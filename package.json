@@ -1,7 +1,7 @@
 {
   "name": "fonscape",
   "version": "0.1.0",
-  "description": "Fonscape（风栖），一个支持 Markdown、评论与多平台部署的响应式个人博客主题。",
+  "description": "Fonscape（风栖），一款清新、响应式、注重阅读体验的 React 个人博客主题模板。",
   "private": true,
   "license": "MIT",
   "repository": {
