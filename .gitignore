@@ -1,0 +1,15 @@
+node_modules/
+dist/
+.env
+.env.*
+!.env.example
+.dev.vars
+.dev.vars.*
+!.dev.vars.example
+.DS_Store
+work/
+outputs/
+.wrangler/
+worker-configuration.d.ts
+design-qa.md
+AGENTS.md
