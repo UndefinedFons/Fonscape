@@ -524,8 +524,11 @@ footer { position:relative; flex:none; display:grid; gap:7px; padding:27px 20px 
 footer::before { content:""; position:absolute; top:0; left:50%; width:min(1180px,calc(100% - 48px)); height:1px; transform:translateX(-50%); background:linear-gradient(90deg,transparent 0%,color-mix(in srgb,var(--line) 38%,transparent) 18%,color-mix(in srgb,var(--line) 52%,transparent) 50%,color-mix(in srgb,var(--line) 38%,transparent) 82%,transparent 100%); opacity:.72; pointer-events:none; }
 .blog-age { font-variant-numeric:tabular-nums; }
 .blog-age strong { color:var(--text); font-weight:500; }
-.footer-theme-link { color:inherit; text-decoration:none; text-underline-offset:3px; }
-.footer-theme-link:hover,.footer-theme-link:focus-visible { color:var(--accent); text-decoration:underline; outline:none; }
+.footer-theme-link { position:relative; display:inline-block; color:inherit; text-decoration:none; transition:color .24s ease,transform .18s ease; }
+.footer-theme-link::after { content:""; position:absolute; right:0; bottom:-2px; left:0; height:1px; border-radius:999px; background:currentColor; opacity:.72; transform:scaleX(0); transform-origin:center; transition:transform .28s cubic-bezier(.22,1,.36,1),opacity .2s ease; }
+.footer-theme-link:hover,.footer-theme-link:focus-visible { color:var(--accent); outline:none; }
+.footer-theme-link:hover::after,.footer-theme-link:focus-visible::after { opacity:1; transform:scaleX(1); }
+.footer-theme-link:active { transform:translateY(1px) scale(.98); }
 .route-view { min-width:0; flex:1 0 auto; }
 .route-view > main > .inner-hero + * {
   /* The only hero-to-content rhythm for primary routes. New sections inherit it structurally. */
@@ -663,7 +666,7 @@ footer::before { content:""; position:absolute; top:0; left:50%; width:min(1180p
 @media (prefers-reduced-motion:reduce) {
   .article-grid .article-card,.paginated-view { animation:none; transition:none; }
 }
-@media (prefers-reduced-motion:reduce) { * { scroll-behavior:auto!important; transition:none!important; animation:none!important; } .app-shell.theme-changing,.app-shell.theme-changing *,.app-shell.theme-changing *::before,.app-shell.theme-changing *::after { transition:none!important; } }
+@media (prefers-reduced-motion:reduce) { * { scroll-behavior:auto!important; transition:none!important; animation:none!important; } .footer-theme-link::after,.app-shell.theme-changing,.app-shell.theme-changing *,.app-shell.theme-changing *::before,.app-shell.theme-changing *::after { transition:none!important; } }
 
 /* Community accounts and comments */
 .account-nav-button { position:relative; overflow:visible; }
