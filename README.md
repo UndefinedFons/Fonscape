@@ -1,13 +1,13 @@
 # Fonscape（风栖）
 
-一个以 Markdown 为内容源、兼顾阅读体验与动态社区功能的响应式个人博客主题。
+一款清新、响应式、注重阅读体验的 React 个人博客主题模板。
+
+Fonscape 基于 React 19 与 Vite 6 构建，以 Markdown 管理文章、小诗和音乐手记，并集成账户、评论与友链申请功能。主题界面、内容和部署配置均可由使用者独立定制。
 
 [![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/UndefinedFons/Fonscape)
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2FUndefinedFons%2FFonscape&env=TURSO_DATABASE_URL%2CTURSO_AUTH_TOKEN%2CADMIN_USERNAME%2CADMIN_BOOTSTRAP_TOKEN%2CRATE_LIMIT_SALT&envDescription=Fonscape%20%E7%9A%84%20Turso%20%E6%95%B0%E6%8D%AE%E5%BA%93%E4%B8%8E%E7%AE%A1%E7%90%86%E5%91%98%E5%88%9D%E5%A7%8B%E5%8C%96%E9%85%8D%E7%BD%AE&envLink=https%3A%2F%2Fgithub.com%2FUndefinedFons%2FFonscape%2Fblob%2Fmain%2Fdocs%2FDEPLOYMENT.md)
 
 [示例网站：Fonstage](https://fonstage.space/) · [部署说明](./docs/DEPLOYMENT.md) · [内容指南](./CONTENT_GUIDE.md)
-
-> Fonstage 是正在使用 Fonscape 的个人博客实例。示例站中的文章、图片、音乐与个人资料不包含在本仓库中。
 
 ## 功能
 
@@ -18,8 +18,6 @@
 - 账户、头像、评论、回复通知、管理员审核与数据库持久化防刷限制
 - 前端内容以 Git 仓库为准，运行时数据与已发布内容相互分离
 - 支持 Cloudflare Workers + D1，以及 Vercel + Turso
-
-纯净版不附带个人头像、文章、小诗、音乐、友链或个人简介，所有页面头图默认使用可替换的白色占位图。
 
 ## 快速开始
 
