@@ -2,11 +2,8 @@ import { ArrowLeft } from "@phosphor-icons/react/ArrowLeft";
 import { ArrowRight } from "@phosphor-icons/react/ArrowRight";
 import { CalendarBlank } from "@phosphor-icons/react/CalendarBlank";
 import { ChatCircleDots } from "@phosphor-icons/react/ChatCircleDots";
-import { Disc } from "@phosphor-icons/react/Disc";
 import { Eye } from "@phosphor-icons/react/Eye";
-import { MicrophoneStage } from "@phosphor-icons/react/MicrophoneStage";
 import { MusicNotes } from "@phosphor-icons/react/MusicNotes";
-import { Playlist } from "@phosphor-icons/react/Playlist";
 import { TextAa } from "@phosphor-icons/react/TextAa";
 import { lazy, Suspense, useEffect, useState } from "react";
 import { MusicReviewCard } from "../components/Cards.jsx";
@@ -15,17 +12,13 @@ import { PageHero } from "../components/PageHero.jsx";
 import { CommentsSection } from "../community/CommentsSection.jsx";
 import { musicReviews, siteConfig } from "../content/index.js";
 import { usePagination, useResponsivePageSize } from "../hooks.js";
+import { musicSections } from "../musicSections.js";
 import { go, parseHashQuery } from "../routeState.js";
 import { formatContentDate, getPostWordCount } from "../siteUtils.js";
 import { NotFound } from "./NotFound.jsx";
 
 const RichArticleContent = lazy(() => import("../RichArticleContent.jsx").then((module) => ({ default: module.RichArticleContent })));
 
-const musicSections = [
-  { id: "songs", label: "歌曲", icon: Playlist },
-  { id: "artists", label: "音乐人", icon: MicrophoneStage },
-  { id: "albums", label: "专辑", icon: Disc },
-];
 export function MusicPage({ stats }) {
   const requestedSection = new URLSearchParams(parseHashQuery()).get("section");
   const [section, setSection] = useState(() => musicSections.some((item) => item.id === requestedSection) ? requestedSection : "songs");
