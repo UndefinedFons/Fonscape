@@ -1,14 +1,12 @@
 import { BookOpenText } from "@phosphor-icons/react/BookOpenText";
 import { CalendarBlank } from "@phosphor-icons/react/CalendarBlank";
 import { ChatCircleDots } from "@phosphor-icons/react/ChatCircleDots";
-import { Disc } from "@phosphor-icons/react/Disc";
 import { Eye } from "@phosphor-icons/react/Eye";
 import { FolderOpen } from "@phosphor-icons/react/FolderOpen";
-import { MicrophoneStage } from "@phosphor-icons/react/MicrophoneStage";
-import { Playlist } from "@phosphor-icons/react/Playlist";
 import { Tag } from "@phosphor-icons/react/Tag";
 import { TextAa } from "@phosphor-icons/react/TextAa";
 import { getPostFirstParagraph } from "../richContent.js";
+import { getMusicSectionIcon } from "../musicSections.js";
 import { formatContentDate, getPostWordCount } from "../siteUtils.js";
 
 export function ArticleCover({ post, className, emptyClassName = "", imageClassName = "", placeholderClassName = "", iconSize = 34, loading = "lazy", fetchPriority }) {
@@ -29,6 +27,6 @@ export function ArticleCard({ post, stats, featured = false }) {
 
 export function MusicReviewCard({ entry, section, stats }) {
   const summary = entry.excerpt || getPostFirstParagraph(entry);
-  const CreditIcon = section === "songs" ? Playlist : section === "artists" ? MicrophoneStage : Disc;
+  const CreditIcon = getMusicSectionIcon(section);
   return <a className={`article-card music-review-card${entry.image ? " has-image" : ""}`} href={`#/music/${section}/${entry.slug}`}><div className="music-review-layout">{entry.image && <span className="article-card-media music-review-media"><img className="article-card-media-image" src={entry.image} alt="" loading="lazy" decoding="async" /></span>}<div className="article-card-copy"><span className="category">标题</span><h2>{entry.title}</h2>{summary && <div className="article-card-excerpt"><span>{entry.excerpt ? "摘要" : "正文预览"}</span><p>{summary}</p></div>}<div className="music-review-credits"><CreditIcon size={16} weight="duotone" /><span><strong>{entry.sourceTitle || entry.title}</strong>{(entry.sourceMeta || entry.kind) && <em>{entry.sourceMeta || entry.kind}</em>}</span></div><div className="post-meta"><span><TextAa size={16} />{getPostWordCount(entry)} 字</span><span><CalendarBlank size={16} />{formatContentDate(entry.date)}</span><span><Eye size={16} />{stats?.views || 0}</span><span><ChatCircleDots size={16} />{stats?.comments || 0}</span></div></div></div></a>;
 }

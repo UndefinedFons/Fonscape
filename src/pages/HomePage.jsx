@@ -1,7 +1,6 @@
 import { Article } from "@phosphor-icons/react/Article";
 import { BookOpenText } from "@phosphor-icons/react/BookOpenText";
 import { ChatCircleDots } from "@phosphor-icons/react/ChatCircleDots";
-import { Disc } from "@phosphor-icons/react/Disc";
 import { Eye } from "@phosphor-icons/react/Eye";
 import { Feather } from "@phosphor-icons/react/Feather";
 import { MusicNotes } from "@phosphor-icons/react/MusicNotes";
@@ -12,6 +11,7 @@ import { authorProfile, musicReviews, poems, posts, siteConfig } from "../conten
 import { ArticleCover } from "../components/Cards.jsx";
 import { HeroShell } from "../components/PageHero.jsx";
 import { useHorizontalScroller } from "../hooks.js";
+import { getMusicSectionIcon } from "../musicSections.js";
 import { getPostFirstParagraph } from "../richContent.js";
 import { formatContentDate, getPostWordCount } from "../siteUtils.js";
 import { getHomeContent } from "./homeContent.js";
@@ -170,10 +170,13 @@ export function HomePage({ stats }) {
             <a href="#/music">音乐手记</a>
           </header>
           {latestMusic.length ? <div className="home-refresh-list home-refresh-mini-track" {...musicScroller}>
-            {latestMusic.map((entry) => <a href={`#/music/${entry.section}/${entry.slug}`} key={`${entry.section}-${entry.slug}`}>
-              <Disc size={21} weight="duotone" />
-              <span><small>{entry.kind} · {formatContentDate(entry.date).slice(0, 10)}</small><strong>{entry.title}</strong></span>
-            </a>)}
+            {latestMusic.map((entry) => {
+              const EntryIcon = getMusicSectionIcon(entry.section);
+              return <a href={`#/music/${entry.section}/${entry.slug}`} key={`${entry.section}-${entry.slug}`}>
+                <EntryIcon size={21} weight="duotone" />
+                <span><small>{entry.kind} · {formatContentDate(entry.date).slice(0, 10)}</small><strong>{entry.title}</strong></span>
+              </a>;
+            })}
           </div> : <div className="home-refresh-empty" role="status"><MusicNotes size={29} weight="duotone" /><strong>暂无音乐</strong></div>}
         </section>
       </div>

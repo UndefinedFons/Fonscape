@@ -12,12 +12,14 @@ import { UserCircleCheck } from "@phosphor-icons/react/UserCircleCheck";
 import { X } from "@phosphor-icons/react/X";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { navItems } from "../content/index.js";
+import { getDetailReadingTarget } from "../detailReading.js";
 
-function useArticleReadingProgress(route) {
+function useDetailReadingProgress(route) {
   const [progress, setProgress] = useState(0);
 
   useEffect(() => {
-    if (!route.startsWith("/post/")) {
+    const readingTarget = getDetailReadingTarget(route);
+    if (!readingTarget) {
       setProgress(0);
       return undefined;
     }
@@ -29,7 +31,7 @@ function useArticleReadingProgress(route) {
 
     const update = () => {
       frame = 0;
-      const nextArticleBody = document.querySelector(".article-page .article-body");
+      const nextArticleBody = document.querySelector(readingTarget);
       if (nextArticleBody !== articleBody) {
         resizeObserver?.disconnect();
         articleBody = nextArticleBody;
@@ -90,7 +92,8 @@ export function ArticleOutlinePopover({ items, open, activeId, onSelect }) {
 export function Header({ route, theme, menuOpen, onMenu, onTheme, onSearch, onSettings, viewer, onAccount, hasArticleOutline, articleOutlineOpen, onArticleOutline, onCloseArticleOutline }) {
   const navRef = useRef(null);
   const headerCenterRef = useRef(null);
-  const articleReadingProgress = useArticleReadingProgress(route);
+  const detailReadingTarget = getDetailReadingTarget(route);
+  const detailReadingProgress = useDetailReadingProgress(route);
   const [indicator, setIndicator] = useState({ x: 0, ready: false });
   const [collapsed, setCollapsed] = useState(false);
   const [morphing, setMorphing] = useState("");
@@ -210,7 +213,7 @@ export function Header({ route, theme, menuOpen, onMenu, onTheme, onSearch, onSe
   const collapseHeader = () => morphHeader(true);
   const restoreHeader = () => morphHeader(false);
   return <header className={`site-header${hasArticleOutline ? " has-article-outline" : ""}${collapsed ? " is-collapsed" : ""}`}>
-    <div ref={headerCenterRef} className={`header-center material-panel${route.startsWith("/post/") ? " has-article-reading-progress" : ""}${morphing ? ` is-morphing is-${morphing}` : ""}`} style={{ "--article-reading-progress": `${articleReadingProgress}%`, "--article-reading-progress-opacity": articleReadingProgress > 0 ? 1 : 0 }}>
+    <div ref={headerCenterRef} className={`header-center material-panel${detailReadingTarget ? " has-article-reading-progress" : ""}${morphing ? ` is-morphing is-${morphing}` : ""}`} style={{ "--article-reading-progress": `${detailReadingProgress}%`, "--article-reading-progress-opacity": detailReadingProgress > 0 ? 1 : 0 }}>
       <nav ref={navRef} className={menuOpen ? "main-nav is-open" : "main-nav"} aria-label="主导航">
         <span className={indicator.ready ? "nav-active-indicator is-ready" : "nav-active-indicator"} style={{ "--indicator-x": `${indicator.x}px` }} aria-hidden="true" />
         {navItems.map(([path, label]) => {
