@@ -430,6 +430,31 @@ async function contentStats(context) {
   return json({ stats: await readContentStats(context) });
 }
 
+async function siteRuntime(context) {
+  const db = requireDatabase(context.env);
+  const candidates = [];
+  for (const sql of [
+    "SELECT launched_at FROM site_runtime WHERE id = 1 LIMIT 1",
+    "SELECT CAST(strftime('%s', MIN(applied_at)) AS INTEGER) * 1000 AS launched_at FROM d1_migrations",
+    "SELECT MIN(applied_at) AS launched_at FROM fonscape_schema_migrations",
+  ]) {
+    try {
+      const row = await db.prepare(sql).first();
+      const value = Number(row?.launched_at);
+      if (Number.isFinite(value) && value > 0) candidates.push(value);
+    } catch {
+      // Cloudflare and Turso use different migration ledgers. The missing
+      // platform-specific table is expected; the current database still owns
+      // the persisted site_runtime fallback.
+    }
+  }
+  const launchedAt = Math.min(...candidates);
+  if (!Number.isFinite(launchedAt)) {
+    throw new ApiError(503, "站点运行时间尚未完成初始化。", "site_runtime_unavailable");
+  }
+  return json({ launchedAt });
+}
+
 async function articleStats(context) {
   return json({ stats: (await readContentStats(context)).post });
 }
@@ -481,6 +506,7 @@ async function handle(context) {
   if (method === "POST" && parts[0] === "articles" && parts[1] && parts[2] === "view" && parts.length === 3) return recordArticleView(context, parts[1]);
   if (method === "GET" && parts[0] === "content" && parts[1] === "stats" && parts.length === 2) return contentStats(context);
   if (method === "POST" && parts[0] === "content" && parts[1] === "view" && parts.length === 2) return recordContentView(context);
+  if (method === "GET" && parts[0] === "site" && parts[1] === "runtime" && parts.length === 2) return siteRuntime(context);
   if (method === "GET" && parts[0] === "comments" && parts.length === 1) return listComments(context, url);
   if (method === "POST" && parts[0] === "comments" && parts.length === 1) return createComment(context);
   if (method === "DELETE" && parts[0] === "comments" && parts[1]) return deleteComment(context, parts[1]);

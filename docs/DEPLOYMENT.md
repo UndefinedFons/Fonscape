@@ -4,11 +4,13 @@ Fonscape 的 Vite 构建输出位于 `dist/`。文章、小诗、音乐与已发
 
 ## Cloudflare Workers + D1
 
-`worker/index.js` 处理动态请求，Workers Static Assets 提供前端文件，`wrangler.jsonc` 通过 `DB` 绑定 D1。纯净版配置不包含现有数据库 ID，部署时应创建并绑定当前站点自己的数据库。
+`worker/index.js` 处理动态请求，Workers Static Assets 提供前端文件，`wrangler.jsonc` 通过 `DB` 绑定 D1。纯净版配置不包含现有数据库 ID，部署时应创建并绑定当前站点自己的数据库。站点会从该数据库最早的迁移时间确定当前实例的建立时间，并保存独立的运行时间记录；后续内容部署不会重置计时。
 
 ### 推荐：Deploy to Cloudflare
 
 点击 README 顶部的 **Deploy to Cloudflare**。Cloudflare 会把 Fonscape 复制到使用者自己的 Git 仓库，根据 `wrangler.jsonc` 自动创建并绑定 D1，并使用仓库的 `deploy` 脚本先应用迁移、再部署 Worker。设置页面只需确认项目名称，并填写当前站点自己的 `ADMIN_USERNAME`、`ADMIN_BOOTSTRAP_TOKEN` 与 `RATE_LIMIT_SALT`。
+
+每次部署都必须使用当前站点自己的仓库、Worker 与数据库。不要把另一个 Fonscape 站点生成的 `database_id`、环境变量、管理员令牌或域名配置复制过来。部署完成后，直接在新仓库的 `src/content/` 中撰写内容并推送到 `main`，Workers Builds 会自动重新构建与发布。
 
 完成后，Workers Builds 会接管该副本的 Git 自动部署。不要再同时启用仓库内的 GitHub Actions，以免一次推送触发两次生产部署。
 

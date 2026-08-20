@@ -18,8 +18,9 @@ test("clean theme defaults use neutral content and one shared white hero", () =>
   );
 });
 
-test("copyright year grows from the configured launch year", () => {
-  assert.equal(formatCopyrightYears(Date.UTC(2026, 7, 16)), "2026");
-  assert.equal(formatCopyrightYears(Date.UTC(2027, 7, 16)), "2026-2027");
-  assert.equal(formatCopyrightYears(Date.UTC(2028, 7, 16)), "2026-2028");
+test("copyright year grows from the current installation launch year", () => {
+  const launchedAt = Date.UTC(2026, 7, 16);
+  assert.equal(formatCopyrightYears(Date.UTC(2026, 7, 16), launchedAt), "2026");
+  assert.equal(formatCopyrightYears(Date.UTC(2027, 7, 16), launchedAt), "2026-2027");
+  assert.equal(formatCopyrightYears(Date.UTC(2028, 7, 16), launchedAt), "2026-2028");
 });

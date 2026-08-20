@@ -36,7 +36,11 @@ test("Vercel and Turso execute the shared auth and comment API end to end", asyn
 
   try {
     const migration = await migrateTurso({ client, apply: true });
-    assert.equal(migration.applied.length, 15);
+    assert.equal(migration.applied.length, 16);
+
+    const runtime = await request("/site/runtime");
+    assert.equal(runtime.status, 200);
+    assert.equal(Number.isFinite((await runtime.json()).launchedAt), true);
 
     const bootstrap = await request("/auth/bootstrap-admin", {
       method: "POST",

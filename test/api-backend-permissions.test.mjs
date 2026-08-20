@@ -24,7 +24,7 @@ function compactSql(value) {
   return String(value).replace(/\s+/gu, " ").trim();
 }
 
-function createDb({ comment, profile, receivedComments = [] } = {}) {
+function createDb({ comment, profile, receivedComments = [], launchedAt = 1_700_000_000_000 } = {}) {
   const state = { comment: comment ? { ...comment } : null, profile: profile ? { ...profile } : null };
   const operations = [];
 
@@ -44,6 +44,9 @@ function createDb({ comment, profile, receivedComments = [] } = {}) {
         }
         if (query.includes("WHERE u.id = ? AND u.status = 'active' LIMIT 1")) {
           return state.profile?.id === values[0] ? { ...state.profile } : null;
+        }
+        if (query === "SELECT launched_at FROM site_runtime WHERE id = 1 LIMIT 1") {
+          return { launched_at: launchedAt };
         }
         return null;
       },
@@ -120,6 +123,20 @@ test("malformed session cookies produce an anonymous response", async () => {
   const response = await onRequest(context);
   assert.equal(response.status, 200);
   assert.deepEqual(await response.json(), { user: null });
+});
+
+test("site runtime exposes this installation's persisted launch time", async () => {
+  const launchedAt = 1_787_246_400_000;
+  const fake = createDb({ launchedAt });
+  const response = await onRequest(createContext({
+    path: ["site", "runtime"],
+    currentUser: undefined,
+    db: fake.db,
+  }));
+
+  assert.equal(response.status, 200);
+  assert.deepEqual(await response.json(), { launchedAt });
+  assert.equal(fake.operations.some((operation) => operation.query === "SELECT launched_at FROM site_runtime WHERE id = 1 LIMIT 1"), true);
 });
 
 test("successful protected writes expose their remaining rate-limit quota", async () => {

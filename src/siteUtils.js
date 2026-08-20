@@ -1,5 +1,4 @@
 import { getPostPlainText } from "./richContent.js";
-import { siteConfig } from "./content/site.js";
 
 function getPostWordCount(post) {
   const text = getPostPlainText(post);
@@ -8,12 +7,16 @@ function getPostWordCount(post) {
   return chineseCharacters + latinWords;
 }
 const formatContentDate = (value) => value?.replace("T", " ").slice(0, 19) || "";
-const BLOG_LAUNCHED_AT = new Date(siteConfig.footer.launchedAt).getTime();
-const BLOG_START_YEAR = Number.parseInt(siteConfig.footer.launchedAt.slice(0, 4), 10);
 
-function formatCopyrightYears(now = Date.now()) {
-  const currentYear = new Date(now).getFullYear();
-  return currentYear > BLOG_START_YEAR ? `${BLOG_START_YEAR}-${currentYear}` : String(BLOG_START_YEAR);
+function normalizeLaunchedAt(value, fallback = Date.now()) {
+  const launchedAt = Number(value);
+  return Number.isFinite(launchedAt) && launchedAt > 0 ? launchedAt : fallback;
 }
 
-export { BLOG_LAUNCHED_AT, formatContentDate, formatCopyrightYears, getPostWordCount };
+function formatCopyrightYears(now = Date.now(), launchedAt = now) {
+  const currentYear = new Date(now).getFullYear();
+  const startYear = new Date(normalizeLaunchedAt(launchedAt, now)).getFullYear();
+  return currentYear > startYear ? `${startYear}-${currentYear}` : String(startYear);
+}
+
+export { formatContentDate, formatCopyrightYears, getPostWordCount, normalizeLaunchedAt };

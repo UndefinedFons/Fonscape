@@ -36,7 +36,6 @@ export const siteConfig = Object.freeze({
   }),
   footer: Object.freeze({
     owner: "博客作者",
-    launchedAt: "2026-08-15T23:54:42+08:00",
     themeName: "Fonscape",
     themeRepository: "https://github.com/UndefinedFons/Fonscape",
   }),
