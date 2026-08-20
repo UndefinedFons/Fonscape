@@ -1275,7 +1275,7 @@ footer::before { content:""; position:absolute; top:0; left:50%; width:min(1180p
 
 .article-detail-kickers { display:flex; justify-content:center; align-items:center; flex-wrap:wrap; gap:8px; }
 .article-series-link { display:inline-flex; align-items:center; gap:5px; padding:6px 10px; border-radius:999px; background:var(--accent-soft); color:var(--accent); font-size:11px; }
-.series-navigation { margin-top:54px; overflow:hidden; border:1px solid var(--line); border-radius:17px; background:var(--surface); }
+.series-navigation { width:min(790px,100%); margin:54px auto 0; overflow:hidden; border:1px solid var(--line); border-radius:17px; background:var(--surface); }
 .series-navigation>header { display:flex; align-items:center; gap:10px; padding:14px 17px; border-bottom:1px solid var(--line); background:var(--surface-soft); color:var(--accent); }
 .series-navigation>header span { display:grid; gap:1px; }
 .series-navigation>header small { color:var(--muted); font-size:8px; letter-spacing:.13em; }
