@@ -83,7 +83,7 @@ Fonscape 支持两套彼此独立的运行方式：
 - [安全政策](./SECURITY.md)
 - [版本记录](./CHANGELOG.md)
 
-Fonscape 当前以 Beta 版本发布。版本号遵循语义化版本；正式升级前请先阅读对应 Release 与 [`CHANGELOG.md`](./CHANGELOG.md)。
+Fonscape 当前版本为 `0.1.0`。版本号遵循语义化版本；正式升级前请先阅读对应 Release 与 [`CHANGELOG.md`](./CHANGELOG.md)。
 
 ## 许可
 
