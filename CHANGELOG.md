@@ -2,7 +2,7 @@
 
 Fonscape 的公开版本变化记录在这里。版本号遵循语义化版本。
 
-## [0.1.0] - 2026-08-22
+## [1.0.0] - 2026-08-22
 
 首个公开版本。
 
@@ -17,6 +17,6 @@ Fonscape 的公开版本变化记录在这里。版本号遵循语义化版本�
 
 ### 说明
 
-- `0.x` 版本仍可能调整配置与部署约定。生产使用前请在独立预览环境验证主题配置、数据库与部署链路。
+- 生产使用前建议在独立预览环境验证主题配置、数据库与部署链路。
 
-[0.1.0]: https://github.com/UndefinedFons/Fonscape/releases/tag/v0.1.0
+[1.0.0]: https://github.com/UndefinedFons/Fonscape/releases/tag/v1.0.0
