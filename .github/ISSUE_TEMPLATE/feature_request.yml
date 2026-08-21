@@ -1,0 +1,41 @@
+name: 功能建议
+description: 提议适用于通用 Fonscape 主题的改进
+title: "[Feature] "
+labels:
+  - enhancement
+body:
+  - type: checkboxes
+    attributes:
+      label: 提交前检查
+      options:
+        - label: 我已搜索现有 Issue，未找到相同建议。
+          required: true
+        - label: 该建议适用于通用博客主题，不依赖某个站点的个人内容或生产配置。
+          required: true
+  - type: textarea
+    attributes:
+      label: 使用场景
+      description: 说明现在遇到的问题，以及谁会从改进中受益。
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: 期望方案
+      description: 描述期望行为，不必限定具体实现。
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: 备选方案
+      description: 如果考虑过其他做法，可以在这里补充。
+  - type: dropdown
+    attributes:
+      label: 影响范围
+      multiple: true
+      options:
+        - 前端界面或交互
+        - Markdown 内容系统
+        - 账户、评论或防刷
+        - Cloudflare 部署
+        - Vercel 部署
+        - 文档与维护
