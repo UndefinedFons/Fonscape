@@ -16,7 +16,7 @@ import { usePagination, useResponsivePageSize } from "../hooks.js";
 import { lockPageScroll } from "../lockPageScroll.js";
 import { ARTICLE_INDEX_DEFAULTS, articleIndexState, parseHash, parseHashQuery, updateArticleIndexState } from "../routeState.js";
 
-const POST_CATEGORIES = ["随笔", "小说", "评论", "记录", "笔记", "站务"];
+const POST_CATEGORIES = ["随笔", "小说", "评谈", "记录", "笔记", "指南"];
 
 export function PostsPage({ query, stats }) {
   const parameters = useMemo(() => new URLSearchParams(query), [query]);
