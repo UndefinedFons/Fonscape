@@ -42,3 +42,18 @@ Fonscape 的 Vite 构建输出位于 `dist/`。文章、小诗、音乐与已发
 - Repository variable：`CLOUDFLARE_DEPLOY_ENABLED=true`
 
 此后推送或合并到 `main` 即可自动运行检查并部署 Cloudflare Worker。若已经通过 Deploy to Cloudflare 配置了 Workers Builds，请保持此变量关闭。Vercel 可直接导入仓库并使用平台的 Git 自动部署。两种方式都只发布当前仓库版本，不应连接其他站点的 Worker、数据库或域名。
+
+## 部署后验证
+
+完成首次部署后检查：
+
+1. 首页、文章、小诗、音乐、友链和关于页可以直接访问并刷新。
+2. `/api/site/runtime` 返回当前站点自己的 `launchedAt`，页脚从本次部署建立的数据库开始计时。
+3. 使用一次性初始化令牌创建管理员后，普通注册不能占用管理员用户名。
+4. 登录、评论、头像与回复通知写入当前站点数据库。
+5. 在自己的仓库新增一篇临时 Markdown 内容并推送，确认 Git 集成自动部署该提交；验证后再删除临时内容。
+6. Cloudflare 只启用 Workers Builds 或 GitHub Actions 其中之一；Vercel 的 Production 与 Preview 不共用数据库。
+
+确认管理员建立成功后移除 `ADMIN_BOOTSTRAP_TOKEN`。保留 `ADMIN_USERNAME` 与 `RATE_LIMIT_SALT`，并将所有真实密钥限制在部署平台服务器端。
+
+配置字段见 [`CONFIGURATION.md`](./CONFIGURATION.md)，常见失败原因见 [`TROUBLESHOOTING.md`](./TROUBLESHOOTING.md)。

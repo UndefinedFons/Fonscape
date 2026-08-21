@@ -1,0 +1,61 @@
+name: Bug 报告
+description: 报告可复现的功能、部署或兼容性问题
+title: "[Bug] "
+labels:
+  - bug
+body:
+  - type: checkboxes
+    attributes:
+      label: 提交前检查
+      options:
+        - label: 我已搜索现有 Issue，未找到相同问题。
+          required: true
+        - label: 我已阅读部署说明和故障排查文档。
+          required: true
+        - label: 我没有在报告中包含令牌、数据库地址、账户资料或其他敏感数据。
+          required: true
+  - type: input
+    attributes:
+      label: Fonscape 版本
+      description: 填写 Release 版本或提交 SHA。
+      placeholder: v0.1.0 / 238d7b6
+    validations:
+      required: true
+  - type: dropdown
+    attributes:
+      label: 运行环境
+      options:
+        - Cloudflare Workers + D1
+        - Vercel + Turso
+        - 本地开发或预览
+        - 其他
+    validations:
+      required: true
+  - type: input
+    attributes:
+      label: 浏览器与设备
+      placeholder: Chrome 版本、操作系统、设备或视口宽度
+  - type: textarea
+    attributes:
+      label: 复现步骤
+      description: 用最少步骤稳定复现问题。
+      placeholder: |
+        1. 打开……
+        2. 点击……
+        3. 出现……
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: 预期行为
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: 实际行为
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: 已脱敏日志或截图
+      description: 删除令牌、Cookie、数据库地址、账户与评论数据后再粘贴。

@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 私下报告安全漏洞
+    url: https://github.com/UndefinedFons/Fonscape/security/advisories/new
+    about: 请勿在公开 Issue 中披露尚未修复的漏洞或敏感数据。
+  - name: 使用与部署文档
+    url: https://github.com/UndefinedFons/Fonscape#文档
+    about: 创建 Issue 前先检查配置、部署与故障排查文档。

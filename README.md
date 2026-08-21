@@ -7,7 +7,7 @@ Fonscape 基于 React 19 与 Vite 6 构建，以 Markdown 管理文章、小诗�
 [![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/UndefinedFons/Fonscape)
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2FUndefinedFons%2FFonscape&env=TURSO_DATABASE_URL%2CTURSO_AUTH_TOKEN%2CADMIN_USERNAME%2CADMIN_BOOTSTRAP_TOKEN%2CRATE_LIMIT_SALT&envDescription=Fonscape%20%E7%9A%84%20Turso%20%E6%95%B0%E6%8D%AE%E5%BA%93%E4%B8%8E%E7%AE%A1%E7%90%86%E5%91%98%E5%88%9D%E5%A7%8B%E5%8C%96%E9%85%8D%E7%BD%AE&envLink=https%3A%2F%2Fgithub.com%2FUndefinedFons%2FFonscape%2Fblob%2Fmain%2Fdocs%2FDEPLOYMENT.md)
 
-[示例网站：Fonstage](https://fonstage.space/) · [部署说明](./docs/DEPLOYMENT.md) · [内容指南](./CONTENT_GUIDE.md)
+[示例网站：Fonstage](https://fonstage.space/) · [部署说明](./docs/DEPLOYMENT.md) · [配置说明](./docs/CONFIGURATION.md) · [内容指南](./CONTENT_GUIDE.md)
 
 ## 功能
 
@@ -47,6 +47,8 @@ pnpm check
 
 内容采用 Markdown 与 Frontmatter；字段、置顶顺序和富文本写法见 [`CONTENT_GUIDE.md`](./CONTENT_GUIDE.md)。
 
+完整站点配置见 [`docs/CONFIGURATION.md`](./docs/CONFIGURATION.md)。其中包括站点资料、作者信息、各页面头图、页脚年份、友链与资源路径。每个部署都应使用自己的配置、数据库和密钥。
+
 ## 部署
 
 Fonscape 支持两套彼此独立的运行方式：
@@ -69,6 +71,19 @@ Fonscape 支持两套彼此独立的运行方式：
 | `pnpm migrate:turso --apply` | 将迁移应用到 Turso |
 
 运行维护与防刷默认值见 [`MAINTENANCE.md`](./MAINTENANCE.md)。
+
+## 文档
+
+- [站点配置](./docs/CONFIGURATION.md)
+- [内容撰写](./CONTENT_GUIDE.md)
+- [Cloudflare / Vercel 部署](./docs/DEPLOYMENT.md)
+- [版本升级](./docs/UPGRADING.md)
+- [故障排查](./docs/TROUBLESHOOTING.md)
+- [参与贡献](./CONTRIBUTING.md)
+- [安全政策](./SECURITY.md)
+- [版本记录](./CHANGELOG.md)
+
+Fonscape 当前以 Beta 版本发布。版本号遵循语义化版本；正式升级前请先阅读对应 Release 与 [`CHANGELOG.md`](./CHANGELOG.md)。
 
 ## 许可
 
