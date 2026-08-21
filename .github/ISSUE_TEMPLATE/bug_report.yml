@@ -18,7 +18,7 @@ body:
     attributes:
       label: Fonscape 版本
       description: 填写 Release 版本或提交 SHA。
-      placeholder: v0.1.0 / 238d7b6
+      placeholder: v1.0.0 / 1e138ae
     validations:
       required: true
   - type: dropdown
