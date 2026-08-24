@@ -30,6 +30,7 @@ Fonscape 把可公开的站点资料放在仓库中，把密钥与数据库连�
 | `author.interests` | 关于页兴趣标签数组 |
 | `author.github.label` | GitHub 链接显示文字 |
 | `author.github.url` | GitHub 个人主页；留空时不显示入口 |
+| `author.support.*` | 可选赞赏入口的标题、显示名、二维码路径与替代文字；`image` 留空时不显示 |
 | `about.*` | 关于页头图、标题、摘要与正文段落 |
 | `pages.*Description` | 文章、小诗、音乐、友链页面简介 |
 | `footer.owner` | 页脚版权所有者名称 |

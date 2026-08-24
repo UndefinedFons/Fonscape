@@ -2,6 +2,12 @@
 
 Fonscape 的公开版本变化记录在这里。版本号遵循语义化版本。
 
+## [1.1.9] - 2026-08-24
+
+### 修复
+
+- 关于页重新支持可配置的赞赏入口，并与 GitHub 入口保持原有渠道列表版式；正文段落继续由站点配置提供，个人内容无需写入主题组件。
+
 ## [1.1.8] - 2026-08-24
 
 ### 修复
@@ -115,6 +121,7 @@ Fonscape 的公开版本变化记录在这里。版本号遵循语义化版本�
 
 - 生产使用前建议在独立预览环境验证主题配置、数据库与部署链路。
 
+[1.1.9]: https://github.com/UndefinedFons/Fonscape/releases/tag/v1.1.9
 [1.1.8]: https://github.com/UndefinedFons/Fonscape/releases/tag/v1.1.8
 [1.1.7]: https://github.com/UndefinedFons/Fonscape/releases/tag/v1.1.7
 [1.1.6]: https://github.com/UndefinedFons/Fonscape/releases/tag/v1.1.6
