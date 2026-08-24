@@ -186,7 +186,7 @@ function isText(value) {
   return value === null || !value.subarray(0, 8192).includes(0);
 }
 
-async function walkFiles(root, prefix = "") {
+async function walkFiles(root, prefix = "", { skipSymlinks = false } = {}) {
   if (!prefix) await assertNoSymlink(root, "源目录");
   const directory = prefix ? join(root, prefix) : root;
   if (!(await exists(directory))) return [];
@@ -195,8 +195,11 @@ async function walkFiles(root, prefix = "") {
   for (const entry of entries.sort((a, b) => a.name.localeCompare(b.name))) {
     if (!prefix && [".git", "node_modules", "dist", UPDATE_DIRECTORY].includes(entry.name)) continue;
     const path = prefix ? `${prefix}/${entry.name}` : entry.name;
-    if (entry.isSymbolicLink()) throw new Error(`源目录不能包含符号链接：${path}`);
-    if (entry.isDirectory()) files.push(...await walkFiles(root, path));
+    if (entry.isSymbolicLink()) {
+      if (skipSymlinks) continue;
+      throw new Error(`源目录不能包含符号链接：${path}`);
+    }
+    if (entry.isDirectory()) files.push(...await walkFiles(root, path, { skipSymlinks }));
     else files.push(safeRelativePath(path));
   }
   return files;
@@ -375,7 +378,8 @@ async function modeFor(directory, path, fallback = 0o644) {
 }
 
 export async function createUpdatePlan({ project, source, target, manifest, fromVersion, targetVersion, temporaryDirectory, reconcileTheme = false }) {
-  const projectPaths = reconcileTheme ? await walkFiles(project) : [];
+  const installedProjectPaths = await walkFiles(project, "", { skipSymlinks: !reconcileTheme });
+  const projectPaths = reconcileTheme ? installedProjectPaths : [];
   const allPaths = new Set([
     ...await walkFiles(source),
     ...await walkFiles(target),
@@ -386,7 +390,7 @@ export async function createUpdatePlan({ project, source, target, manifest, from
   const warnings = [];
   const skippedUserFiles = [];
   const installedHistoryByHash = new Map();
-  for (const path of projectPaths) {
+  for (const path of installedProjectPaths) {
     if (classifyPath(path, manifest) !== "history") continue;
     const content = await readOptional(join(project, path));
     if (content !== null && !installedHistoryByHash.has(hash(content))) installedHistoryByHash.set(hash(content), path);

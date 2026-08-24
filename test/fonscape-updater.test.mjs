@@ -161,6 +161,27 @@ test("migration history is additive and keeps installation-only records", async 
   assert.equal(await readFile(join(data.project, "migrations/0003_runtime.sql"), "utf8"), "ALTER TABLE example ADD COLUMN created_at TEXT;\n");
 });
 
+test("ordinary follow-up updates keep recognizing renamed migration history", async (context) => {
+  const data = await fixture();
+  context.after(() => rm(data.root, { recursive: true, force: true }));
+  await Promise.all([
+    put(data.source, "migrations/0002_release_history.sql", "SELECT 1;\n"),
+    put(data.target, "migrations/0002_release_history.sql", "SELECT 1;\n"),
+    put(data.project, "migrations/0001_installation_history.sql", "SELECT 1;\n"),
+  ]);
+
+  await main([
+    "update",
+    "--project", data.project,
+    "--source-dir", data.source,
+    "--target-dir", data.target,
+    "--apply",
+  ]);
+
+  assert.equal(await readFile(join(data.project, "migrations/0001_installation_history.sql"), "utf8"), "SELECT 1;\n");
+  await assert.rejects(access(join(data.project, "migrations/0002_release_history.sql")), { code: "ENOENT" });
+});
+
 test("migration history refuses to overwrite a changed checksum", async (context) => {
   const data = await fixture();
   context.after(() => rm(data.root, { recursive: true, force: true }));
