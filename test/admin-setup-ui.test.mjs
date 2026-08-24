@@ -12,6 +12,7 @@ test("administrator setup keeps the bootstrap token empty and visible", async ()
   assert.match(source, /name="token" type="text" value=\{form\.token\}/u);
   assert.doesNotMatch(source, /defaultValue=/u);
   assert.doesNotMatch(source, /ADMIN_BOOTSTRAP_TOKEN/u);
+  assert.doesNotMatch(source, /令牌保持可见/u);
   assert.match(source, /typeof result\.initialized !== "boolean"/u);
   assert.match(source, /暂时无法检查初始化状态/u);
   assert.match(source, /window\.location\.replace\("#\/"\)/u);

@@ -7,7 +7,7 @@ import {
   requestWithVercelClientAddress,
   vercelApiPath,
   vercelClientAddress,
-} from "../api/[...path].js";
+} from "../api/fonscape.js";
 
 test("Vercel adapter uses the first trusted forwarded address for existing abuse policies", () => {
   const request = new Request("https://example.test/api/comments", {
@@ -29,6 +29,7 @@ test("Vercel adapter translates catch-all API paths to Pages Function params", (
   assert.deepEqual(vercelApiPath(new Request("https://example.test/api/auth/session")), ["auth", "session"]);
   assert.deepEqual(vercelApiPath(new Request("https://example.test/api")), []);
   assert.deepEqual(vercelApiPath(new Request("https://example.test/api/avatar/user-1")), ["avatar", "user-1"]);
+  assert.deepEqual(vercelApiPath(new Request("https://example.test/api/fonscape?path=admin%2Fsetup")), ["admin", "setup"]);
 });
 
 test("Vercel adapter delegates database-missing responses to the existing Pages handler", async () => {
@@ -73,7 +74,11 @@ test("Vercel redirects retired admin paths before the API-safe SPA fallback", as
     { source: "/admin", destination: "/", statusCode: 302 },
     { source: "/admin/:path*", destination: "/", statusCode: 302 },
   ]);
-  assert.equal(config.rewrites.length, 1);
+  assert.deepEqual(config.rewrites.slice(0, 2), [
+    { source: "/api", destination: "/api/fonscape?path=" },
+    { source: "/api/:path*", destination: "/api/fonscape?path=:path*" },
+  ]);
+  assert.equal(config.rewrites.length, 3);
   assert.match(config.rewrites.at(-1).source, /api/u);
   assert.doesNotMatch(config.rewrites.at(-1).source, /admin/u);
   assert.equal(config.rewrites.at(-1).destination, "/index.html");

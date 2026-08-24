@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import test from "node:test";
 import {
   friendEntryFromApplication,
@@ -55,4 +56,15 @@ test("repository friend entries use the comment author identity", () => {
     color: "#aabbcc",
   });
   assert.deepEqual(JSON.parse(friendEntryJson(application, { id: "user-42", nickname: "小丰" })), entry);
+});
+
+test("friends UI derives the owner from the account and keeps the administrator copy action", async () => {
+  const [commentsSource, friendsSource] = await Promise.all([
+    readFile(new URL("../src/community/CommentsSection.jsx", import.meta.url), "utf8"),
+    readFile(new URL("../src/pages/FriendsPage.jsx", import.meta.url), "utf8"),
+  ]);
+  assert.match(commentsSource, /viewer\?\.role === "admin" && friendApplication\?\.valid/u);
+  assert.match(commentsSource, /复制友链 JSON/u);
+  assert.doesNotMatch(friendsSource, /`owner:/u);
+  assert.match(friendsSource, /请将复制的内容粘贴到下方评论区/u);
 });

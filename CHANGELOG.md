@@ -2,6 +2,14 @@
 
 Fonscape 的公开版本变化记录在这里。版本号遵循语义化版本。
 
+## [1.1.2] - 2026-08-24
+
+### 修复
+
+- Vercel 改用明确的单一函数入口与 API 重写规则，避免多段 `/api/*` 请求被平台当作不存在的路径；管理员初始化、账户与评论请求现在会真正到达 Turso 后端。
+- 移除管理员令牌输入框下方多余的可见性说明，输入框仍保持可见且不会预填令牌。
+- 补充 1.1.0 升级到 1.1.1 时临时调用目标版本 Updater 的准确命令。
+
 ## [1.1.1] - 2026-08-24
 
 ### 改进
@@ -64,6 +72,7 @@ Fonscape 的公开版本变化记录在这里。版本号遵循语义化版本�
 
 - 生产使用前建议在独立预览环境验证主题配置、数据库与部署链路。
 
+[1.1.2]: https://github.com/UndefinedFons/Fonscape/releases/tag/v1.1.2
 [1.1.1]: https://github.com/UndefinedFons/Fonscape/releases/tag/v1.1.1
 [1.1.0]: https://github.com/UndefinedFons/Fonscape/releases/tag/v1.1.0
 [1.0.0]: https://github.com/UndefinedFons/Fonscape/releases/tag/v1.0.0
