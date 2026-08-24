@@ -3686,6 +3686,9 @@ a.home-dash-panel:focus-visible {
     will-change:opacity;
   }
   .global-glass-backdrop {
+    inset:-16px;
+    width:auto;
+    height:auto;
     background-size:cover;
     transform:translate3d(0,0,0);
     transform-origin:center;
