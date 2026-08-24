@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { createClient } from "@libsql/client";
-import { handleVercelApiRequest } from "../api/[...path].js";
+import { handleVercelApiRequest } from "../api/fonscape.js";
 import { migrateTurso, readMigrations } from "../scripts/migrate-turso.mjs";
 import { createTursoD1Database } from "../server/turso-d1.js";
 

@@ -30,6 +30,15 @@ GitHub 模板生成的新仓库拥有独立历史，不能假设它能像普通 
 
 从 1.1.0 及更高版本升级时，`.fonscape-version` 必须记录已安装的主题版本：
 
+1.1.0 自带的 Updater 会保护 1.1.1 已移除的旧配置文件，因此 1.1.0 → 1.1.1 这一次过渡需要临时运行目标版本的 Updater：
+
+```bash
+pnpm dlx github:UndefinedFons/Fonscape#v1.1.1 update --from 1.1.0 --to 1.1.1
+pnpm dlx github:UndefinedFons/Fonscape#v1.1.1 update --from 1.1.0 --to 1.1.1 --apply
+```
+
+到达 1.1.1 后，后续版本继续使用站点内置命令：
+
 ```bash
 pnpm fonscape update
 pnpm fonscape update --apply

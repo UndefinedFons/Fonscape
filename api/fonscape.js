@@ -43,7 +43,10 @@ export function requestWithVercelClientAddress(request, environment = process.en
 }
 
 export function vercelApiPath(request) {
-  const pathname = new URL(request.url).pathname;
+  const url = new URL(request.url);
+  const rewrittenPath = url.searchParams.get("path");
+  if (rewrittenPath !== null) return rewrittenPath.split("/").filter(Boolean);
+  const pathname = url.pathname;
   const suffix = pathname === "/api" ? "" : pathname.replace(/^\/api\/?/u, "");
   return suffix.split("/").filter(Boolean);
 }
