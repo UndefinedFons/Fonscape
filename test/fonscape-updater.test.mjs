@@ -167,6 +167,7 @@ test("ordinary follow-up updates keep recognizing renamed migration history", as
   await Promise.all([
     put(data.source, "migrations/0002_release_history.sql", "SELECT 1;\n"),
     put(data.target, "migrations/0002_release_history.sql", "SELECT 1;\n"),
+    put(data.target, "migrations/0003_new_history.sql", "SELECT 2;\n"),
     put(data.project, "migrations/0001_installation_history.sql", "SELECT 1;\n"),
   ]);
 
@@ -180,6 +181,23 @@ test("ordinary follow-up updates keep recognizing renamed migration history", as
 
   assert.equal(await readFile(join(data.project, "migrations/0001_installation_history.sql"), "utf8"), "SELECT 1;\n");
   await assert.rejects(access(join(data.project, "migrations/0002_release_history.sql")), { code: "ENOENT" });
+  assert.equal(await readFile(join(data.project, "migrations/0003_new_history.sql"), "utf8"), "SELECT 2;\n");
+});
+
+test("ordinary history scans reject symlinks inside migration storage", async (context) => {
+  const data = await fixture();
+  context.after(() => rm(data.root, { recursive: true, force: true }));
+  const outside = join(data.root, "outside-migration.sql");
+  await writeFile(outside, "SELECT 1;\n");
+  await mkdir(join(data.project, "migrations"));
+  await symlink(outside, join(data.project, "migrations/0001_installation_history.sql"));
+
+  await assert.rejects(main([
+    "update",
+    "--project", data.project,
+    "--source-dir", data.source,
+    "--target-dir", data.target,
+  ]), /源目录不能包含符号链接：migrations\/0001_installation_history\.sql/u);
 });
 
 test("migration history refuses to overwrite a changed checksum", async (context) => {

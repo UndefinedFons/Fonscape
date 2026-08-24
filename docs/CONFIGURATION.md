@@ -48,7 +48,7 @@ home: {
 - `mobilePosition`：移动端焦点。
 - `size`：通常使用 `cover`。
 
-默认头图是主题资源 `public/fonscape/hero-white.svg`。自定义图片放入使用者目录 `public/assets/`，并使用 `/assets/...` 路径；升级器不会覆盖该目录。
+默认头图是主题资源 `public/fonscape/hero-white.svg`。自定义图片文件放入使用者目录 `public/assets/`，配置值必须保留引号并写成 `"/assets/..."`；不要把仓库目录写成 `public/assets/...`。升级器不会覆盖该目录。
 
 ## 友链
 

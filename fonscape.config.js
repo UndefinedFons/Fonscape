@@ -40,6 +40,8 @@ const siteConfig = {
     owner: "博客作者",
   },
   heroes: {
+    // 自定义图片请保留引号并填写网站路径，例如 "/assets/home.jpg"。
+    // 图片文件放在 public/assets/，但这里不要写成 public/assets/...。
     home: { image: defaultHeroImage, position: "center", mobilePosition: "center", size: "cover" },
     posts: { image: defaultHeroImage, position: "center", mobilePosition: "center", size: "cover" },
     poems: { image: defaultHeroImage, position: "center", mobilePosition: "center", size: "cover" },
