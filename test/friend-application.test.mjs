@@ -64,7 +64,9 @@ test("friends UI derives the owner from the account and keeps the administrator 
     readFile(new URL("../src/pages/FriendsPage.jsx", import.meta.url), "utf8"),
   ]);
   assert.match(commentsSource, /viewer\?\.role === "admin" && friendApplication\?\.valid/u);
-  assert.match(commentsSource, /aria-label="复制友链 JSON"/u);
+  assert.match(commentsSource, /aria-live="polite"/u);
+  assert.match(commentsSource, /\{copyState \|\| "复制友链 JSON"\}/u);
+  assert.doesNotMatch(commentsSource, /copyState && <p/u);
   assert.doesNotMatch(friendsSource, /`owner:/u);
   assert.match(friendsSource, /aria-live="polite"/u);
   assert.match(friendsSource, /请将复制的内容粘贴到下方评论区/u);

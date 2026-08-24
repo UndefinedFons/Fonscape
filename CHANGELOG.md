@@ -2,6 +2,12 @@
 
 Fonscape 的公开版本变化记录在这里。版本号遵循语义化版本。
 
+## [1.1.6] - 2026-08-24
+
+### 改进
+
+- 管理员复制友链 JSON 后，成功或失败状态直接在原按钮内切换，不再额外占用一行提示空间；交互与评论删除确认保持一致。
+
 ## [1.1.5] - 2026-08-24
 
 ### 修复
@@ -94,6 +100,7 @@ Fonscape 的公开版本变化记录在这里。版本号遵循语义化版本�
 
 - 生产使用前建议在独立预览环境验证主题配置、数据库与部署链路。
 
+[1.1.6]: https://github.com/UndefinedFons/Fonscape/releases/tag/v1.1.6
 [1.1.5]: https://github.com/UndefinedFons/Fonscape/releases/tag/v1.1.5
 [1.1.4]: https://github.com/UndefinedFons/Fonscape/releases/tag/v1.1.4
 [1.1.3]: https://github.com/UndefinedFons/Fonscape/releases/tag/v1.1.3
