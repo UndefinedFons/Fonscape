@@ -2,6 +2,22 @@
 
 Fonscape 的公开版本变化记录在这里。版本号遵循语义化版本。
 
+## [1.1.1] - 2026-08-24
+
+### 改进
+
+- 根目录 `fonscape.config.js`、`src/content/friends.json` 与 Markdown `content` 现在分别是站点设置、正式友链与富文本正文的唯一来源。
+- 站点配置适配器移入主题拥有的 `src/siteConfig.js`，用户配置与主题实现不再混放。
+- Updater 只接受带有 `.fonscape-version` 的正式版本；`--from` 仅用于核对 marker，不再承担无 marker 旧项目的兼容入口。
+- 部署模板测试同时校验 Cloudflare 与 Vercel 按钮参数。
+- `/admin/setup` 会在各部署平台自动进入一次性 Setup；已初始化站点及其他 `/admin` 路径直接返回首页。
+- 修正用户资源目录：图片使用 `public/assets/`，音频使用唯一的 `public/audio/`，不再生成误导性的嵌套目录。
+
+### 移除
+
+- 移除旧 `src/content/site.js`、`avatarUserId`、内嵌友链和数组正文兼容层。
+- 通过新迁移删除已停用的旧友链申请归档表；原始公开评论及账户数据保持不变。
+
 ## [1.1.0] - 2026-08-24
 
 ### 新增
@@ -48,5 +64,6 @@ Fonscape 的公开版本变化记录在这里。版本号遵循语义化版本�
 
 - 生产使用前建议在独立预览环境验证主题配置、数据库与部署链路。
 
+[1.1.1]: https://github.com/UndefinedFons/Fonscape/releases/tag/v1.1.1
 [1.1.0]: https://github.com/UndefinedFons/Fonscape/releases/tag/v1.1.0
 [1.0.0]: https://github.com/UndefinedFons/Fonscape/releases/tag/v1.0.0

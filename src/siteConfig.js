@@ -1,4 +1,4 @@
-import configuredSite from "../../fonscape.config.js";
+import configuredSite from "../fonscape.config.js";
 
 function freezeConfig(value) {
   if (!value || typeof value !== "object" || Object.isFrozen(value)) return value;
@@ -25,7 +25,3 @@ export const navItems = [
   ["/friends", "友链"],
   ["/about", "关于"],
 ];
-
-// Compatibility export for sites upgrading from Fonscape 1.0.0. New sites
-// maintain accepted friend links in friends.json instead.
-export const friendLinks = [];

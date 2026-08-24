@@ -1,5 +1,5 @@
 import friends from "./friends.json" with { type: "json" };
-import { authorProfile, friendLinks as legacyFriendLinks, navItems, siteConfig } from "./site.js";
+import { authorProfile, navItems, siteConfig } from "../siteConfig.js";
 import {
   assertUniqueEntries,
   parseMusicReview,
@@ -40,5 +40,5 @@ export const musicReviews = Object.fromEntries(
     allMusicReviews.filter((review) => review.section === section),
   ]),
 );
-const friendLinks = friends.length > 0 ? friends : legacyFriendLinks;
+const friendLinks = friends;
 export { authorProfile, friendLinks, navItems, siteConfig };

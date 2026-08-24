@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { siteConfig } from "../src/content/site.js";
+import { siteConfig } from "../src/siteConfig.js";
 import { formatCopyrightYears } from "../src/siteUtils.js";
 
 test("clean theme defaults use neutral content and one shared white hero", () => {

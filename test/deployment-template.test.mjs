@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
+import { readFile, stat } from "node:fs/promises";
 import test from "node:test";
 
 async function readJson(path) {
@@ -9,6 +9,15 @@ async function readJson(path) {
 async function readOptional(path) {
   try {
     return await readFile(new URL(path, import.meta.url), "utf8");
+  } catch (error) {
+    if (error.code === "ENOENT") return null;
+    throw error;
+  }
+}
+
+async function statOptional(path) {
+  try {
+    return await stat(new URL(path, import.meta.url));
   } catch (error) {
     if (error.code === "ENOENT") return null;
     throw error;
@@ -40,6 +49,11 @@ test("one-click deployment asks for only an empty administrator bootstrap token"
   assert.equal(vercel.buildCommand, "pnpm build:vercel");
 
   if (readme !== null) {
+    const cloudflareButtonMatch = readme.match(/\[!\[Deploy to Cloudflare\].*?\]\((https:\/\/deploy\.workers\.cloudflare\.com\/\?[^\s)]+)\)/u);
+    assert.ok(cloudflareButtonMatch, "README must contain a Cloudflare Deploy Button");
+    const cloudflareButton = new URL(cloudflareButtonMatch[1]);
+    assert.equal(cloudflareButton.searchParams.get("url"), "https://github.com/UndefinedFons/Fonscape");
+
     const buttonMatch = readme.match(/\[!\[Deploy with Vercel\].*?\]\((https:\/\/vercel\.com\/new\/clone\?[^\s)]+)\)/u);
     assert.ok(buttonMatch, "README must contain a Vercel Deploy Button");
     const button = new URL(buttonMatch[1]);
@@ -61,4 +75,15 @@ test("content targets generate before supported install and project commands", a
     assert.equal(packageJson.scripts[hook], "node scripts/generate-content-targets.mjs");
   }
   assert.doesNotMatch(packageJson.scripts.check, /--check/u);
+});
+
+test("public image and audio directories stay separate", async () => {
+  const [imageDirectory, audioDirectory, nestedAudioDirectory] = await Promise.all([
+    statOptional("../public/assets/"),
+    statOptional("../public/audio/"),
+    statOptional("../public/assets/audio/"),
+  ]);
+  assert.equal(imageDirectory?.isDirectory(), true);
+  assert.equal(audioDirectory?.isDirectory(), true);
+  assert.equal(nestedAudioDirectory, null);
 });

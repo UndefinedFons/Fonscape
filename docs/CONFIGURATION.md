@@ -67,7 +67,7 @@ home: {
 ]
 ```
 
-`userId` 用于从当前站点账户系统同步头像与昵称。普通静态友链也可使用 `avatar`。为兼容 1.0.0，页面仍能读取旧的 `avatarUserId`，新条目只使用 `userId`。不要把其他 Fonscape 站点的用户 ID 或运行时数据复制到新站点。
+`userId` 用于从当前站点账户系统同步头像与昵称。普通静态友链也可使用 `avatar`。不要把其他 Fonscape 站点的用户 ID 或运行时数据复制到新站点。
 
 ## 内容与资源
 
@@ -77,7 +77,7 @@ home: {
 | 小诗 | `src/content/poems/*.md` |
 | 音乐手记 | `src/content/music/*.md` |
 | 图片 | `public/assets/` |
-| 音频 | `public/assets/audio/` |
+| 音频 | `public/audio/` |
 
 字段与 Markdown 写法见 [`../CONTENT_GUIDE.md`](../CONTENT_GUIDE.md)。内容目标会在 `pnpm install`、`pnpm dev`、`pnpm build`、`pnpm test` 与 `pnpm check` 前自动生成，无需手工运行或提交生成文件。
 
@@ -87,7 +87,7 @@ home: {
 
 | 变量 | 平台 | 说明 |
 | --- | --- | --- |
-| `ADMIN_BOOTSTRAP_TOKEN` | 两者 | 唯一需要手工填写的值；无默认值，在 `/#/admin/setup` 的可见输入框中使用一次 |
+| `ADMIN_BOOTSTRAP_TOKEN` | 两者 | 唯一需要手工填写的值；无默认值，在 `/admin/setup` 自动进入的可见设置页中使用一次 |
 | `TURSO_DATABASE_URL` | Vercel | 由 Turso Marketplace 自动注入，不手工填写 |
 | `TURSO_AUTH_TOKEN` | Vercel | 由 Turso Marketplace 自动注入，不手工填写 |
 

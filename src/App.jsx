@@ -206,6 +206,11 @@ export function App() {
       if (pendingImage) pendingImage.src = "";
     };
   }, []);
+  const isSetupRoute = route === "/admin/setup";
+  const isRetiredAdminRoute = route === "/admin" || (route.startsWith("/admin/") && !isSetupRoute);
+  useEffect(() => {
+    if (isRetiredAdminRoute) window.location.replace("#/");
+  }, [isRetiredAdminRoute]);
   const content = useMemo(() => {
     if (route.startsWith("/post/")) return <ArticlePage slug={route.replace("/post/", "")} stats={contentStats.post} onView={recordContentView} />;
     if (route.startsWith("/poem/")) return <PoemPage slug={route.replace("/poem/", "")} stats={contentStats.poem} onView={recordContentView} />;
@@ -217,8 +222,9 @@ export function App() {
     if (route === "/friends") return <FriendsPage />;
     if (route === "/about") return <AboutPage />;
     if (route === "/admin/setup") return <AdminSetupPage />;
+    if (isRetiredAdminRoute) return <HomePage stats={contentStats.post} />;
     return <NotFound />;
-  }, [route, routeQuery, contentStats, recordContentView]);
+  }, [route, routeQuery, contentStats, recordContentView, isRetiredAdminRoute]);
   const isDetailRoute = route.startsWith("/post/") || route.startsWith("/poem/") || route.startsWith("/music/");
   const activePost = useMemo(() => route.startsWith("/post/") ? posts.find((post) => post.slug === route.replace("/post/", "")) : null, [route]);
   const activePostOutline = useMemo(() => activePost ? getPostOutline(activePost) : [], [activePost]);
@@ -253,7 +259,6 @@ export function App() {
       window.removeEventListener("resize", update);
     };
   }, [route, hasArticleOutline]);
-  const isSetupRoute = route === "/admin/setup";
   const toggleTheme = () => {
     const nextTheme = theme === "light" ? "dark" : "light";
     flushSync(() => setThemeChanging(true));

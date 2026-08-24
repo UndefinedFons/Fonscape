@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "version": "1.1.0",
+  "version": "1.1.1",
   "ownership": {
     "user": [
       ".env",
@@ -8,7 +8,6 @@
       ".dev.vars",
       ".dev.vars.*",
       "fonscape.config.js",
-      "src/content/site.js",
       "src/content/friends.json",
       "src/content/posts/**",
       "src/content/poems/**",

@@ -4,6 +4,7 @@ import test from "node:test";
 
 const setupPageUrl = new URL("../src/pages/AdminSetupPage.jsx", import.meta.url);
 const appUrl = new URL("../src/App.jsx", import.meta.url);
+const mainUrl = new URL("../src/main.jsx", import.meta.url);
 
 test("administrator setup keeps the bootstrap token empty and visible", async () => {
   const source = await readFile(setupPageUrl, "utf8");
@@ -25,4 +26,15 @@ test("administrator setup is a focused route without site navigation", async (co
   assert.match(source, /const isSetupRoute = route === "\/admin\/setup"/u);
   assert.match(source, /\{!isSetupRoute && <Header/u);
   assert.match(source, /\{!isSetupRoute && <><Footer/u);
+});
+
+test("direct and retired administrator routes return to their canonical destinations", async () => {
+  const [appSource, mainSource] = await Promise.all([
+    readFile(appUrl, "utf8"),
+    readFile(mainUrl, "utf8"),
+  ]);
+  assert.match(mainSource, /directPath === "\/admin\/setup"[\s\S]*replace\("\/#\/admin\/setup"\)/u);
+  assert.match(mainSource, /directPath === "\/admin"[\s\S]*replace\("\/#\/"\)/u);
+  assert.match(appSource, /route === "\/admin" \|\| (?:\(route\.startsWith\("\/admin\/"\) && !isSetupRoute\)|route\.startsWith\("\/admin\/"\))/u);
+  assert.match(appSource, /isRetiredAdminRoute\) window\.location\.replace\("#\/"\)/u);
 });

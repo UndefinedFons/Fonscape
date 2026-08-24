@@ -45,6 +45,14 @@ function audioAssetsBinding(assets) {
   };
 }
 
+function adminRouteRedirect(request) {
+  const url = new URL(request.url);
+  const pathname = url.pathname.replace(/\/+$/u, "") || "/";
+  if (pathname === "/admin/setup") return Response.redirect(new URL("/#/admin/setup", url), 302);
+  if (pathname === "/admin" || pathname.startsWith("/admin/")) return Response.redirect(new URL("/#/", url), 302);
+  return null;
+}
+
 export default {
   async fetch(request, env, executionContext) {
     const { pathname } = new URL(request.url);
@@ -59,6 +67,8 @@ export default {
         "/audio",
       ));
     }
+    const adminRedirect = adminRouteRedirect(request);
+    if (adminRedirect) return adminRedirect;
     return env.ASSETS.fetch(request);
   },
   async scheduled(controller, env) {

@@ -19,7 +19,7 @@ Fonscape 的 Vite 构建输出位于 `dist/`。文章、小诗、音乐与已发
 1. 为当前站点生成独立的 `ADMIN_BOOTSTRAP_TOKEN`，通过 `wrangler secret put ADMIN_BOOTSTRAP_TOKEN` 保存；不要把真实值写入仓库。
 2. 运行 `pnpm check`。
 3. 运行 `pnpm deploy`，依次应用 D1 迁移并部署 Worker。
-4. 打开 `/#/admin/setup`，在可见输入框中输入令牌并创建首位管理员。数据库会永久记录初始化已完成；之后即使环境变量仍存在，该令牌也不能再次使用。
+4. 打开 `/admin/setup`（会自动转到 `/#/admin/setup`），在可见输入框中输入令牌并创建首位管理员。数据库会永久记录初始化已完成；之后再次访问 Setup 或任何其他 `/admin` 路径都会回到首页，即使环境变量仍存在，该令牌也不能再次使用。
 5. 如需自定义域名，在 Cloudflare 控制台为本 Worker 添加 Custom Domain。
 
 `wrangler.jsonc` 还配置了每日维护任务，用于清理过期会话与陈旧限频窗口，并校准容量计数。
@@ -29,7 +29,7 @@ Fonscape 的 Vite 构建输出位于 `dist/`。文章、小诗、音乐与已发
 1. 点击 README 顶部的 **Deploy with Vercel**。部署按钮会把 [Turso Cloud](https://vercel.com/marketplace/tursocloud) 的 `database` 产品作为不可跳过的 Marketplace 集成，创建数据库并自动注入 `TURSO_DATABASE_URL` 与 `TURSO_AUTH_TOKEN`。
 2. 只填写自己生成的 `ADMIN_BOOTSTRAP_TOKEN`；该字段没有默认值。不需要手工填写数据库地址、数据库令牌、管理员用户名或限频盐。
 3. Vercel 使用 `pnpm build:vercel`，在构建前自动执行数据库迁移。迁移脚本以数据库记录抢占每一项迁移，并在写锁冲突时重试，多个并发构建不会重复执行同一项迁移。
-4. 部署完成后打开 `/#/admin/setup`，在可见输入框中输入同一个令牌并创建首位管理员。
+4. 部署完成后打开 `/admin/setup`（会自动转到 `/#/admin/setup`），在可见输入框中输入同一个令牌并创建首位管理员；初始化完成后再次访问会回到首页。
 
 不使用部署按钮时，先在 Vercel Marketplace 为项目添加 Turso Cloud 数据库，再在项目环境变量中加入 `ADMIN_BOOTSTRAP_TOKEN`。Vercel 的 Git 集成会自动为后续提交生成预览并部署生产分支。
 

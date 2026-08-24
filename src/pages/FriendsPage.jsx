@@ -51,7 +51,7 @@ function friendCardStyle(value) {
 }
 
 function friendAvatarSource(friend, viewer) {
-  const userId = String(friend.userId || friend.avatarUserId || "").trim();
+  const userId = String(friend.userId || "").trim();
   if (!userId) return friend.avatar || "";
   if (String(viewer?.id || "") === userId && viewer.avatarUrl) return viewer.avatarUrl;
   return `/api/avatar/${encodeURIComponent(userId)}`;
@@ -60,7 +60,7 @@ function friendAvatarSource(friend, viewer) {
 function useFriendProfiles() {
   const [profiles, setProfiles] = useState({});
   useEffect(() => {
-    const userIds = [...new Set(friendLinks.map((friend) => String(friend.userId || friend.avatarUserId || "").trim()).filter(Boolean))];
+    const userIds = [...new Set(friendLinks.map((friend) => String(friend.userId || "").trim()).filter(Boolean))];
     if (!userIds.length) return undefined;
     const controller = new AbortController();
     Promise.all(userIds.map(async (userId) => {
@@ -88,7 +88,7 @@ export function FriendsPage() {
         {friendLinks.length ? (
           <div className="friend-grid">
             {friendLinks.map((friend) => {
-              const userId = String(friend.userId || friend.avatarUserId || "").trim();
+              const userId = String(friend.userId || "").trim();
               const accountProfile = String(viewer?.id || "") === userId ? viewer : profiles[userId];
               const avatarSource = accountProfile?.avatarUrl || friendAvatarSource(friend, viewer);
               const owner = accountProfile?.nickname || friend.owner;
