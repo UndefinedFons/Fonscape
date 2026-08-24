@@ -375,15 +375,22 @@ async function modeFor(directory, path, fallback = 0o644) {
 }
 
 export async function createUpdatePlan({ project, source, target, manifest, fromVersion, targetVersion, temporaryDirectory, reconcileTheme = false }) {
+  const projectPaths = reconcileTheme ? await walkFiles(project) : [];
   const allPaths = new Set([
     ...await walkFiles(source),
     ...await walkFiles(target),
-    ...(reconcileTheme ? await walkFiles(project) : []),
+    ...projectPaths,
   ]);
   const actions = [];
   const conflicts = [];
   const warnings = [];
   const skippedUserFiles = [];
+  const installedHistoryByHash = new Map();
+  for (const path of projectPaths) {
+    if (classifyPath(path, manifest) !== "history") continue;
+    const content = await readOptional(join(project, path));
+    if (content !== null && !installedHistoryByHash.has(hash(content))) installedHistoryByHash.set(hash(content), path);
+  }
 
   for (const path of [...allPaths].sort()) {
     if (path === VERSION_FILE) continue;
@@ -413,7 +420,12 @@ export async function createUpdatePlan({ project, source, target, manifest, from
     ]);
     if (ownership === "history") {
       if (local === null && incoming !== null) {
-        actions.push(action(path, "write", incoming, "new-history-file", await modeFor(target, path), local));
+        const equivalentPath = installedHistoryByHash.get(hash(incoming));
+        if (equivalentPath) {
+          warnings.push(`目标迁移 ${path} 与已有历史 ${equivalentPath} 内容相同，不重复添加。`);
+        } else {
+          actions.push(action(path, "write", incoming, "new-history-file", await modeFor(target, path), local));
+        }
       } else if (local !== null && incoming !== null && !equal(local, incoming)) {
         conflicts.push({ path, reason: "immutable-history-file-changed", base, local, incoming, merged: null });
       }
