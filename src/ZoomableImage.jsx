@@ -11,17 +11,24 @@ export function ZoomableImage({
   triggerClassName = "",
   style,
   loading = "lazy",
+  triggerContent,
+  triggerAriaLabel,
 }) {
   const [open, setOpen] = useState(false);
   const [closing, setClosing] = useState(false);
   const [failed, setFailed] = useState(false);
   const closeRef = useRef(null);
+  const triggerRef = useRef(null);
   const closeTimerRef = useRef(null);
 
   const closeLightbox = () => {
     if (!open || closing) return;
     setClosing(true);
-    closeTimerRef.current = window.setTimeout(() => { setOpen(false); setClosing(false); }, 280);
+    closeTimerRef.current = window.setTimeout(() => {
+      setOpen(false);
+      setClosing(false);
+      requestAnimationFrame(() => triggerRef.current?.focus());
+    }, 280);
   };
   useEffect(() => { setFailed(false); }, [src]);
 
@@ -43,13 +50,14 @@ export function ZoomableImage({
 
   return <>
     <button
+      ref={triggerRef}
       type="button"
       className={`zoomable-image-trigger ${triggerClassName}${failed ? " is-broken" : ""}`.trim()}
       onClick={() => { if (!failed) { setClosing(false); setOpen(true); } }}
       disabled={failed}
-      aria-label={`放大查看${alt ? `：${alt}` : "图片"}`}
+      aria-label={triggerAriaLabel || `放大查看${alt ? `：${alt}` : "图片"}`}
     >
-      {failed ? <span className="article-image-error">图片地址无效，请返回编辑区重新插入图片。</span> : <img className={className} src={src} alt={alt} style={style} loading={loading} decoding="async" onError={() => setFailed(true)} />}
+      {triggerContent || (failed ? <span className="article-image-error">图片地址无效，请返回编辑区重新插入图片。</span> : <img className={className} src={src} alt={alt} style={style} loading={loading} decoding="async" onError={() => setFailed(true)} />)}
       {caption && <span className="article-image-caption">{caption}</span>}
     </button>
     {open && createPortal(
