@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFile, readdir, stat } from "node:fs/promises";
 import test from "node:test";
-import worker, { audioAssetSizes } from "../worker/index.js";
+import worker, { audioAssetSizes, canonicalAudioPathname } from "../worker/index.js";
 
 function executionContext() {
   return { waitUntil() {} };
@@ -55,6 +55,11 @@ test("Worker audio size metadata matches every repository audio asset", async ()
     const metadata = await stat(new URL(`../public${pathname}`, import.meta.url));
     assert.equal(metadata.size, expectedSize, `${pathname} size metadata is stale`);
   }
+});
+
+test("Worker canonicalizes equivalent audio pathname escapes", () => {
+  assert.equal(canonicalAudioPathname("/audio/%e9%9f%b3%e4%b9%90.mp3"), "/audio/%E9%9F%B3%E4%B9%90.mp3");
+  assert.equal(canonicalAudioPathname("/audio/mix%20one.mp3"), "/audio/mix%20one.mp3");
 });
 
 test("Worker delegates non-dynamic paths to Static Assets unchanged", async () => {
