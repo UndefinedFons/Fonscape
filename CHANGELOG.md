@@ -2,6 +2,12 @@
 
 Fonscape 的公开版本变化记录在这里。版本号遵循语义化版本。
 
+## [1.1.5] - 2026-08-24
+
+### 修复
+
+- Updater 会按内容识别文件名不同但已经存在的等价迁移历史，避免真实博客因历史迁移曾改名而重复执行同一段数据库变更。
+
 ## [1.1.4] - 2026-08-24
 
 ### 修复
@@ -88,6 +94,7 @@ Fonscape 的公开版本变化记录在这里。版本号遵循语义化版本�
 
 - 生产使用前建议在独立预览环境验证主题配置、数据库与部署链路。
 
+[1.1.5]: https://github.com/UndefinedFons/Fonscape/releases/tag/v1.1.5
 [1.1.4]: https://github.com/UndefinedFons/Fonscape/releases/tag/v1.1.4
 [1.1.3]: https://github.com/UndefinedFons/Fonscape/releases/tag/v1.1.3
 [1.1.2]: https://github.com/UndefinedFons/Fonscape/releases/tag/v1.1.2

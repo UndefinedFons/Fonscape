@@ -141,7 +141,8 @@ test("migration history is additive and keeps installation-only records", async 
   await Promise.all([
     put(data.source, "migrations/0001_setup.sql", "CREATE TABLE example (id TEXT);\n"),
     put(data.target, "migrations/0001_setup.sql", "CREATE TABLE example (id TEXT);\n"),
-    put(data.target, "migrations/0002_runtime.sql", "ALTER TABLE example ADD COLUMN created_at TEXT;\n"),
+    put(data.target, "migrations/0002_renamed_history.sql", "SELECT 1;\n"),
+    put(data.target, "migrations/0003_runtime.sql", "ALTER TABLE example ADD COLUMN created_at TEXT;\n"),
     put(data.project, "migrations/0001_setup.sql", "CREATE TABLE example (id TEXT);\n"),
     put(data.project, "migrations/0001_installation_history.sql", "SELECT 1;\n"),
   ]);
@@ -156,7 +157,8 @@ test("migration history is additive and keeps installation-only records", async 
   ]);
 
   assert.equal(await readFile(join(data.project, "migrations/0001_installation_history.sql"), "utf8"), "SELECT 1;\n");
-  assert.equal(await readFile(join(data.project, "migrations/0002_runtime.sql"), "utf8"), "ALTER TABLE example ADD COLUMN created_at TEXT;\n");
+  await assert.rejects(access(join(data.project, "migrations/0002_renamed_history.sql")), { code: "ENOENT" });
+  assert.equal(await readFile(join(data.project, "migrations/0003_runtime.sql"), "utf8"), "ALTER TABLE example ADD COLUMN created_at TEXT;\n");
 });
 
 test("migration history refuses to overwrite a changed checksum", async (context) => {
