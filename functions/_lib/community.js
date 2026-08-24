@@ -261,7 +261,7 @@ export async function currentUser(context) {
   const token = parseCookies(context.request)[SESSION_COOKIE];
   if (!token) return (context.data.currentUser = null);
   const now = Date.now();
-  const row = await db.prepare(`SELECT u.id, u.email, u.username, u.nickname, u.role, u.status, u.created_at, u.updated_at,
+  const row = await db.prepare(`SELECT u.id, u.username, u.nickname, u.role, u.status, u.created_at, u.updated_at,
     u.notifications_seen_at, u.admin_comments_seen_at, ua.user_id AS avatar_user_id, ua.updated_at AS avatar_updated_at
     FROM sessions s JOIN users u ON u.id = s.user_id
     LEFT JOIN user_avatars ua ON ua.user_id = u.id

@@ -39,7 +39,8 @@ import {
 } from "../_lib/abuse.js";
 
 export const AVATAR_MAX_BYTES = 100 * 1024;
-const USER_FIELDS = `u.id, u.email, u.username, u.password_hash, u.password_salt, u.nickname, u.role, u.status,
+export const AVATAR_TOTAL_MAX_BYTES = 100 * 1024 * 1024;
+const USER_FIELDS = `u.id, u.username, u.password_hash, u.password_salt, u.nickname, u.role, u.status,
   u.created_at, u.updated_at, u.notifications_seen_at, u.admin_comments_seen_at,
   ua.user_id AS avatar_user_id, ua.updated_at AS avatar_updated_at`;
 
@@ -77,11 +78,13 @@ async function session(context) {
 }
 
 async function register(context) {
-  await protectRegistration(context);
   const db = requireDatabase(context.env);
+  if (!(await adminSetupState(db)).initialized) {
+    throw new ApiError(403, "管理员完成站点初始化后才会开放注册。", "registration_closed");
+  }
+  await protectRegistration(context);
   const input = await readJson(context.request);
   const username = normalizeUsername(input.username);
-  if (username.toLowerCase() === String(context.env.ADMIN_USERNAME || "admin").trim().toLowerCase()) throw new ApiError(403, "管理员账户请通过一次性初始化链接创建。", "admin_bootstrap_required");
   const nickname = normalizeNickname(input.nickname);
   const password = validatePassword(input.password);
   const existing = await db.prepare("SELECT id FROM users WHERE username = ? COLLATE NOCASE LIMIT 1").bind(username).first();
@@ -89,12 +92,11 @@ async function register(context) {
   const credentials = await hashPassword(password);
   const id = crypto.randomUUID();
   const now = Date.now();
-  const legacyEmail = `${username.toLowerCase()}.${id.slice(0, 8)}@accounts.fonscape.invalid`;
   const releaseRegistrationSlot = await reserveRegistrationSlot(db, context.env);
   try {
     await db.batch([
-      db.prepare("INSERT INTO users (id, email, username, password_hash, password_salt, nickname, role, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)")
-        .bind(id, legacyEmail, username, credentials.hash, credentials.salt, nickname, "member", now, now),
+      db.prepare("INSERT INTO users (id, username, password_hash, password_salt, nickname, role, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)")
+        .bind(id, username, credentials.hash, credentials.salt, nickname, "member", now, now),
       db.prepare("INSERT INTO account_usage (user_id, comments_created, updated_at) VALUES (?, 0, ?)").bind(id, now),
     ]);
   } catch (error) {
@@ -106,28 +108,58 @@ async function register(context) {
   return json({ user: publicUser(user, context.env) }, 201, { "Set-Cookie": auth.cookie });
 }
 
-async function bootstrapAdmin(context) {
-  await protectAdminBootstrap(context);
+async function adminSetupState(db) {
+  const row = await db.prepare(`SELECT
+    admin_initialized_at,
+    EXISTS (SELECT 1 FROM users WHERE role = 'admin') AS has_admin
+    FROM site_runtime WHERE id = 1 LIMIT 1`).first();
+  if (!row) throw new ApiError(503, "站点初始化数据不可用。", "setup_state_unavailable");
+  return { initialized: Boolean(row.admin_initialized_at || Number(row.has_admin)) };
+}
+
+async function adminSetupStatus(context) {
+  return json(await adminSetupState(requireDatabase(context.env)));
+}
+
+async function setupAdmin(context) {
   const db = requireDatabase(context.env);
+  if ((await adminSetupState(db)).initialized) {
+    throw new ApiError(409, "管理员账户已经完成初始化。", "admin_already_initialized");
+  }
+  await protectAdminBootstrap(context);
   const input = await readJson(context.request);
   const suppliedToken = String(input.token || "");
   const expectedToken = String(context.env.ADMIN_BOOTSTRAP_TOKEN || "");
   if (!expectedToken || !await constantTimeEqual(suppliedToken, expectedToken)) throw new ApiError(403, "管理员初始化链接无效。", "invalid_bootstrap_token");
   const username = normalizeUsername(input.username);
-  if (username.toLowerCase() !== String(context.env.ADMIN_USERNAME || "admin").trim().toLowerCase()) throw new ApiError(403, "该账户名未被授权为管理员。", "admin_username_required");
-  const existingAdmin = await db.prepare("SELECT id FROM users WHERE role = 'admin' OR username = ? COLLATE NOCASE LIMIT 1").bind(username).first();
-  if (existingAdmin) throw new ApiError(409, "管理员账户已经完成初始化。", "admin_already_initialized");
-  const nickname = normalizeNickname(input.nickname);
+  const existingUsername = await db.prepare("SELECT id FROM users WHERE username = ? COLLATE NOCASE LIMIT 1").bind(username).first();
+  if (existingUsername) throw new ApiError(409, "这个账户名已经被使用。", "username_exists");
+  const nickname = normalizeNickname(input.nickname === undefined ? username.slice(0, 10) : input.nickname);
   const password = validatePassword(input.password);
   const credentials = await hashPassword(password);
   const id = crypto.randomUUID();
+  const claim = crypto.randomUUID();
   const now = Date.now();
-  const legacyEmail = `${username.toLowerCase()}.${id.slice(0, 8)}@accounts.fonscape.invalid`;
-  await db.batch([
-    db.prepare("INSERT INTO users (id, email, username, password_hash, password_salt, nickname, role, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, 'admin', ?, ?)")
-      .bind(id, legacyEmail, username, credentials.hash, credentials.salt, nickname, now, now),
-    db.prepare("INSERT INTO account_usage (user_id, comments_created, updated_at) VALUES (?, 0, ?)").bind(id, now),
+  const results = await db.batch([
+    db.prepare(`UPDATE site_runtime
+      SET admin_initialized_at = ?, admin_bootstrap_claim = ?
+      WHERE id = 1 AND admin_initialized_at IS NULL
+        AND NOT EXISTS (SELECT 1 FROM users WHERE role = 'admin')`)
+      .bind(now, claim),
+    db.prepare(`INSERT INTO users
+      (id, username, password_hash, password_salt, nickname, role, created_at, updated_at)
+      SELECT ?, ?, ?, ?, ?, 'admin', ?, ?
+      FROM site_runtime
+      WHERE id = 1 AND admin_bootstrap_claim = ?
+        AND NOT EXISTS (SELECT 1 FROM users WHERE role = 'admin')`)
+      .bind(id, username, credentials.hash, credentials.salt, nickname, now, now, claim),
+    db.prepare(`INSERT INTO account_usage (user_id, comments_created, updated_at)
+      SELECT ?, 0, ? WHERE EXISTS (SELECT 1 FROM users WHERE id = ? AND role = 'admin')`)
+      .bind(id, now, id),
   ]);
+  if (Number(results[1]?.meta?.changes || 0) !== 1) {
+    throw new ApiError(409, "管理员账户已经完成初始化。", "admin_already_initialized");
+  }
   const auth = await createSession(db, id, context.request, limitFromEnv(context.env, "MAX_ACTIVE_SESSIONS"));
   const user = await userById(db, id);
   return json({ user: publicUser(user, context.env) }, 201, { "Set-Cookie": auth.cookie });
@@ -183,14 +215,21 @@ async function uploadAvatar(context) {
   const now = Date.now();
   // user_id is the primary key, so a new upload atomically replaces the old
   // BLOB instead of creating another avatar record for the same account.
-  await db.prepare(`INSERT INTO user_avatars (user_id, image_data, mime_type, byte_size, updated_at)
-    VALUES (?, ?, ?, ?, ?)
-    ON CONFLICT(user_id) DO UPDATE SET
-      image_data = excluded.image_data,
-      mime_type = excluded.mime_type,
-      byte_size = excluded.byte_size,
-      updated_at = excluded.updated_at`)
-    .bind(user.id, bytes.buffer, actualType, bytes.byteLength, now).run();
+  try {
+    await db.prepare(`INSERT INTO user_avatars (user_id, image_data, mime_type, byte_size, updated_at)
+      VALUES (?, ?, ?, ?, ?)
+      ON CONFLICT(user_id) DO UPDATE SET
+        image_data = excluded.image_data,
+        mime_type = excluded.mime_type,
+        byte_size = excluded.byte_size,
+        updated_at = excluded.updated_at`)
+      .bind(user.id, bytes.buffer, actualType, bytes.byteLength, now).run();
+  } catch (error) {
+    if (/avatar_capacity_reached/iu.test(error instanceof Error ? error.message : String(error))) {
+      throw new ApiError(503, "站点头像存储空间已满。", "avatar_capacity_reached");
+    }
+    throw error;
+  }
   const updated = await userById(db, user.id);
   context.data.currentUser = updated;
   return json({ user: publicUser(updated, context.env) });
@@ -488,9 +527,10 @@ async function handle(context) {
   const method = context.request.method;
   const url = new URL(context.request.url);
   if (method === "OPTIONS") return new Response(null, { status: 204 });
+  if (method === "GET" && parts[0] === "admin" && parts[1] === "setup" && parts.length === 2) return adminSetupStatus(context);
+  if (method === "POST" && parts[0] === "admin" && parts[1] === "setup" && parts.length === 2) return setupAdmin(context);
   if (method === "GET" && parts[0] === "auth" && parts[1] === "session") return session(context);
   if (method === "POST" && parts[0] === "auth" && parts[1] === "register") return register(context);
-  if (method === "POST" && parts[0] === "auth" && parts[1] === "bootstrap-admin") return bootstrapAdmin(context);
   if (method === "POST" && parts[0] === "auth" && parts[1] === "login") return login(context);
   if (method === "POST" && parts[0] === "auth" && parts[1] === "logout") return logout(context);
   if (method === "PATCH" && parts[0] === "me" && parts.length === 1) return updateMe(context);

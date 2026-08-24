@@ -34,6 +34,8 @@ export const DEFAULT_ABUSE_LIMITS = Object.freeze({
   VIEW_TARGET_HOURLY: 2000,
 });
 
+const RATE_LIMIT_SECRET_BYTES = 32;
+
 export function limitFromEnv(env, name, fallback = DEFAULT_ABUSE_LIMITS[name]) {
   const configured = env?.[name];
   if (configured === undefined || configured === null || String(configured).trim() === "") return fallback;
@@ -45,12 +47,32 @@ export function limitFromEnv(env, name, fallback = DEFAULT_ABUSE_LIMITS[name]) {
   return value;
 }
 
-export function requireRateLimitSalt(env) {
-  const salt = String(env?.RATE_LIMIT_SALT || "").trim();
-  if (!salt) {
-    throw new ApiError(503, "服务安全配置尚未完成。", "rate_limit_unconfigured");
+function randomSecret() {
+  const bytes = new Uint8Array(RATE_LIMIT_SECRET_BYTES);
+  crypto.getRandomValues(bytes);
+  return Array.from(bytes, (value) => value.toString(16).padStart(2, "0")).join("");
+}
+
+export async function rateLimitSecret(context) {
+  context.data ||= {};
+  if (context.data.rateLimitSecret) return context.data.rateLimitSecret;
+  const db = requireDatabase(context.env);
+  const candidate = randomSecret();
+  const initialized = await db.prepare(`UPDATE site_runtime
+    SET rate_limit_secret = ?
+    WHERE id = 1 AND (rate_limit_secret IS NULL OR rate_limit_secret = '')
+    RETURNING rate_limit_secret`)
+    .bind(candidate).run();
+  const secret = String(
+    initialized.results?.[0]?.rate_limit_secret
+      || (await db.prepare("SELECT rate_limit_secret FROM site_runtime WHERE id = 1 LIMIT 1").first())?.rate_limit_secret
+      || "",
+  );
+  if (secret.length < RATE_LIMIT_SECRET_BYTES) {
+    throw new ApiError(503, "服务安全数据尚未完成初始化。", "rate_limit_unavailable");
   }
-  return salt;
+  context.data.rateLimitSecret = secret;
+  return secret;
 }
 
 function ipv4Prefix(address) {
@@ -135,8 +157,8 @@ export async function consumeFixedWindow(db, key, limit, windowMs, now = Date.no
 }
 
 async function policyKey(context, action, scope, subject, windowMs) {
-  const salt = requireRateLimitSalt(context.env);
-  return sha256(`${salt}:${action}:${scope}:${windowMs}:${subject}`);
+  const secret = await rateLimitSecret(context);
+  return sha256(`${secret}:${action}:${scope}:${windowMs}:${subject}`);
 }
 
 async function enforcePolicies(context, action, policies) {
@@ -325,6 +347,9 @@ export async function cleanupRuntimeData(db, now = Date.now()) {
       ON CONFLICT(metric) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at`).bind(now),
     db.prepare(`INSERT INTO storage_counters (metric, value, updated_at)
       VALUES ('comments_created', (SELECT COUNT(*) FROM comments WHERE status != 'deleted'), ?)
+      ON CONFLICT(metric) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at`).bind(now),
+    db.prepare(`INSERT INTO storage_counters (metric, value, updated_at)
+      VALUES ('avatar_bytes', (SELECT COALESCE(SUM(byte_size), 0) FROM user_avatars), ?)
       ON CONFLICT(metric) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at`).bind(now),
   ]);
   return {

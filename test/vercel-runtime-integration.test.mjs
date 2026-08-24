@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { createClient } from "@libsql/client";
 import { handleVercelApiRequest } from "../api/[...path].js";
-import { migrateTurso } from "../scripts/migrate-turso.mjs";
+import { migrateTurso, readMigrations } from "../scripts/migrate-turso.mjs";
 import { createTursoD1Database } from "../server/turso-d1.js";
 
 test("Vercel and Turso execute the shared auth and comment API end to end", async () => {
@@ -19,9 +19,7 @@ test("Vercel and Turso execute the shared auth and comment API end to end", asyn
   const environment = {
     VERCEL: "1",
     DB: createTursoD1Database({ client }),
-    ADMIN_USERNAME: "adminuser",
     ADMIN_BOOTSTRAP_TOKEN: "test-bootstrap-token-with-enough-entropy",
-    RATE_LIMIT_SALT: "test-rate-limit-salt-with-enough-entropy",
   };
   const request = (path, { method = "GET", body, cookie } = {}) => {
     const headers = new Headers({ "x-vercel-forwarded-for": "203.0.113.9" });
@@ -35,30 +33,81 @@ test("Vercel and Turso execute the shared auth and comment API end to end", asyn
   };
 
   try {
+    const migrations = await readMigrations();
     const migration = await migrateTurso({ client, apply: true });
-    assert.equal(migration.applied.length, 17);
+    assert.equal(migration.applied.length, migrations.length);
 
     const runtime = await request("/site/runtime");
     assert.equal(runtime.status, 200);
     assert.equal(Number.isFinite((await runtime.json()).launchedAt), true);
 
-    const bootstrap = await request("/auth/bootstrap-admin", {
+    const setupBefore = await request("/admin/setup");
+    assert.equal(setupBefore.status, 200);
+    assert.deepEqual(await setupBefore.json(), { initialized: false });
+
+    const registrationBeforeSetup = await request("/auth/register", {
+      method: "POST",
+      body: { username: "earlyreader", nickname: "提前注册", password: "Reader123" },
+    });
+    assert.equal(registrationBeforeSetup.status, 403);
+    assert.equal((await registrationBeforeSetup.json()).code, "registration_closed");
+
+    const invalidBootstrap = await request("/admin/setup", {
+      method: "POST",
+      body: { token: "wrong-token", username: "invalidadmin", password: "Admin123" },
+    });
+    assert.equal(invalidBootstrap.status, 403);
+    assert.equal((await invalidBootstrap.json()).code, "invalid_bootstrap_token");
+
+    const bootstrapAttempts = await Promise.all(Array.from({ length: 4 }, (_, index) => request("/admin/setup", {
       method: "POST",
       body: {
         token: environment.ADMIN_BOOTSTRAP_TOKEN,
-        username: environment.ADMIN_USERNAME,
-        nickname: "管理员",
+        username: `adminuser${index}`,
         password: "Admin123",
       },
-    });
+    })));
+    const successfulBootstraps = bootstrapAttempts.filter((response) => response.status === 201);
+    assert.equal(successfulBootstraps.length, 1);
+    assert.deepEqual(bootstrapAttempts.filter((response) => response.status !== 201).map((response) => response.status), [409, 409, 409]);
+    const bootstrap = successfulBootstraps[0];
     assert.equal(bootstrap.status, 201);
     assert.equal((await bootstrap.clone().json()).user.role, "admin");
     const adminCookie = bootstrap.headers.get("Set-Cookie")?.split(";", 1)[0];
-    assert.match(adminCookie || "", /^fonscape_session=/u);
+    assert.match(adminCookie || "", /^[a-z][a-z0-9_-]*_session=/u);
 
     const session = await request("/auth/session", { cookie: adminCookie });
     assert.equal(session.status, 200);
-    assert.equal((await session.json()).user.username, "adminuser");
+    assert.match((await session.json()).user.username, /^adminuser[0-3]$/u);
+
+    const setupAfter = await request("/admin/setup");
+    assert.deepEqual(await setupAfter.json(), { initialized: true });
+    const retiredBootstrapRoute = await request("/auth/bootstrap-admin", {
+      method: "POST",
+      body: { token: environment.ADMIN_BOOTSTRAP_TOKEN, username: "retiredadmin", password: "Admin123" },
+    });
+    assert.equal(retiredBootstrapRoute.status, 404);
+    environment.ADMIN_BOOTSTRAP_TOKEN = "a-different-token";
+    const bootstrapAfterInitialization = await request("/admin/setup", {
+      method: "POST",
+      body: { token: environment.ADMIN_BOOTSTRAP_TOKEN, username: "anotheradmin", password: "Admin123" },
+    });
+    assert.equal(bootstrapAfterInitialization.status, 409);
+    assert.equal((await bootstrapAfterInitialization.json()).code, "admin_already_initialized");
+
+    await client.execute("UPDATE storage_counters SET value = 104857600 WHERE metric = 'avatar_bytes'");
+    const fullAvatarStorage = await handleVercelApiRequest(new Request("https://example.test/api/me/avatar", {
+      method: "POST",
+      headers: {
+        "Content-Type": "image/webp",
+        Cookie: adminCookie,
+        "x-vercel-forwarded-for": "203.0.113.9",
+      },
+      body: new Uint8Array([0x52, 0x49, 0x46, 0x46, 0, 0, 0, 0, 0x57, 0x45, 0x42, 0x50]),
+    }), environment);
+    assert.equal(fullAvatarStorage.status, 503);
+    assert.equal((await fullAvatarStorage.json()).code, "avatar_capacity_reached");
+    await client.execute("UPDATE storage_counters SET value = 0 WHERE metric = 'avatar_bytes'");
 
     const registration = await request("/auth/register", {
       method: "POST",
@@ -70,7 +119,7 @@ test("Vercel and Turso execute the shared auth and comment API end to end", asyn
     });
     assert.equal(registration.status, 201);
     const memberCookie = registration.headers.get("Set-Cookie")?.split(";", 1)[0];
-    assert.match(memberCookie || "", /^fonscape_session=/u);
+    assert.match(memberCookie || "", /^[a-z][a-z0-9_-]*_session=/u);
 
     const comment = await request("/comments", {
       method: "POST",

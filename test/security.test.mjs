@@ -15,6 +15,7 @@ import {
   protectLogin,
   protectProfileUpdate,
   protectRegistration,
+  rateLimitSecret,
 } from "../functions/_lib/abuse.js";
 import { createTursoD1Database } from "../server/turso-d1.js";
 import {
@@ -55,7 +56,7 @@ test("specific abuse limits are consumed before shared global capacity", async (
   async function consumedLimits(action) {
     const limits = [];
     const db = {
-      prepare() {
+      prepare(sql) {
         let values = [];
         const statement = {
           bind(...next) {
@@ -63,6 +64,9 @@ test("specific abuse limits are consumed before shared global capacity", async (
             return statement;
           },
           async run() {
+            if (sql.includes("SET rate_limit_secret")) {
+              return { meta: { changes: 1 }, results: [{ rate_limit_secret: "a".repeat(64) }] };
+            }
             limits.push(values.at(-1));
             return { meta: { changes: 1 }, results: [{ window_started_at: Date.now(), count: 1 }] };
           },
@@ -74,7 +78,7 @@ test("specific abuse limits are consumed before shared global capacity", async (
       request: new Request("https://example.com/api/test", {
         headers: { "CF-Connecting-IP": "203.0.113.9" },
       }),
-      env: { DB: db, RATE_LIMIT_SALT: "test-rate-limit-salt-with-enough-entropy" },
+      env: { DB: db },
     };
     await action(context);
     return limits;
@@ -107,19 +111,20 @@ test("specific abuse limits are consumed before shared global capacity", async (
   )), [2000, 10000]);
 });
 
-test("rate-limited actions fail closed when a deployment omits its private salt", async () => {
-  const context = {
-    request: new Request("https://example.com/api/auth/register", {
-      headers: { "CF-Connecting-IP": "203.0.113.9" },
-    }),
-    env: { DB: { prepare() { throw new Error("the database must not be touched without a salt"); } } },
-  };
-  await assert.rejects(protectRegistration(context), (error) => {
-    assert.ok(error instanceof ApiError);
-    assert.equal(error.status, 503);
-    assert.equal(error.code, "rate_limit_unconfigured");
-    return true;
-  });
+test("rate-limit secret is generated once in the database without an environment variable", async () => {
+  const client = createClient({ url: ":memory:" });
+  try {
+    await client.execute("CREATE TABLE site_runtime (id INTEGER PRIMARY KEY, rate_limit_secret TEXT)");
+    await client.execute("INSERT INTO site_runtime (id) VALUES (1)");
+    const db = createTursoD1Database({ client });
+    const contexts = Array.from({ length: 8 }, () => ({ env: { DB: db }, data: {} }));
+    const secrets = await Promise.all(contexts.map((context) => rateLimitSecret(context)));
+    assert.equal(new Set(secrets).size, 1);
+    assert.match(secrets[0], /^[a-f0-9]{64}$/u);
+    assert.equal((await client.execute("SELECT rate_limit_secret FROM site_runtime WHERE id = 1")).rows[0].rate_limit_secret, secrets[0]);
+  } finally {
+    await client.close();
+  }
 });
 
 test("fixed-window limits block concurrent excess and reopen after the window", async () => {
@@ -187,6 +192,7 @@ test("runtime maintenance cleans temporary rows and reconciles capacity counters
     await client.execute("CREATE TABLE comments (id TEXT PRIMARY KEY, user_id TEXT NOT NULL, status TEXT NOT NULL)");
     await client.execute("CREATE TABLE account_usage (user_id TEXT PRIMARY KEY, comments_created INTEGER NOT NULL, updated_at INTEGER NOT NULL)");
     await client.execute("CREATE TABLE storage_counters (metric TEXT PRIMARY KEY, value INTEGER NOT NULL, updated_at INTEGER NOT NULL)");
+    await client.execute("CREATE TABLE user_avatars (user_id TEXT PRIMARY KEY, byte_size INTEGER NOT NULL)");
     await client.batch([
       { sql: "INSERT INTO sessions VALUES (?, ?)", args: ["expired", 999] },
       { sql: "INSERT INTO sessions VALUES (?, ?)", args: ["active", 1_001] },
@@ -203,6 +209,7 @@ test("runtime maintenance cleans temporary rows and reconciles capacity counters
     assert.deepEqual((await client.execute("SELECT key FROM rate_limits ORDER BY key")).rows, [{ key: "fresh" }]);
     assert.deepEqual((await client.execute("SELECT comments_created FROM account_usage")).rows, [{ comments_created: 1 }]);
     assert.deepEqual((await client.execute("SELECT metric, value FROM storage_counters ORDER BY metric")).rows, [
+      { metric: "avatar_bytes", value: 0 },
       { metric: "comments_created", value: 1 },
       { metric: "member_accounts", value: 1 },
     ]);

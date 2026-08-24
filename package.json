@@ -1,6 +1,6 @@
 {
   "name": "fonscape",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Fonscape（风栖），一款清新、响应式、注重阅读体验的 React 个人博客主题模板。",
   "private": true,
   "license": "MIT",
@@ -8,38 +8,40 @@
     "type": "git",
     "url": "git+https://github.com/UndefinedFons/Fonscape.git"
   },
-  "homepage": "https://fonstage.space/",
+  "homepage": "https://github.com/UndefinedFons/Fonscape#readme",
   "packageManager": "pnpm@11.16.0",
   "type": "module",
+  "bin": {
+    "fonscape": "scripts/fonscape-update.mjs"
+  },
   "cloudflare": {
     "bindings": {
       "DB": {
         "description": "Stores runtime accounts, comments, sessions and rate-limit state; published blog content remains in Git."
       },
-      "ADMIN_USERNAME": {
-        "description": "The one account name allowed to complete the one-time administrator bootstrap."
-      },
       "ADMIN_BOOTSTRAP_TOKEN": {
-        "description": "Generate a long random one-time token and remove it after the administrator account is created."
-      },
-      "RATE_LIMIT_SALT": {
-        "description": "Generate a unique long random secret for hashing rate-limit subjects."
+        "description": "Enter a long random one-time token. Leave no default value; the first administrator enters it on /#/admin/setup."
       }
     }
   },
   "scripts": {
     "generate:content-targets": "node scripts/generate-content-targets.mjs",
     "check:content-targets": "node scripts/generate-content-targets.mjs --check",
+    "pnpm:devPreinstall": "node scripts/generate-content-targets.mjs",
     "predev": "node scripts/generate-content-targets.mjs",
     "dev": "vite",
     "prebuild": "node scripts/generate-content-targets.mjs",
     "build": "vite build",
+    "build:vercel": "pnpm migrate:turso --apply && pnpm build",
     "preview": "vite preview",
+    "pretest": "node scripts/generate-content-targets.mjs",
     "test": "node --test",
     "db:migrate:cloudflare": "wrangler d1 migrations apply DB --remote",
     "deploy": "pnpm db:migrate:cloudflare && wrangler deploy",
     "migrate:turso": "node scripts/migrate-turso.mjs",
-    "check": "node scripts/generate-content-targets.mjs --check && node --test && vite build"
+    "fonscape": "node scripts/fonscape-update.mjs",
+    "precheck": "node scripts/generate-content-targets.mjs",
+    "check": "node --test && vite build"
   },
   "dependencies": {
     "@libsql/client": "0.17.4",

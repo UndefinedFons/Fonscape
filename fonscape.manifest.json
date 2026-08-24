@@ -1,0 +1,65 @@
+{
+  "schemaVersion": 1,
+  "version": "1.1.0",
+  "ownership": {
+    "user": [
+      ".env",
+      ".env.*",
+      ".dev.vars",
+      ".dev.vars.*",
+      "fonscape.config.js",
+      "src/content/site.js",
+      "src/content/friends.json",
+      "src/content/posts/**",
+      "src/content/poems/**",
+      "src/content/music/**",
+      "public/assets/**",
+      "public/audio/**"
+    ],
+    "seed": [
+      "fonscape.config.js",
+      "src/content/friends.json"
+    ],
+    "merge": [
+      ".github/workflows/**",
+      ".env.example",
+      "index.html",
+      "package.json",
+      "pnpm-lock.yaml",
+      "pnpm-workspace.yaml",
+      "vercel.json",
+      "wrangler.jsonc"
+    ],
+    "theme": [
+      ".github/CODEOWNERS",
+      ".github/ISSUE_TEMPLATE/**",
+      ".github/PULL_REQUEST_TEMPLATE.md",
+      ".github/dependabot.yml",
+      ".gitignore",
+      ".fonscape-version",
+      "content-repository.config.mjs",
+      "fonscape.manifest.json",
+      "CHANGELOG.md",
+      "CODE_OF_CONDUCT.md",
+      "CONTENT_GUIDE.md",
+      "CONTRIBUTING.md",
+      "LICENSE",
+      "MAINTENANCE.md",
+      "README.md",
+      "SECURITY.md",
+      "api/**",
+      "docs/**",
+      "functions/**",
+      "migrations/**",
+      "public/fonscape/**",
+      "public/_headers",
+      "public/_redirects",
+      "scripts/**",
+      "server/**",
+      "src/**",
+      "test/**",
+      "vite.config.mjs",
+      "worker/**"
+    ]
+  }
+}
