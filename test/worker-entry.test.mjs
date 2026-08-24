@@ -7,6 +7,21 @@ function executionContext() {
   return { waitUntil() {} };
 }
 
+async function repositoryAudioPaths(directory, prefix = "") {
+  const entries = await readdir(directory, { withFileTypes: true });
+  const paths = [];
+  for (const entry of entries) {
+    if (entry.name.startsWith(".")) continue;
+    const relativePath = prefix ? `${prefix}/${entry.name}` : entry.name;
+    if (entry.isDirectory()) {
+      paths.push(...await repositoryAudioPaths(new URL(`${encodeURIComponent(entry.name)}/`, directory), relativePath));
+    } else if (entry.isFile()) {
+      paths.push(`/audio/${relativePath.split("/").map(encodeURIComponent).join("/")}`);
+    }
+  }
+  return paths;
+}
+
 test("Worker routes API requests through the shared Cloudflare handler", async () => {
   const response = await worker.fetch(
     new Request("https://example.com/api/not-a-real-route"),
@@ -45,10 +60,7 @@ test("Worker routes audio requests through the existing range handler", async ()
 
 test("Worker audio size metadata matches every repository audio asset", async () => {
   const audioDirectory = new URL("../public/audio/", import.meta.url);
-  const audioPaths = (await readdir(audioDirectory, { withFileTypes: true }))
-    .filter((entry) => entry.isFile() && !entry.name.startsWith("."))
-    .map((entry) => `/audio/${entry.name}`)
-    .sort();
+  const audioPaths = (await repositoryAudioPaths(audioDirectory)).sort();
 
   assert.deepEqual(audioPaths, Object.keys(audioAssetSizes).sort());
   for (const [pathname, expectedSize] of Object.entries(audioAssetSizes)) {
