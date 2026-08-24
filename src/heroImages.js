@@ -32,20 +32,27 @@ function pathVariant(path) {
   return PATH_TO_VARIANT[normalized] || "home";
 }
 
-function getGlassBackgroundImage(path) {
-  const hero = getHeroConfig(pathVariant(path));
-  return hero.glassImage || hero.image;
+function resolveGlassBackground(hero) {
+  const glassImage = typeof hero.glassImage === "string" ? hero.glassImage.trim() : "";
+  return {
+    image: glassImage || hero.image,
+    needsSoftening: !glassImage,
+  };
+}
+
+function getGlassBackground(path) {
+  return resolveGlassBackground(getHeroConfig(pathVariant(path)));
 }
 
 const ROUTE_HERO_IMAGES = PRIMARY_HERO_ORDER.map((variant) => getHeroConfig(variant).image);
 const GLASS_BACKGROUND_IMAGES = PRIMARY_HERO_ORDER.map((variant) => {
-  const hero = getHeroConfig(variant);
-  return hero.glassImage || hero.image;
+  return resolveGlassBackground(getHeroConfig(variant)).image;
 });
 
 export {
-  getGlassBackgroundImage,
+  getGlassBackground,
   getHeroStyle,
+  resolveGlassBackground,
   ROUTE_HERO_IMAGES,
   GLASS_BACKGROUND_IMAGES,
   PRIMARY_HERO_ORDER,

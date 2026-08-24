@@ -3297,7 +3297,11 @@ a.home-dash-panel:focus-visible {
   --glass-veil-opacity:1;
 }
 :root[data-glass="on"] .app-shell { background:transparent; }
-:root[data-glass="on"] .global-glass-backdrop { opacity:var(--glass-image-opacity); }
+:root[data-glass="on"] .global-glass-backdrop {
+  opacity:var(--glass-image-opacity);
+  filter:var(--glass-background-filter,none);
+  transform:var(--glass-background-transform,translateZ(0));
+}
 :root[data-glass="on"] .global-glass-veil { opacity:var(--glass-veil-opacity); }
 :root[data-glass="on"] .home-refresh-page,
 :root[data-glass="on"] .home-dashboard-page,
@@ -3688,7 +3692,7 @@ a.home-dash-panel:focus-visible {
   }
 }
 
-/* Keep glass depth without real-time backdrop sampling or full-screen filters. */
+/* Keep panel depth without real-time backdrop sampling. */
 .inner-icon,
 .zoomable-image-hint,
 .image-lightbox-close,
