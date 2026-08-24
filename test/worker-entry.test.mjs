@@ -1,10 +1,25 @@
 import assert from "node:assert/strict";
 import { readFile, readdir, stat } from "node:fs/promises";
 import test from "node:test";
-import worker, { audioAssetSizes } from "../worker/index.js";
+import worker, { audioAssetSizes, canonicalAudioPathname } from "../worker/index.js";
 
 function executionContext() {
   return { waitUntil() {} };
+}
+
+async function repositoryAudioPaths(directory, prefix = "") {
+  const entries = await readdir(directory, { withFileTypes: true });
+  const paths = [];
+  for (const entry of entries) {
+    if (entry.name.startsWith(".")) continue;
+    const relativePath = prefix ? `${prefix}/${entry.name}` : entry.name;
+    if (entry.isDirectory()) {
+      paths.push(...await repositoryAudioPaths(new URL(`${encodeURIComponent(entry.name)}/`, directory), relativePath));
+    } else if (entry.isFile()) {
+      paths.push(`/audio/${relativePath.split("/").map(encodeURIComponent).join("/")}`);
+    }
+  }
+  return paths;
 }
 
 test("Worker routes API requests through the shared Cloudflare handler", async () => {
@@ -45,16 +60,18 @@ test("Worker routes audio requests through the existing range handler", async ()
 
 test("Worker audio size metadata matches every repository audio asset", async () => {
   const audioDirectory = new URL("../public/audio/", import.meta.url);
-  const audioPaths = (await readdir(audioDirectory, { withFileTypes: true }))
-    .filter((entry) => entry.isFile() && !entry.name.startsWith("."))
-    .map((entry) => `/audio/${entry.name}`)
-    .sort();
+  const audioPaths = (await repositoryAudioPaths(audioDirectory)).sort();
 
   assert.deepEqual(audioPaths, Object.keys(audioAssetSizes).sort());
   for (const [pathname, expectedSize] of Object.entries(audioAssetSizes)) {
     const metadata = await stat(new URL(`../public${pathname}`, import.meta.url));
     assert.equal(metadata.size, expectedSize, `${pathname} size metadata is stale`);
   }
+});
+
+test("Worker canonicalizes equivalent audio pathname escapes", () => {
+  assert.equal(canonicalAudioPathname("/audio/%e9%9f%b3%e4%b9%90.mp3"), "/audio/%E9%9F%B3%E4%B9%90.mp3");
+  assert.equal(canonicalAudioPathname("/audio/mix%20one.mp3"), "/audio/mix%20one.mp3");
 });
 
 test("Worker delegates non-dynamic paths to Static Assets unchanged", async () => {

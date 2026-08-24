@@ -2,6 +2,14 @@
 
 Fonscape 的公开版本变化记录在这里。版本号遵循语义化版本。
 
+## [1.1.4] - 2026-08-24
+
+### 修复
+
+- Worker 的音频大小元数据改为在构建时从每个站点自己的 `public/audio/` 自动生成，不再要求博客实例保留手写的 Worker 差异。
+- 站点配置测试改为验证公共配置结构与 Fonscape 主题署名，不再把公共模板的示例文案误当成所有博客必须使用的内容。
+- Updater 将数据库迁移视为只可追加、不可覆盖的执行历史，并保护构建生成文件；主题校准不会再删除站点已经记录的迁移。
+
 ## [1.1.3] - 2026-08-24
 
 ### 改进
@@ -80,6 +88,7 @@ Fonscape 的公开版本变化记录在这里。版本号遵循语义化版本�
 
 - 生产使用前建议在独立预览环境验证主题配置、数据库与部署链路。
 
+[1.1.4]: https://github.com/UndefinedFons/Fonscape/releases/tag/v1.1.4
 [1.1.3]: https://github.com/UndefinedFons/Fonscape/releases/tag/v1.1.3
 [1.1.2]: https://github.com/UndefinedFons/Fonscape/releases/tag/v1.1.2
 [1.1.1]: https://github.com/UndefinedFons/Fonscape/releases/tag/v1.1.1

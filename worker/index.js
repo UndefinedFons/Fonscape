@@ -1,8 +1,17 @@
 import { onRequest as handleApiRequest } from "../functions/api/[[path]].js";
 import { onRequest as handleAudioRequest } from "../functions/audio/[[path]].js";
 import { cleanupRuntimeData } from "../functions/_lib/abuse.js";
+import { audioAssetSizes } from "../functions/_generated/content-targets.js";
 
-export const audioAssetSizes = Object.freeze({});
+export { audioAssetSizes };
+
+export function canonicalAudioPathname(pathname) {
+  try {
+    return pathname.split("/").map((segment) => encodeURIComponent(decodeURIComponent(segment))).join("/");
+  } catch {
+    return pathname;
+  }
+}
 
 function routePath(pathname, prefix) {
   const value = pathname.slice(prefix.length).replace(/^\/+|\/+$/gu, "");
@@ -34,7 +43,7 @@ function audioAssetsBinding(assets) {
       const headers = new Headers(request.headers);
       headers.delete("Range");
       const response = await assets.fetch(new Request(request.url, { method: request.method, headers }));
-      const size = audioAssetSizes[new URL(request.url).pathname];
+      const size = audioAssetSizes[canonicalAudioPathname(new URL(request.url).pathname)];
       if (!response.ok || response.status !== 200 || !size || Number(response.headers.get("Content-Length")) > 0) {
         return response;
       }
