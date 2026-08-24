@@ -146,7 +146,7 @@ date: 2026-07-27T20:00
 ![图片说明](/assets/example.webp "可选图片标题")
 ```
 
-音频建议放在 `public/audio/`，Frontmatter 中使用 `/audio/example.mp3`。
+音频建议放在 `public/assets/audio/`，Frontmatter 中使用 `/assets/audio/example.mp3`。
 
 ## 自动扫描
 
@@ -156,13 +156,12 @@ date: 2026-07-27T20:00
 - `src/content/poems/*.md`
 - `src/content/music/*.md`
 
-构建前会由 `scripts/generate-content-targets.mjs` 生成前端与 API 共用的内容目标清单。Frontmatter 缺少必填字段、日期无效、slug 重复或生成结果没有同步时，测试或生产构建会直接报错，避免错误内容进入线上。
+安装、开发、构建、测试与检查命令会先由 `scripts/generate-content-targets.mjs` 生成前端与 API 共用的内容目标清单。Frontmatter 缺少必填字段、日期无效或 slug 重复时，命令会直接报错，避免错误内容进入线上。
 
-新增、删除或重命名内容后运行：
+新增、删除或重命名内容后只需运行：
 
 ```bash
-pnpm generate:content-targets
 pnpm check
 ```
 
-提交时应同时包含 Markdown 文件和更新后的 `functions/_generated/content-targets.js`。推送到部署分支后，平台的 Git 集成会自动构建；不需要在数据库中再次发布文章。
+内容目标会在安装、开发、构建、测试与检查命令前自动生成，不需要手工运行生成器或提交生成文件。推送到部署分支后，平台的 Git 集成会自动构建；不需要在数据库中再次发布文章。

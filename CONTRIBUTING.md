@@ -40,8 +40,10 @@ pnpm dev
 新增、删除或重命名 Markdown 内容后运行：
 
 ```bash
-pnpm generate:content-targets
+pnpm check
 ```
+
+内容目标会在命令前自动生成，不要手工编辑或提交 `functions/_generated/content-targets.js`。
 
 ## 验证
 

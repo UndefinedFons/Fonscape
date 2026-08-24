@@ -4,14 +4,14 @@
 
 - 文章、小诗、音乐手记分别放在 `src/content/posts/`、`src/content/poems/`、`src/content/music/`。
 - 三类内容均为 Markdown，并由构建程序自动扫描；不需要维护手写 JavaScript 索引。
-- `pnpm generate:content-targets` 生成 API 可接受的内容目标，`predev` 与 `prebuild` 会自动运行。
+- 安装、开发、构建、测试与检查命令会自动生成 API 可接受的内容目标，不需要手工提交生成文件。
 - 提交前运行 `pnpm check`，确认内容清单、测试与生产构建全部通过。
 
 ## 数据库维护
 
 - D1 或 Turso 只保存账户、评论、会话、统计、审核和限频等运行时数据；已发布博客内容与友链保存在仓库。
 - 数据库结构变更只新增到 `migrations/`，并从 `0001` 起在全新数据库中顺序验证。
-- 头像表以 `user_id` 为主键，新头像通过 UPSERT 覆盖旧 BLOB；原始图片限制为 10 MB，处理后保存的 WebP 限制为 100 KB。
+- 头像表以 `user_id` 为主键，新头像通过 UPSERT 覆盖旧 BLOB；原始图片限制为 10 MB，处理后保存的 WebP 限制为 100 KiB，全站头像总容量固定为 100 MiB。
 
 ## 滥用防护
 
@@ -26,7 +26,7 @@
 | 资料 | 同账户每小时 20 次 |
 | 浏览计数 | 单内容每小时 2,000 次；全站每小时 10,000 次。计数超限不影响静态页面正常阅读 |
 
-配置项见 `.env.example` 与 `functions/_lib/abuse.js`。无效、非整数或非正数配置会拒绝受保护操作，限频盐缺失时也会安全地拒绝执行。
+默认限制见 `functions/_lib/abuse.js`。限频哈希密钥由服务端在数据库中首次安全随机生成，不增加 `RATE_LIMIT_SALT` 或其他部署变量。
 
 ## 发布检查
 
