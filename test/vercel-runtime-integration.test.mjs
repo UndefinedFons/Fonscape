@@ -64,6 +64,7 @@ test("Vercel and Turso execute the shared auth and comment API end to end", asyn
       body: {
         token: environment.ADMIN_BOOTSTRAP_TOKEN,
         username: `adminuser${index}`,
+        nickname: `管理员${index}`,
         password: "Admin123",
       },
     })));
@@ -72,7 +73,9 @@ test("Vercel and Turso execute the shared auth and comment API end to end", asyn
     assert.deepEqual(bootstrapAttempts.filter((response) => response.status !== 201).map((response) => response.status), [409, 409, 409]);
     const bootstrap = successfulBootstraps[0];
     assert.equal(bootstrap.status, 201);
-    assert.equal((await bootstrap.clone().json()).user.role, "admin");
+    const bootstrapUser = (await bootstrap.clone().json()).user;
+    assert.equal(bootstrapUser.role, "admin");
+    assert.match(bootstrapUser.nickname, /^管理员[0-3]$/u);
     const adminCookie = bootstrap.headers.get("Set-Cookie")?.split(";", 1)[0];
     assert.match(adminCookie || "", /^[a-z][a-z0-9_-]*_session=/u);
 
