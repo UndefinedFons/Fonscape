@@ -8,6 +8,7 @@ import { SearchDialog, SettingsDialog } from "./components/Dialogs.jsx";
 import { Footer } from "./components/Footer.jsx";
 import { posts } from "./content/index.js";
 import { AboutPage } from "./pages/AboutPage.jsx";
+import { AdminSetupPage } from "./pages/AdminSetupPage.jsx";
 import { ArticlePage } from "./pages/ArticlePage.jsx";
 import { FriendsPage } from "./pages/FriendsPage.jsx";
 import { HomePage } from "./pages/HomePage.jsx";
@@ -215,6 +216,7 @@ export function App() {
     if (route === "/music") return <MusicPage stats={contentStats.music} />;
     if (route === "/friends") return <FriendsPage />;
     if (route === "/about") return <AboutPage />;
+    if (route === "/admin/setup") return <AdminSetupPage />;
     return <NotFound />;
   }, [route, routeQuery, contentStats, recordContentView]);
   const isDetailRoute = route.startsWith("/post/") || route.startsWith("/poem/") || route.startsWith("/music/");
@@ -251,6 +253,7 @@ export function App() {
       window.removeEventListener("resize", update);
     };
   }, [route, hasArticleOutline]);
+  const isSetupRoute = route === "/admin/setup";
   const toggleTheme = () => {
     const nextTheme = theme === "light" ? "dark" : "light";
     flushSync(() => setThemeChanging(true));
@@ -264,8 +267,8 @@ export function App() {
   return <div className={themeChanging ? "app-shell theme-changing" : "app-shell"} style={{ "--glass-background-image": `url("${glassBackgroundImage}")` }}>
     <span className="global-glass-backdrop" aria-hidden="true" />
     <span className="global-glass-veil" aria-hidden="true" />
-    <Header route={route} theme={theme} menuOpen={menuOpen} onMenu={() => { setArticleOutlineOpen(false); setMenuOpen((value) => !value); }} onTheme={toggleTheme} onSearch={() => setSearchOpen(true)} onSettings={() => setSettingsOpen(true)} viewer={viewer} onAccount={() => openAccount(viewer ? "profile" : "login")} hasArticleOutline={hasArticleOutline} articleOutlineOpen={articleOutlineOpen} onArticleOutline={() => { setMenuOpen(false); setArticleOutlineOpen((value) => !value); }} onCloseArticleOutline={() => setArticleOutlineOpen(false)} />
-    {hasArticleOutline && <ArticleOutlinePopover items={activePostOutline} open={articleOutlineOpen} activeId={activeOutlineId || activePostOutline[0]?.id} onClose={() => setArticleOutlineOpen(false)} onSelect={(item) => { document.getElementById(item.id)?.scrollIntoView({ behavior: "smooth", block: "start" }); setActiveOutlineId(item.id); setArticleOutlineOpen(false); }} />}
-    <div className={isDetailRoute ? "route-view route-view--detail" : "route-view"} key={route}>{content}</div><Footer />{searchOpen && <SearchDialog onClose={() => setSearchOpen(false)} />}{settingsOpen && <SettingsDialog glassEnabled={glassEnabled} onGlassChange={setGlassEnabled} onClose={() => setSettingsOpen(false)} />}<AccountDialog />{accountNotice && <aside className="community-account-notice" role="alert"><div><strong>账户通知</strong><p>{accountNotice}</p></div><button type="button" onClick={dismissAccountNotice}>知道了</button></aside>}
+    {!isSetupRoute && <Header route={route} theme={theme} menuOpen={menuOpen} onMenu={() => { setArticleOutlineOpen(false); setMenuOpen((value) => !value); }} onTheme={toggleTheme} onSearch={() => setSearchOpen(true)} onSettings={() => setSettingsOpen(true)} viewer={viewer} onAccount={() => openAccount(viewer ? "profile" : "login")} hasArticleOutline={hasArticleOutline} articleOutlineOpen={articleOutlineOpen} onArticleOutline={() => { setMenuOpen(false); setArticleOutlineOpen((value) => !value); }} onCloseArticleOutline={() => setArticleOutlineOpen(false)} />}
+    {!isSetupRoute && hasArticleOutline && <ArticleOutlinePopover items={activePostOutline} open={articleOutlineOpen} activeId={activeOutlineId || activePostOutline[0]?.id} onClose={() => setArticleOutlineOpen(false)} onSelect={(item) => { document.getElementById(item.id)?.scrollIntoView({ behavior: "smooth", block: "start" }); setActiveOutlineId(item.id); setArticleOutlineOpen(false); }} />}
+    <div className={isDetailRoute ? "route-view route-view--detail" : "route-view"} key={route}>{content}</div>{!isSetupRoute && <><Footer />{searchOpen && <SearchDialog onClose={() => setSearchOpen(false)} />}{settingsOpen && <SettingsDialog glassEnabled={glassEnabled} onGlassChange={setGlassEnabled} onClose={() => setSettingsOpen(false)} />}<AccountDialog />{accountNotice && <aside className="community-account-notice" role="alert"><div><strong>账户通知</strong><p>{accountNotice}</p></div><button type="button" onClick={dismissAccountNotice}>知道了</button></aside>}</>}
   </div>;
 }

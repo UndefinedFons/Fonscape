@@ -5,12 +5,14 @@ import { PaperPlaneTilt } from "@phosphor-icons/react/PaperPlaneTilt";
 import { ArrowBendUpLeft } from "@phosphor-icons/react/ArrowBendUpLeft";
 import { CaretDown } from "@phosphor-icons/react/CaretDown";
 import { CaretUp } from "@phosphor-icons/react/CaretUp";
+import { CopySimple } from "@phosphor-icons/react/CopySimple";
 import { Trash } from "@phosphor-icons/react/Trash";
 import { WarningCircle } from "@phosphor-icons/react/WarningCircle";
 import { X } from "@phosphor-icons/react/X";
 import { Avatar } from "./Avatar.jsx";
 import { api, formatCommunityTime } from "./api.js";
 import { useCommunity } from "./CommunityProvider.jsx";
+import { friendEntryJson, parseFriendApplication } from "./friendApplication.js";
 
 function readCommentTarget() {
   return new URLSearchParams(window.location.hash.split("?")[1] || "").get("comment") || "";
@@ -194,10 +196,15 @@ function ReplyEditor({ closing, immediateOpen, onClosed, children }) {
   return <div ref={editor} className={`comment-reply-editor${closing ? " is-closing" : ""}`} aria-hidden={closing} onTransitionEnd={finishTransition}><div ref={content}>{children}</div></div>;
 }
 
-function CommentItemImpl({ comment, replies, targetType, slug, onRefresh, locatedCommentId, activeReplyId, closingReplyId, replySwitchInProgress, onReplyOpen, onReplyClose, onReplyClosed, compact = false }) {
+function CommentItemImpl({ comment, replies, targetType, slug, onRefresh, locatedCommentId, activeReplyId, closingReplyId, replySwitchInProgress, onReplyOpen, onReplyClose, onReplyClosed, friendApplicationEnabled = false, compact = false }) {
   const { viewer, openAccount } = useCommunity();
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [message, setMessage] = useState("");
+  const [copyState, setCopyState] = useState("");
+  const friendApplication = useMemo(
+    () => friendApplicationEnabled ? parseFriendApplication(comment.body) : null,
+    [comment.body, friendApplicationEnabled],
+  );
   const targetedReply = useRef(readCommentTarget()).current;
   const [repliesExpanded, setRepliesExpanded] = useState(() => replies.some((reply) => reply.id === targetedReply));
   const replying = activeReplyId === comment.id || closingReplyId === comment.id;
@@ -221,8 +228,18 @@ function CommentItemImpl({ comment, replies, targetType, slug, onRefresh, locate
     if (replying) onReplyClose(comment.id);
     else onReplyOpen(comment.id);
   };
-  const childProps = { targetType, slug, onRefresh, locatedCommentId, activeReplyId, closingReplyId, replySwitchInProgress, onReplyOpen, onReplyClose, onReplyClosed };
-  return <li className={`comment-thread${compact ? " comment-thread--compact" : ""}`}><article id={`comment-${comment.id}`} tabIndex="-1" className={`comment-item${compact ? " comment-item--compact" : ""}${comment.id === locatedCommentId ? " is-located-comment" : ""}`}><Avatar user={comment.author} size="medium" /><div className="comment-main"><header><strong>{comment.author.nickname}</strong>{comment.author.role === "admin" && <span className="author-badge"><Check size={11} weight="bold" />博主</span>}<time>{formatCommunityTime(comment.createdAt)}</time>{comment.editedAt && <small>已编辑</small>}</header>{comment.replyTo && <span className="comment-reply-to">回复 @{comment.replyTo}</span>}<p className="comment-body">{comment.body}</p><div className="comment-actions"><button type="button" onClick={toggleReply} aria-expanded={activeReplyId === comment.id && !replyClosing}><ArrowBendUpLeft size={14} />回复</button>{comment.canDelete && <button type="button" className={confirmDelete ? "is-danger" : ""} onClick={remove} onBlur={() => setConfirmDelete(false)}><Trash size={14} />{confirmDelete ? "再次点击确认" : "删除"}</button>}</div>{message && <p className="comment-action-message" role="status">{message}</p>}{replying && <ReplyEditor closing={replyClosing} immediateOpen={replySwitchInProgress && !replyClosing} onClosed={() => onReplyClosed(comment.id)}><StableCommentComposer targetType={targetType} slug={slug} parent={comment} onCancel={() => onReplyClose(comment.id)} onCreated={() => { onReplyClose(comment.id); onRefresh(); }} /></ReplyEditor>}</div></article>{replies.length > 0 && <div className="comment-replies-wrap"><ul className="comment-replies"><CommentItem comment={replies[0]} replies={[]} {...childProps} compact /></ul>{replies.length > 1 && <><div className={`comment-replies-extra${repliesExpanded ? " is-open" : ""}`} aria-hidden={!repliesExpanded} inert={repliesExpanded ? undefined : ""}><div><ul className="comment-replies">{replies.slice(1).map((reply) => <CommentItem key={reply.id} comment={reply} replies={[]} {...childProps} compact />)}</ul></div></div><button type="button" className="comment-replies-toggle" aria-expanded={repliesExpanded} onClick={() => setRepliesExpanded((value) => !value)}>{repliesExpanded ? <><CaretUp size={14} />收起回复</> : <><CaretDown size={14} />展开其余 {replies.length - 1} 条回复</>}</button></>}</div>}</li>;
+  const copyFriendEntry = async () => {
+    try {
+      await navigator.clipboard.writeText(friendEntryJson(friendApplication, comment.author));
+      setCopyState("已复制友链 JSON");
+    } catch {
+      setCopyState("复制失败，请重试");
+    }
+    window.setTimeout(() => setCopyState(""), 1800);
+  };
+  const childProps = { targetType, slug, onRefresh, locatedCommentId, activeReplyId, closingReplyId, replySwitchInProgress, onReplyOpen, onReplyClose, onReplyClosed, friendApplicationEnabled };
+  const canCopyFriendEntry = viewer?.role === "admin" && friendApplication?.valid;
+  return <li className={`comment-thread${compact ? " comment-thread--compact" : ""}`}><article id={`comment-${comment.id}`} tabIndex="-1" className={`comment-item${compact ? " comment-item--compact" : ""}${comment.id === locatedCommentId ? " is-located-comment" : ""}`}><Avatar user={comment.author} size="medium" /><div className="comment-main"><header><strong>{comment.author.nickname}</strong>{comment.author.role === "admin" && <span className="author-badge"><Check size={11} weight="bold" />博主</span>}<time>{formatCommunityTime(comment.createdAt)}</time>{comment.editedAt && <small>已编辑</small>}</header>{comment.replyTo && <span className="comment-reply-to">回复 @{comment.replyTo}</span>}<p className="comment-body">{comment.body}</p><div className="comment-actions"><button type="button" onClick={toggleReply} aria-expanded={activeReplyId === comment.id && !replyClosing}><ArrowBendUpLeft size={14} />回复</button>{canCopyFriendEntry && <button type="button" onClick={copyFriendEntry}><CopySimple size={14} />复制友链 JSON</button>}{comment.canDelete && <button type="button" className={confirmDelete ? "is-danger" : ""} onClick={remove} onBlur={() => setConfirmDelete(false)}><Trash size={14} />{confirmDelete ? "再次点击确认" : "删除"}</button>}</div>{copyState && <p className="comment-action-message" role="status">{copyState}</p>}{message && <p className="comment-action-message" role="status">{message}</p>}{replying && <ReplyEditor closing={replyClosing} immediateOpen={replySwitchInProgress && !replyClosing} onClosed={() => onReplyClosed(comment.id)}><StableCommentComposer targetType={targetType} slug={slug} parent={comment} onCancel={() => onReplyClose(comment.id)} onCreated={() => { onReplyClose(comment.id); onRefresh(); }} /></ReplyEditor>}</div></article>{replies.length > 0 && <div className="comment-replies-wrap"><ul className="comment-replies"><CommentItem comment={replies[0]} replies={[]} {...childProps} compact /></ul>{replies.length > 1 && <><div className={`comment-replies-extra${repliesExpanded ? " is-open" : ""}`} aria-hidden={!repliesExpanded} inert={repliesExpanded ? undefined : ""}><div><ul className="comment-replies">{replies.slice(1).map((reply) => <CommentItem key={reply.id} comment={reply} replies={[]} {...childProps} compact />)}</ul></div></div><button type="button" className="comment-replies-toggle" aria-expanded={repliesExpanded} onClick={() => setRepliesExpanded((value) => !value)}>{repliesExpanded ? <><CaretUp size={14} />收起回复</> : <><CaretDown size={14} />展开其余 {replies.length - 1} 条回复</>}</button></>}</div>}</li>;
 }
 
 function threadContainsId(props, id) {
@@ -239,6 +256,7 @@ function commentItemPropsEqual(previous, next) {
     || previous.onReplyOpen !== next.onReplyOpen
     || previous.onReplyClose !== next.onReplyClose
     || previous.onReplyClosed !== next.onReplyClosed
+    || previous.friendApplicationEnabled !== next.friendApplicationEnabled
     || previous.compact !== next.compact
   ) return false;
   const changedIds = new Set([
@@ -398,6 +416,6 @@ export function CommentsSection({ targetType, slug }) {
     state.comments.forEach((comment) => { if (comment.parentId) replies.set(comment.parentId, [...(replies.get(comment.parentId) || []), comment]); });
     return state.comments.filter((comment) => !comment.parentId).sort((left, right) => new Date(right.createdAt) - new Date(left.createdAt)).map((comment) => ({ comment, replies: (replies.get(comment.id) || []).sort((left, right) => new Date(left.createdAt) - new Date(right.createdAt)) }));
   }, [state.comments]);
-  const replyProps = { activeReplyId: replyState.activeId, closingReplyId: replyState.closingId, replySwitchInProgress: replyState.switching, onReplyOpen: openReply, onReplyClose: closeReply, onReplyClosed: finishReplyClose };
+  const replyProps = { activeReplyId: replyState.activeId, closingReplyId: replyState.closingId, replySwitchInProgress: replyState.switching, onReplyOpen: openReply, onReplyClose: closeReply, onReplyClosed: finishReplyClose, friendApplicationEnabled: targetType === "post" && slug === "site-friends" };
   return <section className="comments-section" aria-labelledby={`comments-${targetType}-${slug}`}><header className="comments-heading"><div><span className="comments-heading-icon" aria-hidden="true"><ChatCircleDots size={22} weight="duotone" /></span><h2 id={`comments-${targetType}-${slug}`}>评论</h2></div><span>{state.comments.length} 条评论</span></header><StableCommentComposer targetType={targetType} slug={slug} onCreated={load} />{state.loading ? <div className="community-skeleton" aria-label="正在读取评论"><i /><i /><i /></div> : state.error ? <div className="comments-error"><WarningCircle size={23} /><p>{state.error}</p><button type="button" onClick={load}>重试</button></div> : threads.length ? <ul className="comment-list">{threads.map(({ comment, replies }) => <CommentItem key={comment.id} comment={comment} replies={replies} targetType={targetType} slug={slug} onRefresh={load} locatedCommentId={locatedCommentId} {...replyProps} />)}</ul> : null}</section>;
 }
