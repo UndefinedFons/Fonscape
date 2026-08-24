@@ -155,9 +155,9 @@ function matchesPattern(path, pattern) {
 }
 
 export function classifyPath(path, manifest) {
-  for (const ownership of ["user", "merge", "theme"]) {
+  for (const ownership of ["user", "history", "merge", "theme"]) {
     if (ownership === "user" && path === PUBLIC_ENV_TEMPLATE_PATH) continue;
-    if (manifest.ownership[ownership].some((pattern) => matchesPattern(path, pattern))) return ownership;
+    if ((manifest.ownership[ownership] || []).some((pattern) => matchesPattern(path, pattern))) return ownership;
   }
   return "unmanaged";
 }
@@ -256,6 +256,12 @@ async function validateManifest(directory, expectedVersion) {
     if (!Array.isArray(manifest.ownership?.[key]) || manifest.ownership[key].some((item) => typeof item !== "string")) {
       throw new Error(`manifest ownership.${key} 无效。`);
     }
+  }
+  if (manifest.ownership.history !== undefined && (
+    !Array.isArray(manifest.ownership.history)
+    || manifest.ownership.history.some((item) => typeof item !== "string")
+  )) {
+    throw new Error("manifest ownership.history 无效。");
   }
   if (manifest.ownership.user.includes(PUBLIC_ENV_TEMPLATE_PATH)) {
     throw new Error("manifest ownership.user 不能声明 .env.example 为用户文件。");
@@ -405,6 +411,14 @@ export async function createUpdatePlan({ project, source, target, manifest, from
       readOptional(join(project, path)),
       readOptional(join(target, path)),
     ]);
+    if (ownership === "history") {
+      if (local === null && incoming !== null) {
+        actions.push(action(path, "write", incoming, "new-history-file", await modeFor(target, path), local));
+      } else if (local !== null && incoming !== null && !equal(local, incoming)) {
+        conflicts.push({ path, reason: "immutable-history-file-changed", base, local, incoming, merged: null });
+      }
+      continue;
+    }
     if (reconcileTheme && ownership === "theme") {
       if (equal(local, incoming)) continue;
       if (incoming === null) {

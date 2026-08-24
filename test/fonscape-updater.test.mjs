@@ -26,6 +26,7 @@ const ownership = {
     "public/audio/**",
   ],
   seed: ["src/content/friends.json"],
+  history: ["migrations/**"],
   merge: [".env.example", "package.json"],
   theme: ["docs/**", "src/**", "scripts/**"],
 };
@@ -102,6 +103,7 @@ test("manifest ownership gives user files priority over broad theme paths", () =
   assert.equal(classifyPath(".env.production", manifest), "user");
   assert.equal(classifyPath(".env.example", manifest), "merge");
   assert.equal(classifyPath("src/App.jsx", manifest), "theme");
+  assert.equal(classifyPath("migrations/0001_setup.sql", manifest), "history");
   assert.equal(classifyPath("package.json", manifest), "merge");
   assert.equal(classifyPath("CNAME", manifest), "unmanaged");
 });
@@ -131,6 +133,50 @@ test("theme reconciliation restores the release without touching user files", as
   await assert.rejects(access(join(data.project, "src/retired-theme-file.jsx")), { code: "ENOENT" });
   assert.equal(await readFile(join(data.project, "src/content/posts/site.md"), "utf8"), "# My post\n");
   assert.equal(await readFile(join(data.project, "public/assets/site.png"), "utf8"), "site asset\n");
+});
+
+test("migration history is additive and keeps installation-only records", async (context) => {
+  const data = await fixture();
+  context.after(() => rm(data.root, { recursive: true, force: true }));
+  await Promise.all([
+    put(data.source, "migrations/0001_setup.sql", "CREATE TABLE example (id TEXT);\n"),
+    put(data.target, "migrations/0001_setup.sql", "CREATE TABLE example (id TEXT);\n"),
+    put(data.target, "migrations/0002_runtime.sql", "ALTER TABLE example ADD COLUMN created_at TEXT;\n"),
+    put(data.project, "migrations/0001_setup.sql", "CREATE TABLE example (id TEXT);\n"),
+    put(data.project, "migrations/0001_installation_history.sql", "SELECT 1;\n"),
+  ]);
+
+  await main([
+    "update",
+    "--project", data.project,
+    "--source-dir", data.source,
+    "--target-dir", data.target,
+    "--reconcile-theme",
+    "--apply",
+  ]);
+
+  assert.equal(await readFile(join(data.project, "migrations/0001_installation_history.sql"), "utf8"), "SELECT 1;\n");
+  assert.equal(await readFile(join(data.project, "migrations/0002_runtime.sql"), "utf8"), "ALTER TABLE example ADD COLUMN created_at TEXT;\n");
+});
+
+test("migration history refuses to overwrite a changed checksum", async (context) => {
+  const data = await fixture();
+  context.after(() => rm(data.root, { recursive: true, force: true }));
+  await Promise.all([
+    put(data.source, "migrations/0001_setup.sql", "SELECT 'source';\n"),
+    put(data.target, "migrations/0001_setup.sql", "SELECT 'target';\n"),
+    put(data.project, "migrations/0001_setup.sql", "SELECT 'installed';\n"),
+  ]);
+
+  await assert.rejects(main([
+    "update",
+    "--project", data.project,
+    "--source-dir", data.source,
+    "--target-dir", data.target,
+    "--reconcile-theme",
+    "--apply",
+  ]), /存在不能自动处理的冲突/u);
+  assert.equal(await readFile(join(data.project, "migrations/0001_setup.sql"), "utf8"), "SELECT 'installed';\n");
 });
 
 test("real env files stay user-owned while the public env example three-way merges", async (context) => {
