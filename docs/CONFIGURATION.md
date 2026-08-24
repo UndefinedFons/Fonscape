@@ -4,7 +4,7 @@ Fonscape 把可公开的站点资料放在仓库中，把密钥与数据库连�
 
 ## 站点资料
 
-编辑 `src/content/site.js` 中的 `siteConfig`：
+编辑仓库根目录的 `fonscape.config.js`：
 
 | 配置 | 作用 |
 | --- | --- |
@@ -35,41 +35,39 @@ Fonscape 把可公开的站点资料放在仓库中，把密钥与数据库连�
 `siteConfig.heroes` 包含 `home`、`posts`、`poems`、`music`、`friends`、`about` 六个页面。每项支持：
 
 ```js
-home: Object.freeze({
+home: {
   image: "/assets/home-hero.webp",
-  glassImage: "/assets/home-hero-soft.webp",
   position: "center",
   mobilePosition: "60% center",
   size: "cover",
-})
+}
 ```
 
 - `image`：普通页面头图。
-- `glassImage`：开启全局磨砂玻璃时用于背景取色的图片；可与 `image` 相同。
 - `position`：桌面与平板焦点，对应 CSS `background-position`。
 - `mobilePosition`：移动端焦点。
 - `size`：通常使用 `cover`。
 
-默认头图是 `public/assets/hero-white.svg`。替换图片时将文件放入 `public/assets/`，并使用 `/assets/...` 路径。
+默认头图是主题资源 `public/fonscape/hero-white.svg`。自定义图片放入使用者目录 `public/assets/`，并使用 `/assets/...` 路径；升级器不会覆盖该目录。
 
 ## 友链
 
-已发布友链由 `src/content/site.js` 中的 `friendLinks` 数组维护：
+已发布友链由 `src/content/friends.json` 数组维护：
 
-```js
-export const friendLinks = [
+```json
+[
   {
-    name: "示例站点",
-    url: "https://example.com",
-    description: "站点简介",
-    owner: "站长名称",
-    avatar: "/assets/friend-example.webp",
-    color: "#d98ab0",
-  },
-];
+    "name": "示例站点",
+    "url": "https://example.com",
+    "description": "站点简介",
+    "owner": "站长名称",
+    "avatar": "/assets/friend-example.webp",
+    "color": "#d98ab0"
+  }
+]
 ```
 
-`avatarUserId` 仅用于需要从当前站点账户系统同步头像的场景。普通静态友链使用 `avatar` 即可。不要把其他 Fonscape 站点的用户 ID 或运行时数据复制到新站点。
+`userId` 用于从当前站点账户系统同步头像与昵称。普通静态友链也可使用 `avatar`。为兼容 1.0.0，页面仍能读取旧的 `avatarUserId`，新条目只使用 `userId`。不要把其他 Fonscape 站点的用户 ID 或运行时数据复制到新站点。
 
 ## 内容与资源
 
@@ -79,23 +77,23 @@ export const friendLinks = [
 | 小诗 | `src/content/poems/*.md` |
 | 音乐手记 | `src/content/music/*.md` |
 | 图片 | `public/assets/` |
-| 音频 | `public/audio/` |
+| 音频 | `public/assets/audio/` |
 
-字段与 Markdown 写法见 [`../CONTENT_GUIDE.md`](../CONTENT_GUIDE.md)。新增或删除内容后运行 `pnpm generate:content-targets`，再运行 `pnpm check`。
+字段与 Markdown 写法见 [`../CONTENT_GUIDE.md`](../CONTENT_GUIDE.md)。内容目标会在 `pnpm install`、`pnpm dev`、`pnpm build`、`pnpm test` 与 `pnpm check` 前自动生成，无需手工运行或提交生成文件。
 
 ## 环境变量
 
-密钥不得写入 `site.js`、`.env.example` 或其他已跟踪文件。按照 `.env.example` 在部署平台设置：
+密钥不得写入 `fonscape.config.js`、`.env.example` 或其他已跟踪文件。按照 `.env.example` 在部署平台设置：
 
 | 变量 | 平台 | 说明 |
 | --- | --- | --- |
-| `ADMIN_USERNAME` | 两者 | 唯一允许完成管理员初始化的用户名 |
-| `ADMIN_BOOTSTRAP_TOKEN` | 两者 | 一次性管理员初始化令牌；初始化后移除 |
-| `RATE_LIMIT_SALT` | 两者 | 当前站点独有的限频哈希盐 |
-| `TURSO_DATABASE_URL` | Vercel | 当前站点的 Turso 数据库地址 |
-| `TURSO_AUTH_TOKEN` | Vercel | 当前站点的 Turso 数据库令牌 |
+| `ADMIN_BOOTSTRAP_TOKEN` | 两者 | 唯一需要手工填写的值；无默认值，在 `/#/admin/setup` 的可见输入框中使用一次 |
+| `TURSO_DATABASE_URL` | Vercel | 由 Turso Marketplace 自动注入，不手工填写 |
+| `TURSO_AUTH_TOKEN` | Vercel | 由 Turso Marketplace 自动注入，不手工填写 |
 
-Cloudflare 使用 `wrangler.jsonc` 的 `DB` 绑定连接 D1，不使用 Turso 变量。详细步骤见 [`DEPLOYMENT.md`](./DEPLOYMENT.md)。
+Cloudflare 使用 `wrangler.jsonc` 的 `DB` 绑定连接自动创建的 D1，不使用 Turso 变量。限频哈希密钥由服务端在数据库中首次安全随机生成，不需要 `RATE_LIMIT_SALT`。详细步骤见 [`DEPLOYMENT.md`](./DEPLOYMENT.md)。
+
+每个头像在数据库中的上限是 100 KiB，整个站点的头像总容量固定为 100 MiB。这两项是数据库约束，不增加环境变量。
 
 ## 修改后检查
 

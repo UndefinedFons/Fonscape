@@ -59,6 +59,9 @@ function createDb({ comment, profile, receivedComments = [], launchedAt = 1_700_
       },
       async run() {
         operations.push({ kind: "run", query, values: [...values] });
+        if (query.includes("SET rate_limit_secret")) {
+          return { meta: { changes: 1 }, results: [{ rate_limit_secret: "a".repeat(64) }] };
+        }
         if (query.startsWith("UPDATE comments SET body = '[已删除]', status = 'deleted'")) {
           if (state.comment?.status === "deleted") return { meta: { changes: 0 } };
           state.comment = {
@@ -97,7 +100,7 @@ function createContext(options) {
   const pending = [];
   return {
     request: new Request(`https://example.com/api/${path.join("/")}`, { method }),
-    env: { DB: db, RATE_LIMIT_SALT: "test-rate-limit-salt-with-enough-entropy" },
+    env: { DB: db },
     params: { path },
     data: currentUser === undefined ? {} : { currentUser },
     waitUntil(promise) {
@@ -167,7 +170,12 @@ test("blocked protected writes report their retry window", async () => {
     prepare(sql) {
       const statement = {
         bind() { return statement; },
-        async run() { return { meta: { changes: 0 }, results: [] }; },
+        async run() {
+          if (sql.includes("SET rate_limit_secret")) {
+            return { meta: { changes: 1 }, results: [{ rate_limit_secret: "a".repeat(64) }] };
+          }
+          return { meta: { changes: 0 }, results: [] };
+        },
         async first() {
           return sql.startsWith("SELECT window_started_at, count FROM rate_limits")
             ? { window_started_at: now, count: 10000 }

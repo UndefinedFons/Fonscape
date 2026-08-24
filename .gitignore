@@ -10,6 +10,8 @@ dist/
 work/
 outputs/
 .wrangler/
+.fonscape-update/
+functions/_generated/content-targets.js
 worker-configuration.d.ts
 design-qa.md
 AGENTS.md

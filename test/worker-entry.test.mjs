@@ -100,9 +100,10 @@ test("Worker runs database hygiene through its scheduled handler", async () => {
   };
 
   await worker.scheduled({ scheduledTime: 123_456 }, { DB: db }, executionContext());
-  assert.equal(queries.length, 5);
+  assert.equal(queries.length, 6);
   assert.match(queries[0].sql, /DELETE FROM sessions/u);
   assert.match(queries[1].sql, /DELETE FROM rate_limits/u);
+  assert.match(queries[5].sql, /avatar_bytes/u);
   assert.equal(queries[0].values[0], 123_456);
 });
 

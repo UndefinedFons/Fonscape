@@ -3,10 +3,9 @@
 ## 内容修改后没有更新
 
 1. 确认文件位于 `src/content/posts/`、`src/content/poems/` 或 `src/content/music/`。
-2. 运行 `pnpm generate:content-targets`。
-3. 确认 `functions/_generated/content-targets.js` 一同提交。
-4. 运行 `pnpm check`，根据报错检查 Frontmatter、日期与重复 slug。
-5. 在部署平台核对生产分支和最新构建提交。
+2. 运行 `pnpm check`；内容目标会在命令开始前自动生成，无需手工执行或提交生成文件。
+3. 根据报错检查 Frontmatter、日期与重复 slug。
+4. 在部署平台核对生产分支和最新构建提交。
 
 ## Frontmatter 报错
 
@@ -35,21 +34,21 @@ Workers Builds 与仓库内 GitHub Actions 二选一：
 1. 核对 Production 环境中的 `TURSO_DATABASE_URL` 与 `TURSO_AUTH_TOKEN`。
 2. 运行 `pnpm migrate:turso` 查看未执行迁移。
 3. 确认目标数据库后运行 `pnpm migrate:turso --apply`。
-4. 检查 `ADMIN_USERNAME`、`ADMIN_BOOTSTRAP_TOKEN` 与 `RATE_LIMIT_SALT` 是否仅设置在服务器端。
+4. 确认 Turso Marketplace 集成仍连接到当前项目，并检查 `ADMIN_BOOTSTRAP_TOKEN` 是否仅设置在服务器端。
 
 Preview 与 Production 应使用不同数据库；不要让预览部署写入正式站数据。
 
-## 受保护操作返回限频或配置错误
+## 受保护操作返回限频或数据库错误
 
-`RATE_LIMIT_SALT` 缺失、为空或配置不合法时，服务端会拒绝注册、登录、评论等受保护写入。为当前站点生成一个独立、足够长的随机值并设置到部署平台，不要与其他站点共用。
+限频哈希密钥会在数据库中首次安全随机生成，不再读取 `RATE_LIMIT_SALT`。若注册、登录或评论等受保护写入返回数据库配置错误，先确认当前数据库已执行全部迁移，再检查运行时日志；不要自行添加旧变量。
 
 默认限制见 [`../MAINTENANCE.md`](../MAINTENANCE.md)。
 
 ## 管理员无法初始化
 
-- 注册入口不能直接创建与 `ADMIN_USERNAME` 相同的普通账户。
-- 管理员必须使用当前部署的 `ADMIN_BOOTSTRAP_TOKEN` 完成一次性初始化。
-- 初始化成功后移除该令牌，避免继续暴露初始化入口。
+- 新站点必须先打开 `/#/admin/setup`，使用当前部署的 `ADMIN_BOOTSTRAP_TOKEN` 创建首位管理员，之后才开放普通注册。
+- 令牌输入框是可见文本且默认留空；请确认粘贴内容没有多余空格。
+- 初始化成功后数据库会永久拒绝再次使用令牌，也可以从部署平台移除该变量。
 - 不要把其他站点的管理员账户、数据库或初始化令牌复制过来。
 
 ## 运行时间不正确
@@ -63,7 +62,8 @@ Preview 与 Production 应使用不同数据库；不要让预览部署写入正
 ## 头像上传失败
 
 - 输入文件支持 JPEG、PNG、WebP，原始文件上限为 10 MB。
-- 浏览器裁切后保存为 WebP，数据库中的最终大小上限为 100 KB。
+- 浏览器裁切后保存为 WebP，数据库中的最终大小上限为 100 KiB。
+- 全站头像总容量固定为 100 MiB；达到上限时接口返回 `avatar_capacity_reached`，可由已有头像的用户替换为更小图片，或由维护者清理异常、无主数据。
 - 若图片细节过多导致多次压缩仍超过限制，请缩小裁切范围或换用更简洁的图片。
 
 ## 构建通过但线上仍是旧页面

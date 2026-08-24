@@ -1,6 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { AVATAR_MAX_BYTES as SERVER_AVATAR_MAX_BYTES } from "../functions/api/[[path]].js";
+import {
+  AVATAR_MAX_BYTES as SERVER_AVATAR_MAX_BYTES,
+  AVATAR_TOTAL_MAX_BYTES,
+} from "../functions/api/[[path]].js";
 import {
   AVATAR_INPUT_MAX_BYTES,
   AVATAR_MAX_BYTES,
@@ -12,6 +15,7 @@ test("avatar limits keep raw input separate from the stored WebP", () => {
   assert.equal(AVATAR_INPUT_MAX_BYTES, 10 * 1024 * 1024);
   assert.equal(AVATAR_MAX_BYTES, 100 * 1024);
   assert.equal(SERVER_AVATAR_MAX_BYTES, AVATAR_MAX_BYTES);
+  assert.equal(AVATAR_TOTAL_MAX_BYTES, 100 * 1024 * 1024);
   assert.equal(AVATAR_OUTPUT_SIZE, 512);
 });
 
