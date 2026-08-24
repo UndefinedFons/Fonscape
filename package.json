@@ -56,6 +56,6 @@
     "vite": "6.4.3"
   },
   "devDependencies": {
-    "wrangler": "4.120.0"
+    "wrangler": "4.125.0"
   }
 }
