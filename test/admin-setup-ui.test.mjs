@@ -8,7 +8,7 @@ const mainUrl = new URL("../src/main.jsx", import.meta.url);
 
 test("administrator setup keeps the bootstrap token empty and visible", async () => {
   const source = await readFile(setupPageUrl, "utf8");
-  assert.match(source, /useState\(\{ token: "", username: "", password: "" \}\)/u);
+  assert.match(source, /useState\(\{ token: "", username: "", nickname: "", password: "" \}\)/u);
   assert.match(source, /name="token" type="text" value=\{form\.token\}/u);
   assert.doesNotMatch(source, /defaultValue=/u);
   assert.doesNotMatch(source, /ADMIN_BOOTSTRAP_TOKEN/u);
@@ -16,6 +16,16 @@ test("administrator setup keeps the bootstrap token empty and visible", async ()
   assert.match(source, /typeof result\.initialized !== "boolean"/u);
   assert.match(source, /暂时无法检查初始化状态/u);
   assert.match(source, /window\.location\.replace\("#\/"\)/u);
+});
+
+test("administrator setup collects a nickname and can reveal the password", async () => {
+  const source = await readFile(setupPageUrl, "utf8");
+  assert.match(source, /id="admin-setup-nickname" name="nickname" value=\{form\.nickname\}/u);
+  assert.match(source, /autoComplete="nickname" minLength="1" maxLength="10" required/u);
+  assert.match(source, /type=\{passwordVisible \? "text" : "password"\}/u);
+  assert.match(source, /className="password-visibility-button"/u);
+  assert.match(source, /aria-label=\{passwordVisible \? "隐藏密码" : "显示密码"\}/u);
+  assert.match(source, /<EyeSlash[\s\S]*<Eye/u);
 });
 
 test("administrator setup is a focused route without site navigation", async (context) => {
