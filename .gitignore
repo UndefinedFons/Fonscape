@@ -11,7 +11,7 @@ work/
 outputs/
 .wrangler/
 .fonscape-update/
-functions/_generated/content-targets.js
+functions/_generated/
 worker-configuration.d.ts
 design-qa.md
 AGENTS.md
