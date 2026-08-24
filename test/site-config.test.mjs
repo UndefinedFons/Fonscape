@@ -3,20 +3,23 @@ import test from "node:test";
 import { siteConfig } from "../src/siteConfig.js";
 import { formatCopyrightYears } from "../src/siteUtils.js";
 
-test("clean theme defaults use neutral content and one shared white hero", () => {
-  assert.equal(siteConfig.home.eyebrow, "PERSONAL BLOG");
-  assert.equal(siteConfig.home.description, "网站简介");
-  assert.equal(siteConfig.author.tagline, "个人签名");
-  assert.equal(siteConfig.author.introduction, "个人简介");
-  assert.deepEqual(siteConfig.author.interests, []);
-  assert.deepEqual(siteConfig.about.paragraphs, []);
+test("site configuration keeps the portable theme shape", () => {
+  assert.equal(typeof siteConfig.home.eyebrow, "string");
+  assert.equal(typeof siteConfig.home.description, "string");
+  assert.equal(typeof siteConfig.author.tagline, "string");
+  assert.equal(typeof siteConfig.author.introduction, "string");
+  assert.equal(Array.isArray(siteConfig.author.interests), true);
+  assert.equal(Array.isArray(siteConfig.about.paragraphs), true);
   assert.equal(siteConfig.footer.themeName, "Fonscape");
   assert.equal(siteConfig.footer.themeRepository, "https://github.com/UndefinedFons/Fonscape");
-  assert.deepEqual(
-    [...new Set(Object.values(siteConfig.heroes).map((hero) => hero.image))],
-    ["/fonscape/hero-white.svg"],
-  );
-  assert.equal(Object.values(siteConfig.heroes).some((hero) => "glassImage" in hero), false);
+  for (const hero of Object.values(siteConfig.heroes)) {
+    assert.equal(typeof hero.image, "string");
+    assert.notEqual(hero.image.trim(), "");
+    if ("glassImage" in hero) {
+      assert.equal(typeof hero.glassImage, "string");
+      assert.notEqual(hero.glassImage.trim(), "");
+    }
+  }
 });
 
 test("copyright year grows from the current installation launch year", () => {

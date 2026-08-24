@@ -1,8 +1,9 @@
 import { onRequest as handleApiRequest } from "../functions/api/[[path]].js";
 import { onRequest as handleAudioRequest } from "../functions/audio/[[path]].js";
 import { cleanupRuntimeData } from "../functions/_lib/abuse.js";
+import { audioAssetSizes } from "../functions/_generated/content-targets.js";
 
-export const audioAssetSizes = Object.freeze({});
+export { audioAssetSizes };
 
 function routePath(pathname, prefix) {
   const value = pathname.slice(prefix.length).replace(/^\/+|\/+$/gu, "");
