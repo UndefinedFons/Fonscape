@@ -214,6 +214,37 @@ async function assertNoManagedSymlink(root, path) {
   }
 }
 
+function staticPatternRoot(pattern) {
+  const segments = safeRelativePath(pattern).split("/");
+  const literalSegments = [];
+  for (const segment of segments) {
+    if (/[*?\[\]{}]/u.test(segment)) break;
+    literalSegments.push(segment);
+  }
+  return literalSegments.join("/");
+}
+
+async function walkInstalledHistory(project, manifest) {
+  const files = new Set();
+  const roots = new Set(manifest.ownership.history.map(staticPatternRoot));
+  for (const root of roots) {
+    if (!root) {
+      for (const path of await walkFiles(project)) {
+        if (classifyPath(path, manifest) === "history") files.add(path);
+      }
+      continue;
+    }
+    await assertNoManagedSymlink(project, root);
+    const info = await lstat(join(project, root)).catch((error) => error.code === "ENOENT" ? null : Promise.reject(error));
+    if (!info) continue;
+    const paths = info.isDirectory() ? await walkFiles(project, root) : [root];
+    for (const path of paths) {
+      if (classifyPath(path, manifest) === "history") files.add(path);
+    }
+  }
+  return [...files];
+}
+
 async function readPackageVersion(directory, label) {
   await assertNoManagedSymlink(directory, "package.json");
   let parsed;
@@ -376,6 +407,9 @@ async function modeFor(directory, path, fallback = 0o644) {
 
 export async function createUpdatePlan({ project, source, target, manifest, fromVersion, targetVersion, temporaryDirectory, reconcileTheme = false }) {
   const projectPaths = reconcileTheme ? await walkFiles(project) : [];
+  const installedHistoryPaths = reconcileTheme
+    ? projectPaths.filter((path) => classifyPath(path, manifest) === "history")
+    : await walkInstalledHistory(project, manifest);
   const allPaths = new Set([
     ...await walkFiles(source),
     ...await walkFiles(target),
@@ -386,8 +420,7 @@ export async function createUpdatePlan({ project, source, target, manifest, from
   const warnings = [];
   const skippedUserFiles = [];
   const installedHistoryByHash = new Map();
-  for (const path of projectPaths) {
-    if (classifyPath(path, manifest) !== "history") continue;
+  for (const path of installedHistoryPaths) {
     const content = await readOptional(join(project, path));
     if (content !== null && !installedHistoryByHash.has(hash(content))) installedHistoryByHash.set(hash(content), path);
   }

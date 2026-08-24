@@ -1,5 +1,7 @@
 // 这是你的 Fonscape 站点主配置文件。放在 public/ 中的文件从网站根路径引用，
 // 例如 public/assets/avatar.webp 对应 /assets/avatar.webp。
+// 常见错误：文本或路径漏写引号、字段末尾漏写逗号、括号不成对、资源网址误带 public/，
+// 或文件名大小写与仓库不一致。修改后请先运行 pnpm check。
 const defaultHeroImage = "/fonscape/hero-white.svg";
 
 const siteConfig = {

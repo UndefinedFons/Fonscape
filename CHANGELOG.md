@@ -2,6 +2,13 @@
 
 Fonscape 的公开版本变化记录在这里。版本号遵循语义化版本。
 
+## [1.1.7] - 2026-08-24
+
+### 修复
+
+- Updater 在普通的连续升级中也会扫描站点已有迁移历史，并持续识别内容相同但文件名不同的等价迁移，避免后续版本再次补入已经执行过的迁移。
+- 默认配置与文档新增通用的常见错误提醒，覆盖字符串引号、逗号与括号、公开资源网址、文件名大小写和提交前检查，帮助在自动部署前发现配置问题。
+
 ## [1.1.6] - 2026-08-24
 
 ### 改进
@@ -102,6 +109,7 @@ Fonscape 的公开版本变化记录在这里。版本号遵循语义化版本�
 
 - 生产使用前建议在独立预览环境验证主题配置、数据库与部署链路。
 
+[1.1.7]: https://github.com/UndefinedFons/Fonscape/releases/tag/v1.1.7
 [1.1.6]: https://github.com/UndefinedFons/Fonscape/releases/tag/v1.1.6
 [1.1.5]: https://github.com/UndefinedFons/Fonscape/releases/tag/v1.1.5
 [1.1.4]: https://github.com/UndefinedFons/Fonscape/releases/tag/v1.1.4

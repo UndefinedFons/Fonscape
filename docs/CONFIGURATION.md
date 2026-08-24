@@ -2,6 +2,14 @@
 
 Fonscape 把可公开的站点资料放在仓库中，把密钥与数据库连接放在部署平台。每个站点都应使用自己的仓库副本、运行时数据库和环境变量。
 
+## 常见配置错误
+
+- 文本、颜色和路径都是 JavaScript 字符串，必须放在引号中，例如 `"我的博客"`、`"#ffb7c5"`、`"/assets/home.jpg"`。
+- 同一个对象里的字段通常以逗号分隔，并保持 `{}`、`[]` 和引号成对；漏写会让整个配置文件无法构建。
+- `public/` 是仓库目录，不是网站地址的一部分。文件放在 `public/assets/home.jpg` 时，配置里写 `"/assets/home.jpg"`。
+- 文件名和扩展名的大小写必须与仓库完全一致；本地能显示不代表 Linux 部署环境也会忽略大小写。
+- 修改后先运行 `pnpm check`。检查通过再提交，可以在 Cloudflare 或 Vercel 自动部署前发现问题。
+
 ## 站点资料
 
 编辑仓库根目录的 `fonscape.config.js`：
@@ -48,7 +56,7 @@ home: {
 - `mobilePosition`：移动端焦点。
 - `size`：通常使用 `cover`。
 
-默认头图是主题资源 `public/fonscape/hero-white.svg`。自定义图片放入使用者目录 `public/assets/`，并使用 `/assets/...` 路径；升级器不会覆盖该目录。
+默认头图是主题资源 `public/fonscape/hero-white.svg`。自定义图片放入使用者目录 `public/assets/`，并使用 `"/assets/..."` 网站路径；升级器不会覆盖该目录。
 
 ## 友链
 
