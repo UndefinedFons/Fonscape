@@ -2,6 +2,13 @@
 
 Fonscape 的公开版本变化记录在这里。版本号遵循语义化版本。
 
+## [1.1.3] - 2026-08-24
+
+### 改进
+
+- Updater 新增 `--reconcile-theme` 校准模式：可预演并将主题拥有的文件恢复为目标发布版，同时继续保护站点配置、内容、友链、资源与环境变量，并保留 merge 文件的三方合并。
+- 公共模板不再携带 Dependabot 配置，避免使用 Fonscape 创建的博客仓库自动出现维护者专用的依赖升级 PR。
+
 ## [1.1.2] - 2026-08-24
 
 ### 修复
@@ -73,6 +80,7 @@ Fonscape 的公开版本变化记录在这里。版本号遵循语义化版本�
 
 - 生产使用前建议在独立预览环境验证主题配置、数据库与部署链路。
 
+[1.1.3]: https://github.com/UndefinedFons/Fonscape/releases/tag/v1.1.3
 [1.1.2]: https://github.com/UndefinedFons/Fonscape/releases/tag/v1.1.2
 [1.1.1]: https://github.com/UndefinedFons/Fonscape/releases/tag/v1.1.1
 [1.1.0]: https://github.com/UndefinedFons/Fonscape/releases/tag/v1.1.0

@@ -44,6 +44,20 @@ pnpm fonscape update
 pnpm fonscape update --apply
 ```
 
+如果站点过去直接修改过主题文件，普通升级只会处理版本间发生变化的文件。需要让目标发布版重新接管全部主题文件时，先预演主题校准：
+
+```bash
+pnpm fonscape update --to 1.1.3 --reconcile-theme
+```
+
+确认清单只包含应由主题管理的文件后再应用：
+
+```bash
+pnpm fonscape update --to 1.1.3 --reconcile-theme --apply
+```
+
+主题校准仍会保护 `fonscape.config.js`、Markdown 内容、正式友链、图片、音频和真实环境变量；`merge` 文件继续使用三方合并。所有写入与删除都进入同一份可回滚备份。
+
 不指定 `--to` 时只选择最新的稳定三段式版本标签，不采用预发布标签，也不允许降级。站点缺少 `.fonscape-version` 时升级器始终停止，即使提供 `--from` 也不会猜测或初始化来源版本。已有 marker 时，显式 `--from` 可用于一致性校验，但必须与 marker 完全一致；升级器还会校验来源/目标目录的 `package.json` 版本与请求版本、目标 manifest 版本一致。
 
 预演后若确认某个主题或合并文件必须继续使用站点当前版本，可显式保留；该选项可重复，并会作为提醒打印在最终计划中：

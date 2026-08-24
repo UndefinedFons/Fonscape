@@ -51,11 +51,14 @@ function usage() {
   pnpm fonscape update [--from X.Y.Z] [--to X.Y.Z] [--apply]
   pnpm fonscape update --keep <站点文件> [--keep <另一个文件>]
   pnpm fonscape update --take-incoming <冲突文件> [--take-incoming <另一个冲突文件>]
+  pnpm fonscape update --reconcile-theme [--apply]
   pnpm fonscape update --apply --resolutions <已解决冲突目录>
   pnpm fonscape update --rollback <备份目录>
 
 默认仅预演，不会修改文件。站点必须已有 ${VERSION_FILE}；缺少 marker 时，
-即使提供 --from 也会停止，升级器不会猜测或初始化来源版本。`;
+即使提供 --from 也会停止，升级器不会猜测或初始化来源版本。
+--reconcile-theme 会让目标发布版重新接管全部 theme 文件，但仍保护 user 文件，
+并继续三方合并 merge 文件；应用前请先检查预演清单。`;
 }
 
 function parseArgs(argv) {
@@ -64,6 +67,7 @@ function parseArgs(argv) {
   for (let index = 0; index < args.length; index += 1) {
     const arg = args[index];
     if (arg === "--apply") parsed.apply = true;
+    else if (arg === "--reconcile-theme") parsed.reconcile_theme = true;
     else if (arg === "--help" || arg === "-h") parsed.help = true;
     else if (["--from", "--to", "--project", "--repository", "--source-dir", "--target-dir", "--resolutions", "--rollback", "--keep", "--take-incoming"].includes(arg)) {
       const value = args[index + 1];
@@ -364,8 +368,12 @@ async function modeFor(directory, path, fallback = 0o644) {
   return stat(join(directory, path)).then((info) => info.mode & 0o777, () => fallback);
 }
 
-export async function createUpdatePlan({ project, source, target, manifest, fromVersion, targetVersion, temporaryDirectory }) {
-  const allPaths = new Set([...await walkFiles(source), ...await walkFiles(target)]);
+export async function createUpdatePlan({ project, source, target, manifest, fromVersion, targetVersion, temporaryDirectory, reconcileTheme = false }) {
+  const allPaths = new Set([
+    ...await walkFiles(source),
+    ...await walkFiles(target),
+    ...(reconcileTheme ? await walkFiles(project) : []),
+  ]);
   const actions = [];
   const conflicts = [];
   const warnings = [];
@@ -397,6 +405,15 @@ export async function createUpdatePlan({ project, source, target, manifest, from
       readOptional(join(project, path)),
       readOptional(join(target, path)),
     ]);
+    if (reconcileTheme && ownership === "theme") {
+      if (equal(local, incoming)) continue;
+      if (incoming === null) {
+        if (local !== null) actions.push(action(path, "delete", null, "theme-reconcile-remove", null, local));
+      } else {
+        actions.push(action(path, "write", incoming, local === null ? "theme-reconcile-restore" : "theme-reconcile", await modeFor(target, path), local));
+      }
+      continue;
+    }
     if (base === null && incoming !== null) {
       if (local === null) actions.push(action(path, "write", incoming, "new-theme-file", await modeFor(target, path), local));
       else if (!equal(local, incoming)) conflicts.push({ path, reason: "new-file-collides", base, local, incoming, merged: null });
@@ -794,6 +811,7 @@ async function main(argv = process.argv.slice(2)) {
       fromVersion,
       targetVersion,
       temporaryDirectory: temporaryRoot,
+      reconcileTheme: options.reconcile_theme,
     });
     keepCurrentFiles(plan, options.keep);
     const incomingPaths = await takeIncomingFiles(plan, options.take_incoming, target);
