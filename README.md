@@ -44,7 +44,7 @@ pnpm check
 - 小诗：`src/content/poems/`
 - 音乐手记：`src/content/music/`
 - 图片：`public/assets/`
-- 音频：`public/assets/audio/`
+- 音频：`public/audio/`
 
 内容采用 Markdown 与 Frontmatter；字段、置顶顺序和富文本写法见 [`CONTENT_GUIDE.md`](./CONTENT_GUIDE.md)。
 
@@ -57,7 +57,7 @@ Fonscape 支持两套彼此独立的运行方式：
 - Cloudflare Workers + D1：Cloudflare 自动创建并绑定 D1、执行迁移并部署 Worker。
 - Vercel + Turso：部署按钮通过 Turso Marketplace 自动创建数据库、注入连接变量，并在构建时执行迁移。
 
-两种一键部署都只需要使用者填写一个自己生成的 `ADMIN_BOOTSTRAP_TOKEN`；输入框没有默认值。部署后打开 `/#/admin/setup`，在可见输入框中输入同一个令牌并创建首位管理员。数据库连接与内部限频密钥不需要手工填写，也不能提交到仓库。完整步骤见 [`docs/DEPLOYMENT.md`](./docs/DEPLOYMENT.md)。
+两种一键部署都只需要使用者填写一个自己生成的 `ADMIN_BOOTSTRAP_TOKEN`；输入框没有默认值。部署后打开 `/admin/setup`，网站会自动进入一次性设置页，在可见输入框中输入同一个令牌并创建首位管理员。数据库连接与内部限频密钥不需要手工填写，也不能提交到仓库。完整步骤见 [`docs/DEPLOYMENT.md`](./docs/DEPLOYMENT.md)。
 
 ## 常用命令
 

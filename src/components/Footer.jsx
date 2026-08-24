@@ -1,5 +1,5 @@
 import { memo, useEffect, useState } from "react";
-import { siteConfig } from "../content/site.js";
+import { siteConfig } from "../siteConfig.js";
 import { formatCopyrightYears, normalizeLaunchedAt } from "../siteUtils.js";
 
 export const Footer = memo(function Footer() {

@@ -5,6 +5,16 @@
   "outputDirectory": "dist",
   "redirects": [
     {
+      "source": "/admin/setup",
+      "destination": "/#/admin/setup",
+      "statusCode": 302
+    },
+    {
+      "source": "/admin/setup/",
+      "destination": "/#/admin/setup",
+      "statusCode": 302
+    },
+    {
       "source": "/admin",
       "destination": "/",
       "statusCode": 302

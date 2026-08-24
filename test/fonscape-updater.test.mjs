@@ -18,7 +18,6 @@ const ownership = {
     ".dev.vars",
     ".dev.vars.*",
     "fonscape.config.js",
-    "src/content/site.js",
     "src/content/friends.json",
     "src/content/posts/**",
     "src/content/poems/**",
@@ -72,9 +71,6 @@ async function fixture() {
     put(target, "package.json", `${JSON.stringify(targetPackage, null, 2)}\n`),
     put(project, "package.json", `${JSON.stringify(projectPackage, null, 2)}\n`),
     put(target, "fonscape.manifest.json", `${JSON.stringify({ schemaVersion: 1, version: "1.1.0", ownership }, null, 2)}\n`),
-    put(source, "src/content/site.js", "export default { title: 'Fonscape' };\n"),
-    put(target, "src/content/site.js", "export default { title: 'Fonscape 1.1' };\n"),
-    put(project, "src/content/site.js", "export default { title: 'My blog' };\n"),
     put(target, "src/content/friends.json", "[]\n"),
     put(source, "src/App.jsx", "const version = 'old';\n"),
     put(target, "src/App.jsx", "const version = 'new';\n"),
@@ -100,7 +96,7 @@ test("semantic versions are strict and stable tags sort numerically", () => {
 
 test("manifest ownership gives user files priority over broad theme paths", () => {
   const manifest = { ownership };
-  assert.equal(classifyPath("src/content/site.js", manifest), "user");
+  assert.equal(classifyPath("src/content/site.js", manifest), "theme");
   assert.equal(classifyPath("public/assets/avatar.png", manifest), "user");
   assert.equal(classifyPath(".env", manifest), "user");
   assert.equal(classifyPath(".env.production", manifest), "user");
@@ -147,7 +143,6 @@ test("apply preserves user content, merges site package metadata, backs up, and 
     "--apply",
   ]);
 
-  assert.equal(await readFile(join(data.project, "src/content/site.js"), "utf8"), "export default { title: 'My blog' };\n");
   assert.equal(await readFile(join(data.project, "src/content/friends.json"), "utf8"), "[]\n");
   assert.equal(await readFile(join(data.project, "src/App.jsx"), "utf8"), "const version = 'new';\n");
   assert.match(await readFile(join(data.project, "src/styles.css"), "utf8"), /color: purple[\s\S]*padding: 2rem/u);
@@ -164,7 +159,6 @@ test("apply preserves user content, merges site package metadata, backs up, and 
   const [backupName] = await readdir(backupsRoot);
   await main(["update", "--project", data.project, "--rollback", relative(data.project, join(backupsRoot, backupName))]);
   assert.equal(await readFile(join(data.project, "src/App.jsx"), "utf8"), "const version = 'old';\n");
-  assert.equal(await readFile(join(data.project, "src/content/site.js"), "utf8"), "export default { title: 'My blog' };\n");
   assert.equal(await readFile(join(data.project, ".fonscape-version"), "utf8"), "1.0.0\n");
 });
 
@@ -255,7 +249,7 @@ test("explicit keep choices preserve current auto-merges and conflicts", async (
   assert.equal(await readFile(join(data.project, ".fonscape-version"), "utf8"), "1.1.0\n");
 });
 
-test("missing marker requires --from and rejects a mismatched explicit source", async (context) => {
+test("missing marker always rejects while an existing marker validates explicit --from", async (context) => {
   const data = await fixture();
   context.after(() => rm(data.root, { recursive: true, force: true }));
   await rm(join(data.project, ".fonscape-version"));
@@ -266,6 +260,8 @@ test("missing marker requires --from and rejects a mismatched explicit source", 
     "--target-dir", data.target,
   ];
   await assert.rejects(main(command), /未找到 \.fonscape-version/u);
+  await assert.rejects(main([...command, "--from", "1.0.0"]), /无法安全确定当前主题版本/u);
+  await writeFile(join(data.project, ".fonscape-version"), "1.0.0\n");
   await main([...command, "--from", "1.0.0"]);
   await writeFile(join(data.project, ".fonscape-version"), "1.1.0\n");
   await assert.rejects(main([...command, "--from", "1.0.0"]), /与已安装的 \.fonscape-version 版本 1\.1\.0 不一致/u);

@@ -28,26 +28,14 @@ GitHub 模板生成的新仓库拥有独立历史，不能假设它能像普通 
 
 精确的 `.env.example` 是公开部署模板，按合并文件参与三方升级；`.env` 与其他 `.env.*` 文件仍属于用户所有，升级器不会覆盖它们。
 
-1.1.0 是首个内置升级器的版本。由 1.0.0 升级时，先从正式标签临时运行它：
-
-```bash
-pnpm dlx github:UndefinedFons/Fonscape#v1.1.0 update --from 1.0.0 --to 1.1.0
-```
-
-确认预演清单后才应用：
-
-```bash
-pnpm dlx github:UndefinedFons/Fonscape#v1.1.0 update --from 1.0.0 --to 1.1.0 --apply
-```
-
-从 1.1.0 及更高版本继续升级时，`.fonscape-version` 会记录已安装的主题版本：
+从 1.1.0 及更高版本升级时，`.fonscape-version` 必须记录已安装的主题版本：
 
 ```bash
 pnpm fonscape update
 pnpm fonscape update --apply
 ```
 
-不指定 `--to` 时只选择最新的稳定三段式版本标签，不采用预发布标签，也不允许降级。旧站没有 `.fonscape-version` 时必须明确提供 `--from`；升级器不会猜测来源版本。已有 marker 时，显式 `--from` 必须与 marker 完全一致；升级器还会校验来源/目标目录的 `package.json` 版本与请求版本、目标 manifest 版本一致。
+不指定 `--to` 时只选择最新的稳定三段式版本标签，不采用预发布标签，也不允许降级。站点缺少 `.fonscape-version` 时升级器始终停止，即使提供 `--from` 也不会猜测或初始化来源版本。已有 marker 时，显式 `--from` 可用于一致性校验，但必须与 marker 完全一致；升级器还会校验来源/目标目录的 `package.json` 版本与请求版本、目标 manifest 版本一致。
 
 预演后若确认某个主题或合并文件必须继续使用站点当前版本，可显式保留；该选项可重复，并会作为提醒打印在最终计划中：
 

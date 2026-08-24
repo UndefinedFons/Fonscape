@@ -146,7 +146,7 @@ date: 2026-07-27T20:00
 ![图片说明](/assets/example.webp "可选图片标题")
 ```
 
-音频建议放在 `public/assets/audio/`，Frontmatter 中使用 `/assets/audio/example.mp3`。
+音频放在 `public/audio/`，Frontmatter 中使用 `/audio/example.mp3`。
 
 ## 自动扫描
 

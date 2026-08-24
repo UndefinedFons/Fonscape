@@ -77,6 +77,20 @@ test("Worker delegates non-dynamic paths to Static Assets unchanged", async () =
   assert.equal(await response.text(), "spa-shell");
 });
 
+test("Worker canonicalizes direct administrator browser routes", async () => {
+  const environment = { ASSETS: { fetch: () => Promise.reject(new Error("administrator routes must redirect before assets")) } };
+  const setup = await worker.fetch(new Request("https://example.com/admin/setup"), environment, executionContext());
+  const setupSlash = await worker.fetch(new Request("https://example.com/admin/setup/"), environment, executionContext());
+  const retired = await worker.fetch(new Request("https://example.com/admin"), environment, executionContext());
+  const retiredChild = await worker.fetch(new Request("https://example.com/admin/comments"), environment, executionContext());
+
+  assert.equal(setup.status, 302);
+  assert.equal(setup.headers.get("Location"), "https://example.com/#/admin/setup");
+  assert.equal(setupSlash.headers.get("Location"), "https://example.com/#/admin/setup");
+  assert.equal(retired.headers.get("Location"), "https://example.com/#/");
+  assert.equal(retiredChild.headers.get("Location"), "https://example.com/#/");
+});
+
 test("Worker runs database hygiene through its scheduled handler", async () => {
   const queries = [];
   const db = {

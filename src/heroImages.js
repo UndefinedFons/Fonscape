@@ -1,4 +1,4 @@
-import { siteConfig } from "./content/site.js";
+import { siteConfig } from "./siteConfig.js";
 
 const PRIMARY_HERO_ORDER = ["home", "posts", "poems", "music", "friends", "about"];
 const PATH_TO_VARIANT = {

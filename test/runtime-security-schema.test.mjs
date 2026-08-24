@@ -8,6 +8,8 @@ test("runtime security migration preserves legacy records and enforces avatar ca
   const migrations = await readMigrations();
   const securityIndex = migrations.findIndex((migration) => migration.name.endsWith("_runtime_security.sql"));
   assert.notEqual(securityIndex, -1);
+  const cleanupIndex = migrations.findIndex((migration) => migration.name.endsWith("_remove_legacy_friend_applications.sql"));
+  assert.notEqual(cleanupIndex, -1);
 
   try {
     await migrateTurso({ client, apply: true, migrations: migrations.slice(0, securityIndex) });
@@ -65,6 +67,10 @@ test("runtime security migration preserves legacy records and enforces avatar ca
     assert.equal(tables.includes("friend_applications"), false);
     assert.equal(tables.includes("legacy_friend_applications_v1"), true);
     assert.deepEqual((await client.execute("SELECT id, comment_id FROM legacy_friend_applications_v1")).rows, [{ id: "application-1", comment_id: "comment-1" }]);
+
+    await migrateTurso({ client, apply: true, migrations: [migrations[cleanupIndex]] });
+    const cleanedTables = (await client.execute("SELECT name FROM sqlite_master WHERE type = 'table' ORDER BY name")).rows.map((row) => row.name);
+    assert.equal(cleanedTables.includes("legacy_friend_applications_v1"), false);
 
     const userColumns = (await client.execute("PRAGMA table_info(users)")).rows.map((row) => row.name);
     assert.equal(userColumns.includes("email"), false);

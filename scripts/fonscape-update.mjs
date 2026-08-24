@@ -34,7 +34,6 @@ const MANDATORY_USER_PATTERNS = [
   ".dev.vars",
   ".dev.vars.*",
   "fonscape.config.js",
-  "src/content/site.js",
   "src/content/friends.json",
   "src/content/posts/**",
   "src/content/poems/**",
@@ -49,14 +48,14 @@ function usage() {
   return `Fonscape 安全升级器
 
 用法：
-  pnpm fonscape update [--from 1.0.0] [--to 1.1.0] [--apply]
+  pnpm fonscape update [--from X.Y.Z] [--to X.Y.Z] [--apply]
   pnpm fonscape update --keep <站点文件> [--keep <另一个文件>]
   pnpm fonscape update --take-incoming <冲突文件> [--take-incoming <另一个冲突文件>]
   pnpm fonscape update --apply --resolutions <已解决冲突目录>
   pnpm fonscape update --rollback <备份目录>
 
-默认仅预演，不会修改文件。首次从 1.0.0 升级且没有 ${VERSION_FILE} 时，
-必须显式传入 --from 1.0.0。`;
+默认仅预演，不会修改文件。站点必须已有 ${VERSION_FILE}；缺少 marker 时，
+即使提供 --from 也会停止，升级器不会猜测或初始化来源版本。`;
 }
 
 function parseArgs(argv) {
@@ -749,8 +748,7 @@ async function resolveInstalledVersion(project, provided) {
     }
     return installed;
   }
-  if (!provided) throw new Error(`未找到 ${VERSION_FILE}。首次升级请明确传入 --from 1.0.0，升级器不会猜测。`);
-  return normalizeVersion(provided, "来源版本");
+  throw new Error(`未找到 ${VERSION_FILE}。升级器无法安全确定当前主题版本；请先为站点写入正确的 marker。`);
 }
 
 async function main(argv = process.argv.slice(2)) {

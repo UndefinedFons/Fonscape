@@ -1,11 +1,5 @@
-const normalizeLegacyBody = (body) => body
-  .map((block) => typeof block === "string" ? block.trim() : "")
-  .filter(Boolean)
-  .join("\n\n");
-
 export function getPostMarkdown(post) {
   if (typeof post.content === "string") return post.content.trim();
-  if (Array.isArray(post.body)) return normalizeLegacyBody(post.body);
   return "";
 }
 
