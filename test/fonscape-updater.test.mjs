@@ -106,6 +106,33 @@ test("manifest ownership gives user files priority over broad theme paths", () =
   assert.equal(classifyPath("CNAME", manifest), "unmanaged");
 });
 
+test("theme reconciliation restores the release without touching user files", async (context) => {
+  const data = await fixture();
+  context.after(() => rm(data.root, { recursive: true, force: true }));
+  await Promise.all([
+    put(data.source, "src/unchanged.jsx", "export const theme = 'release';\n"),
+    put(data.target, "src/unchanged.jsx", "export const theme = 'release';\n"),
+    put(data.project, "src/unchanged.jsx", "export const theme = 'site fork';\n"),
+    put(data.project, "src/retired-theme-file.jsx", "export const retired = true;\n"),
+    put(data.project, "src/content/posts/site.md", "# My post\n"),
+    put(data.project, "public/assets/site.png", "site asset\n"),
+  ]);
+
+  await main([
+    "update",
+    "--project", data.project,
+    "--source-dir", data.source,
+    "--target-dir", data.target,
+    "--reconcile-theme",
+    "--apply",
+  ]);
+
+  assert.equal(await readFile(join(data.project, "src/unchanged.jsx"), "utf8"), "export const theme = 'release';\n");
+  await assert.rejects(access(join(data.project, "src/retired-theme-file.jsx")), { code: "ENOENT" });
+  assert.equal(await readFile(join(data.project, "src/content/posts/site.md"), "utf8"), "# My post\n");
+  assert.equal(await readFile(join(data.project, "public/assets/site.png"), "utf8"), "site asset\n");
+});
+
 test("real env files stay user-owned while the public env example three-way merges", async (context) => {
   const data = await fixture();
   context.after(() => rm(data.root, { recursive: true, force: true }));
