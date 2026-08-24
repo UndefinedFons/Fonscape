@@ -13,9 +13,10 @@ test("clean theme defaults use neutral content and one shared white hero", () =>
   assert.equal(siteConfig.footer.themeName, "Fonscape");
   assert.equal(siteConfig.footer.themeRepository, "https://github.com/UndefinedFons/Fonscape");
   assert.deepEqual(
-    [...new Set(Object.values(siteConfig.heroes).flatMap((hero) => [hero.image, hero.glassImage]))],
-    ["/assets/hero-white.svg"],
+    [...new Set(Object.values(siteConfig.heroes).map((hero) => hero.image))],
+    ["/fonscape/hero-white.svg"],
   );
+  assert.equal(Object.values(siteConfig.heroes).some((hero) => "glassImage" in hero), false);
 });
 
 test("copyright year grows from the current installation launch year", () => {

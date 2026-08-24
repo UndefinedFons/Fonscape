@@ -8,7 +8,6 @@ import { PageHero } from "../components/PageHero.jsx";
 import { friendLinks, siteConfig } from "../content/index.js";
 
 export function FriendRequestGuide() {
-  const { viewer } = useCommunity();
   const [values, setValues] = useState({ site: "", url: "", description: "", color: "#ffb7c5" });
   const [copyState, setCopyState] = useState("");
   const update = (field) => (event) => setValues((current) => ({ ...current, [field]: event.target.value }));
@@ -17,7 +16,6 @@ export function FriendRequestGuide() {
     "【友链申请】",
     `site: "${escapeValue(values.site, "我的博客")}"`,
     `url: "${escapeValue(values.url, "https://example.com")}"`,
-    `owner: "${escapeValue(viewer?.nickname, "登录后自动填写")}"`,
     `desc: "${escapeValue(values.description, "向大家介绍你的站点")}"`,
     `color: "${escapeValue(values.color, "#ffb7c5")}"`,
   ].join("\n");
@@ -30,7 +28,7 @@ export function FriendRequestGuide() {
     }
     window.setTimeout(() => setCopyState(""), 1600);
   };
-  return <section className="friend-request material-panel" aria-labelledby="friend-request-title"><header><h2 id="friend-request-title">申请友链</h2><p>填写站点资料，复制生成的格式，再粘贴到下方评论区。友链昵称与头像会使用你的登录账户资料。</p></header><div className="friend-request-body"><form onSubmit={(event) => event.preventDefault()}><label className="friend-request-wide"><span>站点名称</span><input value={values.site} onChange={update("site")} placeholder="我的博客" /></label><label className="friend-request-wide"><span>站点地址</span><input type="url" value={values.url} onChange={update("url")} placeholder="https://example.com" /></label><label className="friend-request-wide"><span>站点简介</span><input value={values.description} onChange={update("description")} placeholder="向大家介绍你的站点" /></label><label className="friend-request-wide friend-color-row"><span>主题色</span><span className="friend-color-input"><input type="color" value={values.color} onChange={update("color")} aria-label="选择主题色" /><input value={values.color} onChange={update("color")} pattern="#[0-9a-fA-F]{6}" aria-label="主题色十六进制值" /></span></label></form><div className="friend-request-preview"><div><strong>申请格式</strong><button type="button" onClick={copy}><CopySimple size={16} />{copyState || "复制格式"}</button></div><pre>{requestText}</pre><p>请将复制的内容粘贴到下方评论区；确认信息后，我会把入口加入友链。</p></div></div></section>;
+  return <section className="friend-request material-panel" aria-labelledby="friend-request-title"><header><h2 id="friend-request-title">申请友链</h2><p>填写站点资料，复制生成的格式，再登录并粘贴到下方评论区。友链站长名称会使用你发表评论时的账户昵称。</p></header><div className="friend-request-body"><form onSubmit={(event) => event.preventDefault()}><label className="friend-request-wide"><span>站点名称</span><input value={values.site} onChange={update("site")} placeholder="我的博客" /></label><label className="friend-request-wide"><span>站点地址</span><input type="url" value={values.url} onChange={update("url")} placeholder="https://example.com" /></label><label className="friend-request-wide"><span>站点简介</span><input value={values.description} onChange={update("description")} placeholder="向大家介绍你的站点" /></label><label className="friend-request-wide friend-color-row"><span>主题色</span><span className="friend-color-input"><input type="color" value={values.color} onChange={update("color")} aria-label="选择主题色" /><input value={values.color} onChange={update("color")} pattern="#[0-9a-fA-F]{6}" aria-label="主题色十六进制值" /></span></label></form><div className="friend-request-preview"><div><strong>申请格式</strong><button type="button" onClick={copy}><CopySimple size={16} />{copyState || "复制格式"}</button></div><pre>{requestText}</pre><p>请将复制的内容粘贴到下方评论区；确认信息后，我会把入口加入友链。</p></div></div></section>;
 }
 
 function friendHost(value) {
@@ -53,16 +51,16 @@ function friendCardStyle(value) {
 }
 
 function friendAvatarSource(friend, viewer) {
-  const avatarUserId = String(friend.avatarUserId || "").trim();
-  if (!avatarUserId) return friend.avatar || "";
-  if (String(viewer?.id || "") === avatarUserId && viewer.avatarUrl) return viewer.avatarUrl;
-  return `/api/avatar/${encodeURIComponent(avatarUserId)}`;
+  const userId = String(friend.userId || friend.avatarUserId || "").trim();
+  if (!userId) return friend.avatar || "";
+  if (String(viewer?.id || "") === userId && viewer.avatarUrl) return viewer.avatarUrl;
+  return `/api/avatar/${encodeURIComponent(userId)}`;
 }
 
 function useFriendProfiles() {
   const [profiles, setProfiles] = useState({});
   useEffect(() => {
-    const userIds = [...new Set(friendLinks.map((friend) => String(friend.avatarUserId || "").trim()).filter(Boolean))];
+    const userIds = [...new Set(friendLinks.map((friend) => String(friend.userId || friend.avatarUserId || "").trim()).filter(Boolean))];
     if (!userIds.length) return undefined;
     const controller = new AbortController();
     Promise.all(userIds.map(async (userId) => {
@@ -90,8 +88,8 @@ export function FriendsPage() {
         {friendLinks.length ? (
           <div className="friend-grid">
             {friendLinks.map((friend) => {
-              const avatarUserId = String(friend.avatarUserId || "").trim();
-              const accountProfile = String(viewer?.id || "") === avatarUserId ? viewer : profiles[avatarUserId];
+              const userId = String(friend.userId || friend.avatarUserId || "").trim();
+              const accountProfile = String(viewer?.id || "") === userId ? viewer : profiles[userId];
               const avatarSource = accountProfile?.avatarUrl || friendAvatarSource(friend, viewer);
               const owner = accountProfile?.nickname || friend.owner;
               return <a className="friend-card" href={friend.url} target="_blank" rel="noreferrer" key={friend.url} aria-label={`打开${friend.name || "友链"}站点`} style={friendCardStyle(friend.color)}>

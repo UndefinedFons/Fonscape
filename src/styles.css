@@ -1272,6 +1272,21 @@ footer::before { content:""; position:absolute; top:0; left:50%; width:min(1180p
 .friends-layout .comment-login-prompt { padding-block:10px; border-block:0; }
 .friend-request,.friends-empty,.comments-section { animation:content-rise .52s .08s cubic-bezier(.22,1,.36,1) both; }
 
+.admin-setup-page { width:min(100%,720px); min-height:100svh; display:grid; place-items:center; margin-inline:auto; padding:48px 24px; }
+.admin-setup-panel { width:min(100%,520px); padding:32px; border-radius:24px; }
+.admin-setup-heading { margin-bottom:30px; }
+.admin-setup-heading small { color:var(--accent); font-size:9px; font-weight:700; letter-spacing:.16em; }
+.admin-setup-heading h1,.admin-setup-status h1 { margin:4px 0 0; font:700 26px/1.3 "Zen Maru Gothic",sans-serif; }
+.admin-setup-heading p,.admin-setup-status p { margin:7px 0 0; color:var(--muted); font-size:12px; line-height:1.75; }
+.admin-setup-form label>small { color:var(--muted); font-size:10px; line-height:1.6; }
+.admin-setup-form .community-form-error { display:flex; align-items:flex-start; gap:7px; }
+.admin-setup-form .community-form-error svg { flex:none; margin-top:2px; }
+.admin-setup-status { min-height:300px; display:grid; place-items:center; align-content:center; gap:10px; text-align:center; }
+.admin-setup-status>svg { color:var(--accent); }
+.admin-setup-status .community-primary-button { margin-top:14px; }
+.admin-setup-pulse { width:34px; height:34px; border:3px solid var(--line); border-top-color:var(--accent); border-radius:50%; animation:admin-setup-spin .8s linear infinite; }
+@keyframes admin-setup-spin { to { transform:rotate(360deg); } }
+
 .article-detail-kickers { display:flex; justify-content:center; align-items:center; flex-wrap:wrap; gap:8px; }
 .article-series-link { display:inline-flex; align-items:center; gap:5px; padding:6px 10px; border-radius:999px; background:var(--accent-soft); color:var(--accent); font-size:11px; }
 .series-navigation { width:min(790px,100%); margin:54px auto 0; overflow:hidden; border:1px solid var(--line); border-radius:17px; background:var(--surface); }
@@ -4268,6 +4283,8 @@ a.home-dash-panel:focus-visible {
   .about-story>header h2 { overflow-wrap:anywhere; }
   .friend-request { padding:24px 18px; border-radius:21px; }
   .friends-empty { min-height:190px; border-radius:21px; }
+  .admin-setup-page { padding:24px 16px; }
+  .admin-setup-panel { padding:24px 18px; border-radius:21px; }
   :root[data-glass="on"] .article-page>.comments-section { padding-inline:0; border-radius:0; }
 }
 
