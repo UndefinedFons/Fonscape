@@ -24,6 +24,12 @@ const siteConfig = {
       label: "",
       url: "",
     },
+    support: {
+      label: "",
+      handle: "",
+      image: "",
+      imageAlt: "",
+    },
   },
   about: {
     heroDescription: "关于页简介",
