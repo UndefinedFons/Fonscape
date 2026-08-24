@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { resolveGlassBackground } from "../src/heroImages.js";
 import { siteConfig } from "../src/siteConfig.js";
 import { formatCopyrightYears } from "../src/siteUtils.js";
 
@@ -20,6 +21,17 @@ test("site configuration keeps the portable theme shape", () => {
       assert.notEqual(hero.glassImage.trim(), "");
     }
   }
+});
+
+test("glass backgrounds soften ordinary hero images without double-blurring prepared assets", () => {
+  assert.deepEqual(resolveGlassBackground({ image: "/assets/plain.webp" }), {
+    image: "/assets/plain.webp",
+    needsSoftening: true,
+  });
+  assert.deepEqual(resolveGlassBackground({ image: "/assets/plain.webp", glassImage: "/assets/soft.webp" }), {
+    image: "/assets/soft.webp",
+    needsSoftening: false,
+  });
 });
 
 test("copyright year grows from the current installation launch year", () => {

@@ -2,6 +2,12 @@
 
 Fonscape 的公开版本变化记录在这里。版本号遵循语义化版本。
 
+## [1.1.8] - 2026-08-24
+
+### 修复
+
+- 开启磨砂玻璃后，未单独配置预模糊 `glassImage` 的普通博客会自动柔化页面背景；已经提供预模糊图片的站点保持原有效果，避免重复模糊。
+
 ## [1.1.7] - 2026-08-24
 
 ### 修复
@@ -109,6 +115,7 @@ Fonscape 的公开版本变化记录在这里。版本号遵循语义化版本�
 
 - 生产使用前建议在独立预览环境验证主题配置、数据库与部署链路。
 
+[1.1.8]: https://github.com/UndefinedFons/Fonscape/releases/tag/v1.1.8
 [1.1.7]: https://github.com/UndefinedFons/Fonscape/releases/tag/v1.1.7
 [1.1.6]: https://github.com/UndefinedFons/Fonscape/releases/tag/v1.1.6
 [1.1.5]: https://github.com/UndefinedFons/Fonscape/releases/tag/v1.1.5

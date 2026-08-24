@@ -52,6 +52,7 @@ home: {
 ```
 
 - `image`：普通页面头图。
+- `glassImage`：可选的预模糊背景图；省略时主题会自动柔化普通 `image`，无需额外制作图片。
 - `position`：桌面与平板焦点，对应 CSS `background-position`。
 - `mobilePosition`：移动端焦点。
 - `size`：通常使用 `cover`。

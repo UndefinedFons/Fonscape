@@ -17,7 +17,7 @@ import { NotFound } from "./pages/NotFound.jsx";
 import { PoemPage } from "./pages/PoemPage.jsx";
 import { PoemsPage } from "./pages/PoemsPage.jsx";
 import { PostsPage } from "./pages/PostsPage.jsx";
-import { GLASS_BACKGROUND_IMAGES, getGlassBackgroundImage, ROUTE_HERO_IMAGES } from "./heroImages.js";
+import { getGlassBackground, GLASS_BACKGROUND_IMAGES, ROUTE_HERO_IMAGES } from "./heroImages.js";
 import { getPostOutline } from "./richContent.js";
 import { clearArticleIndexState, clearPaginationFamily, markPopNavigation, markPushNavigation, paginationFamily, parseHash, parseHashQuery, readNavigationType, routeScrollPositions } from "./routeState.js";
 
@@ -32,7 +32,7 @@ export function App() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [glassEnabled, setGlassEnabled] = useState(() => localStorage.getItem("fonscape:glass") !== "false");
-  const [glassBackgroundImage, setGlassBackgroundImage] = useState(() => getGlassBackgroundImage(route));
+  const [glassBackground, setGlassBackground] = useState(() => getGlassBackground(route));
   const [menuOpen, setMenuOpen] = useState(false);
   const [articleOutlineOpen, setArticleOutlineOpen] = useState(false);
   const [activeOutlineId, setActiveOutlineId] = useState("");
@@ -146,13 +146,14 @@ export function App() {
     localStorage.setItem("fonscape:glass", String(glassEnabled));
   }, [glassEnabled]);
   useEffect(() => {
-    const source = getGlassBackgroundImage(route);
+    const background = getGlassBackground(route);
+    const source = background.image;
     let cancelled = false;
     const image = new Image();
     image.decoding = "async";
     image.fetchPriority = "high";
     image.src = source;
-    const commit = () => { if (!cancelled) setGlassBackgroundImage(source); };
+    const commit = () => { if (!cancelled) setGlassBackground(background); };
     if (typeof image.decode === "function") image.decode().then(commit, commit);
     else if (image.complete) commit();
     else {
@@ -166,7 +167,7 @@ export function App() {
     let idleId = null;
     let timerId = null;
     let pendingImage = null;
-    const initialGlassSource = getGlassBackgroundImage(routeRef.current);
+    const initialGlassSource = getGlassBackground(routeRef.current).image;
     const pendingSources = [...new Set([
       ...GLASS_BACKGROUND_IMAGES.filter((source) => source !== initialGlassSource),
       ...ROUTE_HERO_IMAGES.slice(1),
@@ -269,7 +270,11 @@ export function App() {
       window.setTimeout(() => setThemeChanging(false), 560);
     });
   };
-  return <div className={themeChanging ? "app-shell theme-changing" : "app-shell"} style={{ "--glass-background-image": `url("${glassBackgroundImage}")` }}>
+  return <div className={themeChanging ? "app-shell theme-changing" : "app-shell"} style={{
+    "--glass-background-image": `url("${glassBackground.image}")`,
+    "--glass-background-filter": glassBackground.needsSoftening ? "blur(14px) saturate(.86)" : "none",
+    "--glass-background-transform": glassBackground.needsSoftening ? "translateZ(0) scale(1.04)" : "translateZ(0)",
+  }}>
     <span className="global-glass-backdrop" aria-hidden="true" />
     <span className="global-glass-veil" aria-hidden="true" />
     {!isSetupRoute && <Header route={route} theme={theme} menuOpen={menuOpen} onMenu={() => { setArticleOutlineOpen(false); setMenuOpen((value) => !value); }} onTheme={toggleTheme} onSearch={() => setSearchOpen(true)} onSettings={() => setSettingsOpen(true)} viewer={viewer} onAccount={() => openAccount(viewer ? "profile" : "login")} hasArticleOutline={hasArticleOutline} articleOutlineOpen={articleOutlineOpen} onArticleOutline={() => { setMenuOpen(false); setArticleOutlineOpen((value) => !value); }} onCloseArticleOutline={() => setArticleOutlineOpen(false)} />}
