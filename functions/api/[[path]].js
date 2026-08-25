@@ -494,10 +494,6 @@ async function siteRuntime(context) {
   return json({ launchedAt });
 }
 
-async function articleStats(context) {
-  return json({ stats: (await readContentStats(context)).post });
-}
-
 async function incrementContentView(context, target) {
   const db = requireDatabase(context.env);
   await assertTargetExists(db, target);
@@ -515,10 +511,6 @@ async function incrementContentView(context, target) {
 async function recordContentView(context) {
   const input = await readJson(context.request);
   return incrementContentView(context, validateTarget(input.type, input.slug));
-}
-
-async function recordArticleView(context, value) {
-  return incrementContentView(context, validateTarget("post", value));
 }
 
 async function handle(context) {
@@ -542,8 +534,6 @@ async function handle(context) {
   if (method === "PATCH" && parts[0] === "me" && parts[1] === "admin-comments") return markAdminCommentsRead(context);
   if (method === "GET" && parts[0] === "profile" && parts[1] && parts.length === 2) return profile(context, parts[1]);
   if ((method === "GET" || method === "HEAD") && parts[0] === "avatar" && parts[1]) return avatar(context, parts[1]);
-  if (method === "GET" && parts[0] === "articles" && parts[1] === "stats" && parts.length === 2) return articleStats(context);
-  if (method === "POST" && parts[0] === "articles" && parts[1] && parts[2] === "view" && parts.length === 3) return recordArticleView(context, parts[1]);
   if (method === "GET" && parts[0] === "content" && parts[1] === "stats" && parts.length === 2) return contentStats(context);
   if (method === "POST" && parts[0] === "content" && parts[1] === "view" && parts.length === 2) return recordContentView(context);
   if (method === "GET" && parts[0] === "site" && parts[1] === "runtime" && parts.length === 2) return siteRuntime(context);
