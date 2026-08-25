@@ -63,9 +63,9 @@ pnpm dev
 
 ```md
 ---
-title: Hello World
-category: 记录
-date: 2026-01-01T12:00
+title: "Hello World"
+category: "记录"
+date: "2026-01-01T12:00"
 ---
 
 这里直接写 Markdown 正文。
