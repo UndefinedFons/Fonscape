@@ -86,7 +86,7 @@ Cloudflare 通过 `wrangler.jsonc` 中的 `DB` 绑定连接 D1。真实密钥不
 
 文章、小诗与音乐手记都采用“单个 Markdown + Frontmatter + 自动扫描”。新增内容时只需在对应目录新建一个 `.md` 文件，不需要维护 JavaScript 索引，也不需要在 API 中再次登记评论或浏览量目标。
 
-Frontmatter 使用简单的 `key: value` 写法。数组或对象必须写成合法 JSON，例如 `tags: ["阅读", "技术"]`。建议给包含空格、冒号或特殊符号的字符串加双引号。
+Frontmatter 使用 `key: value` 写法。字符串统一使用双引号；布尔值、数字与 `null` 不加引号；数组和对象必须写成合法 JSON，例如 `tags: ["阅读", "技术"]`。
 
 ### 新建文章
 
@@ -94,22 +94,22 @@ Frontmatter 使用简单的 `key: value` 写法。数组或对象必须写成合
 
 ```md
 ---
-title: 我的笔记
-category: 笔记
-date: 2026-07-27T20:00
-slug: my-note
-excerpt: 一段简短摘要。
+title: "我的笔记"
+category: "笔记"
+date: "2026-07-27T20:00"
+slug: "my-note"
+excerpt: "一段简短摘要。"
 tags: ["文学", "随想"]
-series: 阅读札记
+series: "阅读札记"
 seriesOrder: 1
 featured: true
 featuredOrder: 10
-image: /assets/my-note.webp
+image: "/assets/my-note.webp"
 cardPosition: "50% 35%"
-coverMode: wide
+coverMode: "wide"
 coverPosition: "50% 30%"
 music: {"src":"/audio/example.mp3","cover":"/assets/example.webp","title":"曲名","artist":"音乐人"}
-musicPlacement: inline
+musicPlacement: "inline"
 ---
 
 这里直接撰写 Markdown 正文。需要在正文中显示配乐播放器时，将下列标记单独写在一行：
@@ -157,7 +157,7 @@ Frontmatter 中的对象必须写成一行合法 JSON：
 music: {"src":"/audio/example.mp3","cover":"/assets/example.webp","title":"曲名","artist":"音乐人"}
 ```
 
-默认播放器位于文章信息与正文之间。需要放入正文时，增加 `musicPlacement: inline`，再将下列标记单独写在正文一行：
+默认播放器位于文章信息与正文之间。需要放入正文时，增加 `musicPlacement: "inline"`，再将下列标记单独写在正文一行：
 
 ```text
 [[article-music]]
@@ -171,16 +171,16 @@ music: {"src":"/audio/example.mp3","cover":"/assets/example.webp","title":"曲�
 
 ```md
 ---
-title: 一首歌
-kind: 歌曲
-section: songs
-date: 2026-07-27T20:00
-excerpt: 关于这首歌的一段简介。
-image: /assets/a-song.webp
-url: https://example.com
-action: 前往收听
-sourceTitle: 曲名
-sourceMeta: 音乐人
+title: "一首歌"
+kind: "歌曲"
+section: "songs"
+date: "2026-07-27T20:00"
+excerpt: "关于这首歌的一段简介。"
+image: "/assets/a-song.webp"
+url: "https://example.com"
+action: "前往收听"
+sourceTitle: "曲名"
+sourceMeta: "音乐人"
 ---
 
 这里直接撰写 Markdown 正文。
@@ -208,8 +208,8 @@ sourceMeta: 音乐人
 
 ```md
 ---
-title: 一首小诗
-date: 2026-07-27T20:00
+title: "一首小诗"
+date: "2026-07-27T20:00"
 ---
 
 第一行
