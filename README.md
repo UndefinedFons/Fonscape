@@ -9,8 +9,7 @@
 <p align="center">
   <a href="https://fonstage.space/">在线示例</a> ·
   <a href="#开始使用">开始使用</a> ·
-  <a href="./CONTENT_GUIDE.md">内容指南</a> ·
-  <a href="./docs/CONFIGURATION.md">配置说明</a>
+  <a href="./GUIDE.md">使用指南</a>
 </p>
 
 ## 示例界面
@@ -46,9 +45,9 @@ Fonscape 把公开内容与运行时数据分开管理：
 ### 一键部署
 
 [![Deploy to Cloudflare](./assets/readme/deploy-cloudflare-light.svg)](https://deploy.workers.cloudflare.com/?url=https://github.com/UndefinedFons/Fonscape)
-[![Deploy with Vercel](./assets/readme/deploy-vercel-light.svg)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2FUndefinedFons%2FFonscape&env=ADMIN_BOOTSTRAP_TOKEN&envDescription=%E8%AF%B7%E8%BE%93%E5%85%A5%E4%B8%80%E4%B8%AA%E7%94%B1%E4%BD%A0%E8%87%AA%E5%B7%B1%E7%94%9F%E6%88%90%E7%9A%84%E3%80%81%E6%97%A0%E9%BB%98%E8%AE%A4%E5%80%BC%E7%9A%84%E4%B8%80%E6%AC%A1%E6%80%A7%E7%AE%A1%E7%90%86%E5%91%98%E5%88%9D%E5%A7%8B%E5%8C%96%E4%BB%A4%E7%89%8C%E3%80%82Turso+%E6%95%B0%E6%8D%AE%E5%BA%93%E5%8F%98%E9%87%8F%E4%BC%9A%E7%94%B1+Marketplace+%E8%87%AA%E5%8A%A8%E6%B3%A8%E5%85%A5%E3%80%82&envLink=https%3A%2F%2Fgithub.com%2FUndefinedFons%2FFonscape%2Fblob%2Fmain%2Fdocs%2FDEPLOYMENT.md&products=%5B%7B%22type%22%3A%22integration%22%2C%22protocol%22%3A%22storage%22%2C%22productSlug%22%3A%22database%22%2C%22integrationSlug%22%3A%22tursocloud%22%7D%5D&skippable-integrations=0)
+[![Deploy with Vercel](./assets/readme/deploy-vercel-light.svg)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2FUndefinedFons%2FFonscape&env=ADMIN_BOOTSTRAP_TOKEN&envDescription=%E8%AF%B7%E8%BE%93%E5%85%A5%E4%B8%80%E4%B8%AA%E7%94%B1%E4%BD%A0%E8%87%AA%E5%B7%B1%E7%94%9F%E6%88%90%E7%9A%84%E3%80%81%E6%97%A0%E9%BB%98%E8%AE%A4%E5%80%BC%E7%9A%84%E4%B8%80%E6%AC%A1%E6%80%A7%E7%AE%A1%E7%90%86%E5%91%98%E5%88%9D%E5%A7%8B%E5%8C%96%E4%BB%A4%E7%89%8C%E3%80%82Turso+%E6%95%B0%E6%8D%AE%E5%BA%93%E5%8F%98%E9%87%8F%E4%BC%9A%E7%94%B1+Marketplace+%E8%87%AA%E5%8A%A8%E6%B3%A8%E5%85%A5%E3%80%82&envLink=https%3A%2F%2Fgithub.com%2FUndefinedFons%2FFonscape%2Fblob%2Fmain%2FGUIDE.md&products=%5B%7B%22type%22%3A%22integration%22%2C%22protocol%22%3A%22storage%22%2C%22productSlug%22%3A%22database%22%2C%22integrationSlug%22%3A%22tursocloud%22%7D%5D&skippable-integrations=0)
 
-两种部署方式均只需填写自行生成的 `ADMIN_BOOTSTRAP_TOKEN`。部署完成后，打开 `/admin/setup` 并使用同一令牌创建首位管理员；初始化成功后，该令牌将永久失效。平台差异和部署后检查见 [部署说明](./docs/DEPLOYMENT.md)。
+两种部署方式均只需填写自行生成的 `ADMIN_BOOTSTRAP_TOKEN`。部署完成后，打开 `/admin/setup` 并使用同一令牌创建首位管理员；初始化成功后，该令牌将永久失效。平台差异和部署后检查见 [使用指南](./GUIDE.md#部署)。
 
 ### 本地运行
 
@@ -78,7 +77,7 @@ date: 2026-01-01T12:00
 pnpm check
 ```
 
-文章、小诗与音乐手记的字段、置顶顺序、封面模式和富文本写法以 [内容指南](./CONTENT_GUIDE.md) 为准；站点资料、资源路径和环境变量见 [配置说明](./docs/CONFIGURATION.md)。
+文章、小诗与音乐手记的字段、站点资料、资源路径和环境变量统一收录在 [使用指南](./GUIDE.md)。
 
 <details>
 <summary>常用命令</summary>
@@ -104,15 +103,7 @@ pnpm fonscape update --apply
 pnpm check
 ```
 
-它会区分用户文件、主题文件、合并文件与迁移历史，并在应用前生成本地备份。升级前请阅读目标 [Release](https://github.com/UndefinedFons/Fonscape/releases)、[更新日志](./CHANGELOG.md) 和 [升级说明](./docs/UPGRADING.md)。
-
-## 文档
-
-- [站点配置](./docs/CONFIGURATION.md)：站点资料、作者信息、页面头图、友链与资源路径。
-- [内容撰写](./CONTENT_GUIDE.md)：文章、小诗、音乐手记与 Markdown 富文本。
-- [部署说明](./docs/DEPLOYMENT.md)：Cloudflare、Vercel、首次管理员设置与部署后验证。
-- [升级说明](./docs/UPGRADING.md)：Updater 预演、冲突处理、回滚与数据库迁移。
-- [故障排查](./docs/TROUBLESHOOTING.md) 与 [运行维护](./MAINTENANCE.md)：常见失败、限频与容量约束。
+它会区分用户文件、主题文件、合并文件与迁移历史，并在应用前生成本地备份。完整流程见 [使用指南](./GUIDE.md#升级)；版本变化与特殊注意事项见 [Release](https://github.com/UndefinedFons/Fonscape/releases) 和 [更新日志](./CHANGELOG.md)。
 
 ## 鸣谢
 
