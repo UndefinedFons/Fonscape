@@ -47,6 +47,8 @@ test("invalid or duplicate frontmatter is rejected during the build", () => {
   assert.throws(() => parsePost("broken.md", "---\ntitle: A\ntitle: B\ndate: 2026-07-30\ncategory: 开发\n---\nBody"), /字段 title 重复/u);
   assert.throws(() => parsePost("broken.md", "---\ntitle: A\ndate: nope\ncategory: 开发\n---\nBody"), /date 格式无效/u);
   assert.throws(() => parsePost("broken.md", "---\ntitle: A\ndate: 2026-07-30\ncategory: 开发\ncoverAlt: 说明\n---\nBody"), /无需配置 coverAlt/u);
+  assert.throws(() => parsePost("broken.md", "---\ntitle: A\ndate: 2026-07-30\ncategory: 开发\ncoverMode: side\n---\nBody"), /coverMode 必须是 wide 或 none/u);
+  assert.throws(() => parsePost("broken.md", "---\ntitle: A\ndate: 2026-07-30\ncategory: 开发\ncoverSide: left\n---\nBody"), /不支持 coverSide/u);
   assert.throws(() => parsePost("broken.md", "---\ntitle: A\ndate: 2026-07-30\ncategory: 开发\nfeatured: false\nfeaturedOrder: 2\n---\nBody"), /未置顶，不能配置 featuredOrder/u);
   assert.throws(() => parsePost("broken.md", "---\ntitle: A\ndate: 2026-07-30\ncategory: 开发\nfeatured: true\nfeaturedOrder: 1.5\n---\nBody"), /featuredOrder 必须是正整数/u);
 });

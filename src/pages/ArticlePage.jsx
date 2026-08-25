@@ -19,15 +19,14 @@ export function ArticlePage({ slug, stats, onView }) {
   const inlineMusicPlayers = useMemo(() => Object.fromEntries((post?.musicBlocks || []).map((track) => [track.id, <ArticleMusicPlayer key={track.id} track={track} autoplay={Boolean(track.autoplay)} />])), [post]);
   useEffect(() => { if (post?.slug) onView("post", post.slug); }, [post?.slug, onView]);
   if (!post) return <NotFound />;
-  const coverMode = post.image ? (post.coverMode || "wide") : "none";
-  const coverSide = post.coverSide === "right" ? "right" : "left";
+  const coverMode = post.image && post.coverMode !== "none" ? "wide" : "none";
   const showDetailCover = coverMode !== "none";
   const seriesPosts = post.series ? posts.filter((item) => item.series === post.series).sort((a, b) => (a.seriesOrder || 0) - (b.seriesOrder || 0) || a.date.localeCompare(b.date)) : [];
   const seriesIndex = seriesPosts.findIndex((item) => item.slug === post.slug);
   const previousChapter = seriesIndex > 0 ? seriesPosts[seriesIndex - 1] : null;
   const nextChapter = seriesIndex >= 0 && seriesIndex < seriesPosts.length - 1 ? seriesPosts[seriesIndex + 1] : null;
   return <main className="article-page material-panel page-width"><button className="back-button" onClick={() => history.length > 1 ? history.back() : go("/posts")}><ArrowLeft size={17} />返回</button><article className={`article-detail article-detail--${coverMode}`}>
-    <div className={`article-intro article-intro--${coverMode} article-intro--cover-${coverSide}`}>
+    <div className={`article-intro article-intro--${coverMode}`}>
       <div className="article-intro-copy"><div className="article-detail-kickers"><span className="category">{post.category}</span></div><h1>{post.title}</h1>{post.excerpt && <p className="article-lede">{post.excerpt}</p>}{(post.series || post.tags.length > 0) && <div className="article-tags article-tags--intro">{post.series && <a className="article-series-link" href={`#/posts?series=${encodeURIComponent(post.series)}`}><FolderOpen size={15} />{post.series}</a>}{post.tags.map((tag) => <a href={`#/posts?tag=${encodeURIComponent(tag)}`} key={tag}><Hash size={15} />{tag}</a>)}</div>}<PostMeta post={post} showTags={false} stats={stats?.[post.slug]} /></div>
       {showDetailCover && <ZoomableImage src={post.image} alt={`${post.title}的文章封面`} showLightboxCaption={false} className="article-cover" triggerClassName="article-cover-frame" style={{ objectPosition: post.coverPosition || "center" }} loading="eager" />}
     </div>
