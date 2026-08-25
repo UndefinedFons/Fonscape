@@ -339,7 +339,7 @@ pnpm fonscape update --rollback .fonscape-update/backups/<备份目录>
 
 数据库迁移按文件名顺序追加。Cloudflare 使用 `pnpm db:migrate:cloudflare`；Vercel + Turso 先运行 `pnpm migrate:turso` 查看计划，确认数据库后再运行 `pnpm migrate:turso --apply`。
 
-升级完成后，在相同的桌面与手机视口核对站点资料、个人内容、资源、数据库数据和主要页面。目标版本的特殊注意事项以 [GitHub Release](https://github.com/UndefinedFons/Fonscape/releases) 与 [`CHANGELOG.md`](./CHANGELOG.md) 为准。
+升级完成后，在相同的桌面与手机视口核对站点资料、个人内容、资源、数据库数据和主要页面。目标版本的变化与特殊注意事项以 [GitHub Releases](https://github.com/UndefinedFons/Fonscape/releases) 为准。
 
 ## 故障排查
 
@@ -380,11 +380,11 @@ pnpm fonscape update --rollback .fonscape-update/backups/<备份目录>
 <summary>主题维护者发布清单</summary>
 
 1. 从最新 `main` 创建独立发布分支。
-2. 更新 `package.json`、`.fonscape-version`、`fonscape.manifest.json` 与 `CHANGELOG.md`，并确认版本一致。
+2. 更新 `package.json`、`.fonscape-version` 与 `fonscape.manifest.json`，并确认版本一致。
 3. 从上一正式版本验证 Updater 的预演、应用与回滚。
 4. 在带有自定义内容和配置的独立站点验证升级，不覆盖用户文件。
 5. 运行 `pnpm install --frozen-lockfile` 与 `pnpm check`。
 6. 通过 Pull Request 合并，确认检查成功且 changed files 符合预期。
-7. 在合并提交上创建版本标签和中文 GitHub Release，并核对标签、提交与变更记录。
+7. 在合并提交上创建版本标签和中文 GitHub Release，并核对标签、提交与变更说明。
 
 </details>

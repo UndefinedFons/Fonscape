@@ -103,7 +103,7 @@ pnpm fonscape update --apply
 pnpm check
 ```
 
-它会区分用户文件、主题文件、合并文件与迁移历史，并在应用前生成本地备份。完整流程见 [使用指南](./GUIDE.md#升级)；版本变化与特殊注意事项见 [Release](https://github.com/UndefinedFons/Fonscape/releases) 和 [更新日志](./CHANGELOG.md)。
+它会区分用户文件、主题文件、合并文件与迁移历史，并在应用前生成本地备份。完整流程见 [使用指南](./GUIDE.md#升级)；版本变化与特殊注意事项见 [Releases](https://github.com/UndefinedFons/Fonscape/releases)。
 
 ## 鸣谢
 
