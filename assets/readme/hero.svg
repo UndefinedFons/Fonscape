@@ -1,0 +1,81 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="420" viewBox="0 0 1200 420" role="img" aria-labelledby="title desc">
+  <title id="title">Fonscape 风栖</title>
+  <desc id="desc">Fonscape 是一款兼顾高颜值界面、沉浸式阅读与简洁使用流程的 React 个人博客主题。</desc>
+
+  <defs>
+    <linearGradient id="background" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#fffafd"/>
+      <stop offset="0.56" stop-color="#fbf1f8"/>
+      <stop offset="1" stop-color="#eee7f7"/>
+    </linearGradient>
+    <linearGradient id="feature" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#f6dce9"/>
+      <stop offset="0.52" stop-color="#eadcf3"/>
+      <stop offset="1" stop-color="#d9d4ef"/>
+    </linearGradient>
+    <linearGradient id="accentLine" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#ad467c"/>
+      <stop offset="1" stop-color="#ad92d4"/>
+    </linearGradient>
+    <filter id="softShadow" x="-20%" y="-20%" width="140%" height="150%">
+      <feDropShadow dx="0" dy="14" stdDeviation="18" flood-color="#50335f" flood-opacity="0.11"/>
+    </filter>
+    <clipPath id="boardClip">
+      <rect x="648" y="30" width="504" height="360" rx="28"/>
+    </clipPath>
+  </defs>
+
+  <rect x="1" y="1" width="1198" height="418" rx="31" fill="url(#background)" stroke="#dfc9dd" stroke-width="2"/>
+  <path d="M-10 356 C150 314 260 420 450 366 S720 286 858 330" fill="none" stroke="#dca9c5" stroke-width="42" stroke-linecap="round" opacity="0.13"/>
+  <path d="M78 84 C128 42 188 43 232 70" fill="none" stroke="#ad92d4" stroke-width="3" stroke-linecap="round" opacity="0.5"/>
+  <circle cx="67" cy="91" r="6" fill="#ad467c"/>
+
+  <g id="title-block" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', sans-serif">
+    <text x="66" y="76" fill="#ad467c" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="18" font-weight="700" letter-spacing="3.5">BEAUTIFUL READING-FIRST BLOG</text>
+    <text x="62" y="166" fill="#50335f" font-size="78" font-weight="760" letter-spacing="-3">Fonscape</text>
+    <text x="68" y="211" fill="#745f80" font-size="28" font-weight="650" letter-spacing="7">风栖</text>
+    <rect x="68" y="235" width="56" height="4" rx="2" fill="url(#accentLine)"/>
+    <text x="66" y="284" fill="#50335f" font-size="30" font-weight="650">把个人博客做得更好看，</text>
+    <text x="66" y="324" fill="#50335f" font-size="30" font-weight="650">也更适合安静地阅读。</text>
+    <text x="68" y="371" fill="#745f80" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="18" letter-spacing="1.4">RESPONSIVE  /  READING  /  MARKDOWN  /  DEPLOY</text>
+  </g>
+
+  <g id="interface-preview" clip-path="url(#boardClip)" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', sans-serif">
+    <rect x="648" y="30" width="504" height="360" rx="28" fill="#fffafd" stroke="#dfc9dd" stroke-width="2" filter="url(#softShadow)"/>
+
+    <g id="navigation-capsule">
+      <rect x="748" y="48" width="304" height="42" rx="21" fill="#ffffff" fill-opacity="0.82" stroke="#dfc9dd"/>
+      <text x="774" y="75" fill="#ad467c" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="15" font-weight="700">HOME</text>
+      <text x="842" y="75" fill="#745f80" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="15" font-weight="600">POSTS</text>
+      <text x="918" y="75" fill="#745f80" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="15" font-weight="600">SEARCH</text>
+      <path d="M1021 61 A8 8 0 1 0 1028 74 A7 7 0 0 1 1021 61 Z" fill="#ad92d4" fill-opacity="0.38" stroke="#745f80" stroke-width="1.5"/>
+    </g>
+
+    <g id="article-card">
+      <rect x="674" y="110" width="452" height="160" rx="22" fill="url(#feature)" stroke="#d9bdd1"/>
+      <text x="702" y="143" fill="#ad467c" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="17" font-weight="700" letter-spacing="2.4">READING EXPERIENCE</text>
+      <text x="702" y="184" fill="#50335f" font-size="31" font-weight="720">沉浸式长文阅读</text>
+      <text x="702" y="216" fill="#745f80" font-size="19">排版、目录与阅读进度一起服务正文。</text>
+      <rect x="702" y="232" width="68" height="26" rx="13" fill="#fffafd" fill-opacity="0.72"/>
+      <text x="721" y="250" fill="#745f80" font-size="15" font-weight="600">目录</text>
+      <rect x="780" y="232" width="104" height="26" rx="13" fill="#fffafd" fill-opacity="0.72"/>
+      <text x="797" y="250" fill="#745f80" font-size="15" font-weight="600">阅读进度</text>
+      <rect x="894" y="232" width="94" height="26" rx="13" fill="#fffafd" fill-opacity="0.72"/>
+      <text x="911" y="250" fill="#745f80" font-size="15" font-weight="600">图片灯箱</text>
+    </g>
+
+    <g id="value-cards">
+      <rect x="674" y="288" width="216" height="76" rx="18" fill="#fffafd" stroke="#dfc9dd"/>
+      <circle cx="704" cy="326" r="12" fill="#f8e1ed"/>
+      <path d="M697 329 L704 320 L711 329 M700 332 H708" fill="none" stroke="#ad467c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <text x="730" y="318" fill="#ad467c" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="15" font-weight="700" letter-spacing="1.8">VISUAL SYSTEM</text>
+      <text x="730" y="344" fill="#50335f" font-size="20" font-weight="650">高颜值界面</text>
+
+      <rect x="910" y="288" width="216" height="76" rx="18" fill="#fffafd" stroke="#dfc9dd"/>
+      <circle cx="940" cy="326" r="12" fill="#eee7f7"/>
+      <path d="M934 326 H946 M942 322 L946 326 L942 330" fill="none" stroke="#ad92d4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <text x="966" y="318" fill="#8c6cba" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="15" font-weight="700" letter-spacing="1.8">QUICK START</text>
+      <text x="966" y="344" fill="#50335f" font-size="20" font-weight="650">一键部署</text>
+    </g>
+  </g>
+</svg>

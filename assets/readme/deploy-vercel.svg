@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="264" height="58" viewBox="0 0 264 58" role="img" aria-labelledby="title desc">
+  <title id="title">部署到 Vercel</title>
+  <desc id="desc">打开 Fonscape 的 Vercel 一键部署页面。</desc>
+  <rect x="1" y="1" width="262" height="56" rx="14" fill="#fffafd" stroke="#dfc9dd" stroke-width="2"/>
+  <path d="M43 16 58 42H28L43 16Z" fill="#50335f"/>
+  <text x="80" y="36" fill="#50335f" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', sans-serif" font-size="18" font-weight="650">部署到 Vercel</text>
+</svg>
