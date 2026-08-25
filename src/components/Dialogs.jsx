@@ -5,6 +5,7 @@ import { MusicNotes } from "@phosphor-icons/react/MusicNotes";
 import { X } from "@phosphor-icons/react/X";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { musicReviews, poems, posts } from "../content/index.js";
+import { sortNewestFirst } from "../content/frontmatter.js";
 import { lockPageScroll } from "../lockPageScroll.js";
 import { go } from "../routeState.js";
 import { formatContentDate } from "../siteUtils.js";
@@ -34,10 +35,10 @@ export function SearchDialog({ onClose }) {
   useEffect(() => () => window.clearTimeout(closeTimer.current), []);
   useEffect(() => lockPageScroll(), []);
   const searchItems = useMemo(() => [
-    ...posts.map((post) => ({ id: `post-${post.slug}`, kind: "post", type: "文章", title: post.title, meta: post.category, date: post.date, href: `#/post/${post.slug}`, icon: BookOpenText })),
-    ...poems.map((poem) => ({ id: `poem-${poem.slug}`, kind: "poem", type: "小诗", title: poem.title, meta: "", date: poem.date, href: `#/poem/${poem.slug}`, icon: Feather })),
-    ...Object.entries(musicReviews).flatMap(([section, entries]) => entries.map((entry) => ({ id: `music-${section}-${entry.slug}`, kind: "music", type: "音乐", title: entry.title, meta: entry.kind, date: entry.date, href: `#/music/${section}/${entry.slug}`, icon: MusicNotes }))),
-  ], []);
+    ...posts.map((post) => ({ id: `post-${post.slug}`, slug: post.slug, kind: "post", type: "文章", title: post.title, meta: post.category, date: post.date, href: `#/post/${post.slug}`, icon: BookOpenText })),
+    ...poems.map((poem) => ({ id: `poem-${poem.slug}`, slug: poem.slug, kind: "poem", type: "小诗", title: poem.title, meta: "", date: poem.date, href: `#/poem/${poem.slug}`, icon: Feather })),
+    ...Object.entries(musicReviews).flatMap(([section, entries]) => entries.map((entry) => ({ id: `music-${section}-${entry.slug}`, slug: `${section}/${entry.slug}`, kind: "music", type: "音乐", title: entry.title, meta: entry.kind, date: entry.date, href: `#/music/${section}/${entry.slug}`, icon: MusicNotes }))),
+  ].sort(sortNewestFirst), []);
   const normalizedQuery = query.trim().toLowerCase();
   const results = useMemo(() => {
     const scopedItems = scope === "all" ? searchItems : searchItems.filter((item) => item.kind === scope);

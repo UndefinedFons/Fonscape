@@ -24,7 +24,6 @@ export const DEFAULT_ABUSE_LIMITS = Object.freeze({
   COMMENT_IP_10M: 20,
   COMMENT_USER_10M: 8,
   COMMENT_USER_DAILY: 60,
-  COMMENT_ADMIN_DAILY: 300,
   COMMENT_TARGET_HOURLY: 120,
   AVATAR_GLOBAL_DAILY: 500,
   AVATAR_IP_HOURLY: 30,
@@ -212,12 +211,11 @@ export async function protectLogin(context, username) {
 }
 
 export async function protectComment(context, user, target) {
+  if (user.role === "admin") return;
   const { address } = clientSubjects(context.request);
-  const dailyLimitName = user.role === "admin" ? "COMMENT_ADMIN_DAILY" : "COMMENT_USER_DAILY";
-  const dailyLimit = DEFAULT_ABUSE_LIMITS[dailyLimitName];
   await enforcePolicies(context, "comment", [
     { scope: "user-10m", subject: user.id, limitName: "COMMENT_USER_10M", limit: DEFAULT_ABUSE_LIMITS.COMMENT_USER_10M, windowMs: 10 * MINUTE },
-    { scope: "user-day", subject: user.id, limitName: dailyLimitName, limit: dailyLimit, windowMs: DAY },
+    { scope: "user-day", subject: user.id, limitName: "COMMENT_USER_DAILY", limit: DEFAULT_ABUSE_LIMITS.COMMENT_USER_DAILY, windowMs: DAY },
     { scope: "ip-10m", subject: address, limitName: "COMMENT_IP_10M", limit: DEFAULT_ABUSE_LIMITS.COMMENT_IP_10M, windowMs: 10 * MINUTE },
     { scope: "target-hour", subject: `${target.type}:${target.slug}`, limitName: "COMMENT_TARGET_HOURLY", limit: DEFAULT_ABUSE_LIMITS.COMMENT_TARGET_HOURLY, windowMs: HOUR },
     { scope: "global-hour", subject: "global", limitName: "COMMENT_GLOBAL_HOURLY", limit: DEFAULT_ABUSE_LIMITS.COMMENT_GLOBAL_HOURLY, windowMs: HOUR },
@@ -226,6 +224,7 @@ export async function protectComment(context, user, target) {
 }
 
 export async function protectAvatar(context, user) {
+  if (user.role === "admin") return;
   const { address } = clientSubjects(context.request);
   await enforcePolicies(context, "avatar", [
     { scope: "user-day", subject: user.id, limitName: "AVATAR_USER_DAILY", limit: DEFAULT_ABUSE_LIMITS.AVATAR_USER_DAILY, windowMs: DAY },
@@ -235,6 +234,7 @@ export async function protectAvatar(context, user) {
 }
 
 export async function protectProfileUpdate(context, user) {
+  if (user.role === "admin") return;
   await enforcePolicies(context, "profile", [
     { scope: "user-hour", subject: user.id, limitName: "PROFILE_USER_HOURLY", limit: DEFAULT_ABUSE_LIMITS.PROFILE_USER_HOURLY, windowMs: HOUR },
   ]);

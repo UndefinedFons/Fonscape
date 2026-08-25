@@ -2,6 +2,18 @@
 
 Fonscape 的公开版本变化记录在这里。版本号遵循语义化版本。
 
+## [1.1.10] - 2026-08-25
+
+### 改进
+
+- 全部搜索结果改为跨文章、小诗与音乐按发布时间统一倒序排列，分类按钮继续用于单独筛选内容类型。
+- 管理员登录后的评论、头像、资料及消息已读操作不再受普通账户频率限制；普通账户与未登录入口继续保留原有防刷规则。
+
+### 修复
+
+- “我的消息”“收到评论”和“收到回复”统一使用两行正文缩略，避免长评论撑满个人中心。
+- 消息已读标记失败不再覆盖已经成功读取的评论或回复列表，也不会在切换消息标签时误显示整页限频错误。
+
 ## [1.1.9] - 2026-08-24
 
 ### 修复
@@ -121,6 +133,7 @@ Fonscape 的公开版本变化记录在这里。版本号遵循语义化版本�
 
 - 生产使用前建议在独立预览环境验证主题配置、数据库与部署链路。
 
+[1.1.10]: https://github.com/UndefinedFons/Fonscape/releases/tag/v1.1.10
 [1.1.9]: https://github.com/UndefinedFons/Fonscape/releases/tag/v1.1.9
 [1.1.8]: https://github.com/UndefinedFons/Fonscape/releases/tag/v1.1.8
 [1.1.7]: https://github.com/UndefinedFons/Fonscape/releases/tag/v1.1.7

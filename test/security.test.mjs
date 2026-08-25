@@ -96,7 +96,7 @@ test("specific abuse limits are consumed before shared global capacity", async (
     context,
     { id: "admin-1", role: "admin" },
     { type: "post", slug: "example" },
-  )), [8, 300, 20, 120, 500, 5000]);
+  )), []);
   assert.deepEqual(await consumedLimits((context) => protectAvatar(
     context,
     { id: "member-1" },
@@ -105,6 +105,14 @@ test("specific abuse limits are consumed before shared global capacity", async (
     context,
     { id: "member-1" },
   )), [20]);
+  assert.deepEqual(await consumedLimits((context) => protectAvatar(
+    context,
+    { id: "admin-1", role: "admin" },
+  )), []);
+  assert.deepEqual(await consumedLimits((context) => protectProfileUpdate(
+    context,
+    { id: "admin-1", role: "admin" },
+  )), []);
   assert.deepEqual(await consumedLimits((context) => protectContentView(
     context,
     { type: "post", slug: "example" },
