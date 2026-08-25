@@ -3690,7 +3690,7 @@ a.home-dash-panel:focus-visible {
     width:auto;
     height:auto;
     background-size:cover;
-    transform:translate3d(0,0,0);
+    transform:var(--glass-background-transform,translate3d(0,0,0));
     transform-origin:center;
   }
 }

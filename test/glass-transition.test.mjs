@@ -17,6 +17,7 @@ test("global glass keeps expensive backdrop properties stable while opacity tran
   assert.match(app, /dataset\.glassTransition = glassTransition/u);
   assert.match(styles, /data-glass-transition="off"[^}]+animation:global-glass-out \.56s/u);
   assert.match(styles, /@keyframes global-glass-out \{ from \{ opacity:1; \} to \{ opacity:0; \} \}/u);
+  assert.match(styles, /inset:-16px;[^}]+transform:var\(--glass-background-transform,translate3d\(0,0,0\)\)/u);
 });
 
 test("home backgrounds remain transparent overlays during glass transitions", async () => {
