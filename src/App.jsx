@@ -32,6 +32,8 @@ export function App() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [glassEnabled, setGlassEnabled] = useState(() => localStorage.getItem("fonscape:glass") !== "false");
+  const [glassTransition, setGlassTransition] = useState(null);
+  const glassTransitionTimerRef = useRef(0);
   const [glassBackground, setGlassBackground] = useState(() => getGlassBackground(route));
   const [menuOpen, setMenuOpen] = useState(false);
   const [articleOutlineOpen, setArticleOutlineOpen] = useState(false);
@@ -141,10 +143,19 @@ export function App() {
     return cleanup;
   }, [route]);
   useEffect(() => { document.documentElement.dataset.theme = theme; localStorage.setItem("theme", theme); }, [theme]);
-  useEffect(() => {
+  useLayoutEffect(() => {
     document.documentElement.dataset.glass = glassEnabled ? "on" : "off";
+    if (glassTransition) document.documentElement.dataset.glassTransition = glassTransition;
+    else delete document.documentElement.dataset.glassTransition;
     localStorage.setItem("fonscape:glass", String(glassEnabled));
-  }, [glassEnabled]);
+  }, [glassEnabled, glassTransition]);
+  const handleGlassChange = useCallback((enabled) => {
+    window.clearTimeout(glassTransitionTimerRef.current);
+    setGlassTransition(enabled ? "on" : "off");
+    setGlassEnabled(enabled);
+    glassTransitionTimerRef.current = window.setTimeout(() => setGlassTransition(null), 600);
+  }, []);
+  useEffect(() => () => window.clearTimeout(glassTransitionTimerRef.current), []);
   useEffect(() => {
     const background = getGlassBackground(route);
     const source = background.image;
@@ -279,6 +290,6 @@ export function App() {
     <span className="global-glass-veil" aria-hidden="true" />
     {!isSetupRoute && <Header route={route} theme={theme} menuOpen={menuOpen} onMenu={() => { setArticleOutlineOpen(false); setMenuOpen((value) => !value); }} onTheme={toggleTheme} onSearch={() => setSearchOpen(true)} onSettings={() => setSettingsOpen(true)} viewer={viewer} onAccount={() => openAccount(viewer ? "profile" : "login")} hasArticleOutline={hasArticleOutline} articleOutlineOpen={articleOutlineOpen} onArticleOutline={() => { setMenuOpen(false); setArticleOutlineOpen((value) => !value); }} onCloseArticleOutline={() => setArticleOutlineOpen(false)} />}
     {!isSetupRoute && hasArticleOutline && <ArticleOutlinePopover items={activePostOutline} open={articleOutlineOpen} activeId={activeOutlineId || activePostOutline[0]?.id} onClose={() => setArticleOutlineOpen(false)} onSelect={(item) => { document.getElementById(item.id)?.scrollIntoView({ behavior: "smooth", block: "start" }); setActiveOutlineId(item.id); setArticleOutlineOpen(false); }} />}
-    <div className={isDetailRoute ? "route-view route-view--detail" : "route-view"} key={route}>{content}</div>{!isSetupRoute && <><Footer />{searchOpen && <SearchDialog onClose={() => setSearchOpen(false)} />}{settingsOpen && <SettingsDialog glassEnabled={glassEnabled} onGlassChange={setGlassEnabled} onClose={() => setSettingsOpen(false)} />}<AccountDialog />{accountNotice && <aside className="community-account-notice" role="alert"><div><strong>账户通知</strong><p>{accountNotice}</p></div><button type="button" onClick={dismissAccountNotice}>知道了</button></aside>}</>}
+    <div className={isDetailRoute ? "route-view route-view--detail" : "route-view"} key={route}>{content}</div>{!isSetupRoute && <><Footer />{searchOpen && <SearchDialog onClose={() => setSearchOpen(false)} />}{settingsOpen && <SettingsDialog glassEnabled={glassEnabled} onGlassChange={handleGlassChange} onClose={() => setSettingsOpen(false)} />}<AccountDialog />{accountNotice && <aside className="community-account-notice" role="alert"><div><strong>账户通知</strong><p>{accountNotice}</p></div><button type="button" onClick={dismissAccountNotice}>知道了</button></aside>}</>}
   </div>;
 }
