@@ -772,7 +772,8 @@ footer::before { content:""; position:absolute; top:0; left:50%; width:min(1180p
 .account-message-kind { flex:none; display:inline-flex; align-items:center; gap:5px; padding:3px 7px; border-radius:999px; background:color-mix(in srgb,var(--accent) 10%,var(--surface)); color:var(--accent); font-size:9px; font-weight:700; }
 .account-message-kind.is-reply { background:color-mix(in srgb,var(--blue) 11%,var(--surface)); color:var(--blue); }
 .account-message-target-avatar { width:18px; height:18px; flex:none; border-width:1px; font-size:8px; }
-.account-comment-list .account-message-body { display:-webkit-box; overflow:hidden; font-size:13px; line-height:1.65; -webkit-line-clamp:2; -webkit-box-orient:vertical; }
+.account-message-body { display:-webkit-box; overflow:hidden; -webkit-line-clamp:2; -webkit-box-orient:vertical; }
+.account-comment-list .account-message-body { font-size:13px; line-height:1.65; }
 .account-comment-list small { color:var(--muted); font-size:10px; }
 .account-comment-list small { display:flex; align-items:center; justify-content:space-between; gap:8px; }
 .comment-state { flex:none; padding:3px 7px; border-radius:999px; font-size:9px; font-weight:700; }

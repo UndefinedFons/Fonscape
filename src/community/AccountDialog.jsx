@@ -193,18 +193,18 @@ function MyReplies() {
   const [state, setState] = useState({ loading: !cached, error: "", replies: cached || [] });
   useEffect(() => {
     let alive = true;
-    loadMyReplies(viewer.id, true).then(async (replies) => {
+    loadMyReplies(viewer.id, true).then((replies) => {
       if (alive) setState({ loading: false, error: "", replies });
-      await markRepliesRead();
     }).catch((error) => alive && setState({ loading: false, error: error.message, replies: [] }));
+    if (viewer.unreadReplies > 0) markRepliesRead().catch(() => {});
     return () => { alive = false; };
-  }, [markRepliesRead, viewer.id]);
+  }, [markRepliesRead, viewer.id, viewer.unreadReplies]);
   if (state.loading) return <div className="community-skeleton" aria-label="正在读取收到的回复"><i /><i /><i /></div>;
   if (state.error) return <p className="community-inline-error">{state.error}</p>;
   if (!state.replies.length) return <div className="account-empty"><BellRinging size={30} weight="duotone" /><p>还没有收到回复。</p></div>;
   return <div className="account-reply-list">{state.replies.map((reply) => {
     const meta = contentMeta(reply);
-    return <a className={reply.unread ? "is-unread" : ""} key={reply.id} {...commentLinkProps(reply, closeAccount)}><Avatar user={reply.author} size="small" /><div><header><strong>{reply.author.nickname}</strong><span>回复了你</span>{reply.unread && <i>新消息</i>}</header><em>{meta.section} ·《{meta.title}》</em><p>{reply.body}</p>{reply.repliedToBody && <blockquote>你的评论：{reply.repliedToBody}</blockquote>}<small>{formatCommunityTime(reply.createdAt)}</small></div></a>;
+    return <a className={reply.unread ? "is-unread" : ""} key={reply.id} {...commentLinkProps(reply, closeAccount)}><Avatar user={reply.author} size="small" /><div><header><strong>{reply.author.nickname}</strong><span>回复了你</span>{reply.unread && <i>新消息</i>}</header><em>{meta.section} ·《{meta.title}》</em><p className="account-message-body">{reply.body}</p>{reply.repliedToBody && <blockquote>你的评论：{reply.repliedToBody}</blockquote>}<small>{formatCommunityTime(reply.createdAt)}</small></div></a>;
   })}</div>;
 }
 
@@ -214,18 +214,18 @@ function ReceivedComments() {
   const [state, setState] = useState({ loading: !cached, error: "", comments: cached || [] });
   useEffect(() => {
     let alive = true;
-    loadReceivedComments(viewer.id, true).then(async (comments) => {
+    loadReceivedComments(viewer.id, true).then((comments) => {
       if (alive) setState({ loading: false, error: "", comments });
-      await markAdminCommentsRead();
     }).catch((error) => alive && setState({ loading: false, error: error.message, comments: [] }));
+    if (viewer.unreadAdminComments > 0) markAdminCommentsRead().catch(() => {});
     return () => { alive = false; };
-  }, [markAdminCommentsRead, viewer.id]);
+  }, [markAdminCommentsRead, viewer.id, viewer.unreadAdminComments]);
   if (state.loading) return <div className="community-skeleton" aria-label="正在读取收到的评论"><i /><i /><i /></div>;
   if (state.error) return <p className="community-inline-error">{state.error}</p>;
   if (!state.comments.length) return <div className="account-empty"><ChatCircleDots size={30} weight="duotone" /><p>还没有收到评论。</p></div>;
   return <div className="account-reply-list account-received-list">{state.comments.map((comment) => {
     const meta = contentMeta(comment);
-    return <a className={comment.unread ? "is-unread" : ""} key={comment.id} {...commentLinkProps(comment, closeAccount)}><Avatar user={comment.author} size="small" /><div><header><strong>{comment.author.nickname}</strong><span>留下了评论</span>{comment.unread && <i>新评论</i>}</header><em>{meta.section} ·《{meta.title}》</em><p>{comment.body}</p><small>{formatCommunityTime(comment.createdAt)}</small></div></a>;
+    return <a className={comment.unread ? "is-unread" : ""} key={comment.id} {...commentLinkProps(comment, closeAccount)}><Avatar user={comment.author} size="small" /><div><header><strong>{comment.author.nickname}</strong><span>留下了评论</span>{comment.unread && <i>新评论</i>}</header><em>{meta.section} ·《{meta.title}》</em><p className="account-message-body">{comment.body}</p><small>{formatCommunityTime(comment.createdAt)}</small></div></a>;
   })}</div>;
 }
 
