@@ -466,7 +466,7 @@ button,input { font:inherit; } a { color:inherit; text-decoration:none; } button
 .rich-article tbody tr:hover { background:var(--accent-soft); }
 .rich-article input[type="checkbox"] { accent-color:var(--accent); }
 .empty-state { padding-block:200px; text-align:center; }
-.dialog-backdrop { position:fixed; z-index:100; inset:0; display:grid; place-items:start center; padding:120px 20px; overflow-y:auto; overscroll-behavior:contain; background:rgba(43,23,52,.58); backdrop-filter:blur(8px); animation:dialog-backdrop-in .24s ease-out both; }
+.dialog-backdrop { position:fixed; z-index:100; inset:0; display:grid; place-items:start center; padding:120px 20px; overflow-y:auto; overscroll-behavior:contain; background:rgba(43,23,52,.58); backdrop-filter:blur(8px); animation:dialog-backdrop-in .24s ease-out both; transition:background-color .42s cubic-bezier(.4,0,.2,1); }
 .search-dialog { width:min(650px,100%); padding:20px; border:1px solid var(--line); border-radius:22px; background:var(--surface); box-shadow:var(--shadow); transform-origin:top center; animation:dialog-panel-in .34s cubic-bezier(.22,1,.36,1) both; }
 .dialog-backdrop.is-closing { pointer-events:none; animation:dialog-backdrop-out .24s ease-in both; }
 .dialog-backdrop.is-closing .search-dialog { animation:dialog-panel-out .22s ease-in both; }
@@ -3298,6 +3298,14 @@ a.home-dash-panel:focus-visible {
   opacity:var(--glass-image-opacity);
 }
 :root[data-glass="on"] .global-glass-veil { opacity:var(--glass-veil-opacity); }
+:root[data-glass-transition="on"] .global-glass-backdrop,
+:root[data-glass-transition="on"] .global-glass-veil {
+  animation:global-glass-in .56s cubic-bezier(.4,0,.2,1) both;
+}
+:root[data-glass-transition="off"] .global-glass-backdrop,
+:root[data-glass-transition="off"] .global-glass-veil {
+  animation:global-glass-out .56s cubic-bezier(.4,0,.2,1) both;
+}
 :root[data-glass="on"] .header-center,
 :root[data-glass="on"] .home-refresh-profile,
 :root[data-glass="on"] .home-refresh-section,
@@ -3666,6 +3674,8 @@ a.home-dash-panel:focus-visible {
 @keyframes account-backdrop-out { from { opacity:1; } to { opacity:0; } }
 @keyframes lightbox-in { from { opacity:0; } to { opacity:1; } }
 @keyframes lightbox-out { from { opacity:1; } to { opacity:0; } }
+@keyframes global-glass-in { from { opacity:0; } to { opacity:1; } }
+@keyframes global-glass-out { from { opacity:1; } to { opacity:0; } }
 
 @media (max-width:760px) {
   .global-glass-backdrop,
@@ -3712,7 +3722,7 @@ a.home-dash-panel:focus-visible {
 }
 @media (prefers-reduced-motion:reduce) {
   .global-glass-backdrop,
-  .global-glass-veil { transition:none; }
+  .global-glass-veil { animation:none!important; transition:none; }
   .settings-button:hover svg { transform:none; }
 }
 
