@@ -1,6 +1,8 @@
 import { siteConfig } from "./siteConfig.js";
 
 const PRIMARY_HERO_ORDER = ["home", "posts", "poems", "music", "friends", "about"];
+const PRIMARY_HERO_PATHS = ["/", "/posts", "/poems", "/music", "/friends", "/about"];
+/** @type {Record<string, string>} */
 const PATH_TO_VARIANT = {
   "/": "home",
   "/posts": "posts",
@@ -10,20 +12,24 @@ const PATH_TO_VARIANT = {
   "/about": "about",
 };
 
+/** @param {string} variant */
 function getHeroConfig(variant) {
   return siteConfig.heroes[variant] || siteConfig.heroes.home;
 }
 
+/** @param {string} variant */
 function getHeroStyle(variant) {
   const hero = getHeroConfig(variant);
   return {
     "--hero-art-image": `url("${hero.image}")`,
+    "--hero-art-image-mobile": `url("${hero.mobileImage || hero.image}")`,
     "--hero-art-position": hero.position || "center",
     "--hero-art-position-mobile": hero.mobilePosition || hero.position || "center",
     "--hero-art-size": hero.size || "cover",
   };
 }
 
+/** @param {string} path */
 function pathVariant(path) {
   let normalized = path === "" ? "/" : path;
   if (normalized.startsWith("/post/")) normalized = "/posts";
@@ -32,6 +38,10 @@ function pathVariant(path) {
   return PATH_TO_VARIANT[normalized] || "home";
 }
 
+/**
+ * @param {import("./types.js").HeroConfig} hero
+ * @returns {{ image: string, needsSoftening: boolean }}
+ */
 function resolveGlassBackground(hero) {
   const glassImage = typeof hero.glassImage === "string" ? hero.glassImage.trim() : "";
   return {
@@ -40,20 +50,43 @@ function resolveGlassBackground(hero) {
   };
 }
 
+/** @param {string} path */
 function getGlassBackground(path) {
   return resolveGlassBackground(getHeroConfig(pathVariant(path)));
 }
 
-const ROUTE_HERO_IMAGES = PRIMARY_HERO_ORDER.map((variant) => getHeroConfig(variant).image);
-const GLASS_BACKGROUND_IMAGES = PRIMARY_HERO_ORDER.map((variant) => {
-  return resolveGlassBackground(getHeroConfig(variant)).image;
-});
+const preloadedHeroSources = new Set();
+const inFlightHeroImages = new Map();
+
+/**
+ * @param {string} path
+ * @param {boolean} [mobile]
+ */
+function preloadHeroAssets(path, mobile = false) {
+  const hero = getHeroConfig(pathVariant(path));
+  const sources = [
+    mobile ? (hero.mobileImage || hero.image) : hero.image,
+    resolveGlassBackground(hero).image,
+  ];
+  for (const source of sources) {
+    if (!source || preloadedHeroSources.has(source)) continue;
+    preloadedHeroSources.add(source);
+    const image = new Image();
+    image.decoding = "async";
+    image.fetchPriority = "low";
+    const finish = () => inFlightHeroImages.delete(source);
+    image.addEventListener("load", finish, { once: true });
+    image.addEventListener("error", finish, { once: true });
+    inFlightHeroImages.set(source, image);
+    image.src = source;
+  }
+}
 
 export {
   getGlassBackground,
   getHeroStyle,
+  preloadHeroAssets,
   resolveGlassBackground,
-  ROUTE_HERO_IMAGES,
-  GLASS_BACKGROUND_IMAGES,
   PRIMARY_HERO_ORDER,
+  PRIMARY_HERO_PATHS,
 };

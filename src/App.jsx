@@ -17,7 +17,7 @@ import { NotFound } from "./pages/NotFound.jsx";
 import { PoemPage } from "./pages/PoemPage.jsx";
 import { PoemsPage } from "./pages/PoemsPage.jsx";
 import { PostsPage } from "./pages/PostsPage.jsx";
-import { getGlassBackground, GLASS_BACKGROUND_IMAGES, ROUTE_HERO_IMAGES } from "./heroImages.js";
+import { getGlassBackground, preloadHeroAssets, PRIMARY_HERO_PATHS } from "./heroImages.js";
 import { getPostOutline } from "./richContent.js";
 import { clearArticleIndexState, clearPaginationFamily, markPopNavigation, markPushNavigation, paginationFamily, parseHash, parseHashQuery, readNavigationType, routeScrollPositions } from "./routeState.js";
 
@@ -177,45 +177,40 @@ export function App() {
     let cancelled = false;
     let idleId = null;
     let timerId = null;
-    let pendingImage = null;
-    const initialGlassSource = getGlassBackground(routeRef.current).image;
-    const pendingSources = [...new Set([
-      ...GLASS_BACKGROUND_IMAGES.filter((source) => source !== initialGlassSource),
-      ...ROUTE_HERO_IMAGES.slice(1),
-    ])];
-    const scheduleNext = (delay = 0) => {
-      if (cancelled || pendingSources.length === 0) return;
+    const compact = window.matchMedia("(max-width:760px)").matches;
+    const pendingPaths = PRIMARY_HERO_PATHS.filter((path) => path !== routeRef.current);
+    const preloadLinkedRoute = (event) => {
+      const anchor = event.target.closest?.('a[href^="#/"]');
+      if (!anchor) return;
+      preloadHeroAssets(anchor.getAttribute("href").slice(1), compact);
+    };
+    const scheduleNext = () => {
+      if (cancelled || pendingPaths.length === 0) return;
       if ("requestIdleCallback" in window) {
-        idleId = window.requestIdleCallback(loadNext, { timeout: 1800 });
+        idleId = window.requestIdleCallback(loadNext, { timeout: 2400 });
       } else {
-        timerId = window.setTimeout(loadNext, delay || 320);
+        timerId = window.setTimeout(loadNext, 900);
       }
     };
     const loadNext = () => {
       if (cancelled) return;
-      const source = pendingSources.shift();
-      if (!source) return;
-      const image = new Image();
-      pendingImage = image;
-      image.decoding = "async";
-      image.fetchPriority = "low";
-      const finish = () => {
-        if (pendingImage === image) pendingImage = null;
-        scheduleNext(240);
-      };
-      image.addEventListener("load", finish, { once: true });
-      image.addEventListener("error", finish, { once: true });
-      image.src = source;
+      const path = pendingPaths.shift();
+      if (path) preloadHeroAssets(path, compact);
+      scheduleNext();
     };
-    const startPreloading = () => scheduleNext(700);
-    if (document.readyState === "complete") startPreloading();
-    else window.addEventListener("load", startPreloading, { once: true });
+    const connection = navigator.connection;
+    const shouldDeferAll = !connection?.saveData && !/^(?:slow-)?2g$/u.test(connection?.effectiveType || "");
+    if (shouldDeferAll) timerId = window.setTimeout(scheduleNext, 12000);
+    document.addEventListener("pointerover", preloadLinkedRoute, { passive: true });
+    document.addEventListener("focusin", preloadLinkedRoute);
+    document.addEventListener("touchstart", preloadLinkedRoute, { passive: true });
     return () => {
       cancelled = true;
-      window.removeEventListener("load", startPreloading);
       if (idleId !== null) window.cancelIdleCallback?.(idleId);
       if (timerId !== null) window.clearTimeout(timerId);
-      if (pendingImage) pendingImage.src = "";
+      document.removeEventListener("pointerover", preloadLinkedRoute);
+      document.removeEventListener("focusin", preloadLinkedRoute);
+      document.removeEventListener("touchstart", preloadLinkedRoute);
     };
   }, []);
   const isSetupRoute = route === "/admin/setup";
@@ -284,7 +279,7 @@ export function App() {
   return <div className={themeChanging ? "app-shell theme-changing" : "app-shell"} style={{
     "--glass-background-image": `url("${glassBackground.image}")`,
     "--glass-background-filter": glassBackground.needsSoftening ? "blur(14px) saturate(.86)" : "none",
-    "--glass-background-transform": glassBackground.needsSoftening ? "translateZ(0) scale(1.04)" : "translateZ(0)",
+    "--glass-background-transform": glassBackground.needsSoftening ? "scale(1.04)" : "none",
   }}>
     <span className="global-glass-backdrop" aria-hidden="true" />
     <span className="global-glass-veil" aria-hidden="true" />

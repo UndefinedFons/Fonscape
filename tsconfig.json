@@ -1,0 +1,23 @@
+{
+  "compilerOptions": {
+    "allowJs": true,
+    "checkJs": true,
+    "noEmit": true,
+    "strict": true,
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "resolveJsonModule": true,
+    "skipLibCheck": true
+  },
+  "include": [
+    "src/content/frontmatter.js",
+    "src/heroImages.js",
+    "src/routeState.js",
+    "src/richContent.js",
+    "src/siteConfig.js",
+    "src/siteUtils.js",
+    "src/types.d.ts"
+  ]
+}

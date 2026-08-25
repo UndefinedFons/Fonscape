@@ -79,7 +79,7 @@ export function HomePage({ stats }) {
     if (!nextPost.image) return;
     const image = new Image();
     image.decoding = "async";
-    image.src = nextPost.image;
+    image.src = nextPost.cardImage || nextPost.image;
   }, [featuredIndex]);
   const showNextFeaturedPost = () => setFeaturedState((current) => {
     if (featuredPosts.length < 2) return current;
@@ -88,7 +88,7 @@ export function HomePage({ stats }) {
     return { current: next, previous: current.current };
   });
   const renderFeaturedPost = (post, phase) => <a key={post.slug} className={`home-refresh-feature is-${phase}`} href={`#/post/${post.slug}`} aria-hidden={phase === "outgoing" ? "true" : undefined} tabIndex={phase === "outgoing" ? -1 : undefined}>
-    {post.image ? <img src={post.image} alt="" loading={phase === "current" ? "eager" : "lazy"} decoding="async" fetchPriority={phase === "current" ? "high" : "auto"} onLoad={(event) => applyFeaturedTone(event.currentTarget)} style={{ objectPosition: post.cardPosition || post.coverPosition || "center" }} /> : <span className="home-refresh-feature-placeholder"><BookOpenText size={48} weight="duotone" /></span>}
+    {post.image ? <img src={post.cardImage || post.image} alt="" loading={phase === "current" ? "eager" : "lazy"} decoding="async" fetchPriority={phase === "current" ? "high" : "auto"} onLoad={(event) => applyFeaturedTone(event.currentTarget)} style={{ objectPosition: post.cardPosition || post.coverPosition || "center" }} /> : <span className="home-refresh-feature-placeholder"><BookOpenText size={48} weight="duotone" /></span>}
     <span className="home-refresh-feature-shade" />
     <span className="home-refresh-feature-copy">
       <small>置顶阅读 · {post.category}</small>
@@ -123,7 +123,7 @@ export function HomePage({ stats }) {
 
         <aside className="home-refresh-profile material-panel" aria-labelledby="home-profile-name">
           <div className="home-refresh-profile-heading">
-            <a href="#/about" aria-label="查看关于我">{authorProfile.avatar ? <img src={authorProfile.avatar} alt={authorProfile.avatarAlt} width="132" height="132" loading="eager" decoding="async" /> : <span className="home-refresh-profile-avatar-placeholder" role="img" aria-label={authorProfile.avatarAlt}><UserCircle size={62} weight="duotone" /></span>}</a>
+            <a href="#/about" aria-label="查看关于我">{authorProfile.avatar ? <img src={authorProfile.avatarSmall || authorProfile.avatar} alt={authorProfile.avatarAlt} width="132" height="132" loading="eager" decoding="async" /> : <span className="home-refresh-profile-avatar-placeholder" role="img" aria-label={authorProfile.avatarAlt}><UserCircle size={62} weight="duotone" /></span>}</a>
             <span><small>ABOUT ME</small><strong id="home-profile-name">{authorProfile.name}</strong><em>{authorProfile.tagline}</em></span>
           </div>
           <p>{authorProfile.introduction}</p>

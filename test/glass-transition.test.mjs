@@ -11,13 +11,15 @@ test("global glass keeps expensive backdrop properties stable while opacity tran
   const enabledRule = styles.match(/:root\[data-glass="on"\] \.global-glass-backdrop\s*\{(?<body>[^}]+)\}/u)?.groups?.body || "";
 
   assert.match(backdropRule, /filter:var\(--glass-background-filter,none\)/u);
-  assert.match(backdropRule, /transform:var\(--glass-background-transform,translateZ\(0\)\)/u);
+  assert.match(backdropRule, /transform:var\(--glass-background-transform,none\)/u);
   assert.match(enabledRule, /opacity:var\(--glass-image-opacity\)/u);
   assert.doesNotMatch(enabledRule, /(?:filter|transform):/u);
   assert.match(app, /dataset\.glassTransition = glassTransition/u);
   assert.match(styles, /data-glass-transition="off"[^}]+animation:global-glass-out \.56s/u);
   assert.match(styles, /@keyframes global-glass-out \{ from \{ opacity:1; \} to \{ opacity:0; \} \}/u);
-  assert.match(styles, /inset:-16px;[^}]+transform:var\(--glass-background-transform,translate3d\(0,0,0\)\)/u);
+  assert.match(app, /needsSoftening \? "scale\(1\.04\)" : "none"/u);
+  assert.match(styles, /inset:-16px -16px auto;[^}]+height:calc\(100lvh \+ 32px\);[^}]+transform:var\(--glass-background-transform,none\)/u);
+  assert.match(styles, /:root\[data-glass-transition\][^{]+\{\s*will-change:opacity;/u);
 });
 
 test("home backgrounds remain transparent overlays during glass transitions", async () => {

@@ -13,7 +13,7 @@ export function ArticleCover({ post, className, emptyClassName = "", imageClassN
   const mediaClassName = `${className}${!post.image && emptyClassName ? ` ${emptyClassName}` : ""}`;
   return <span className={mediaClassName}>
     {post.image
-      ? <img className={imageClassName || undefined} src={post.image} alt="" loading={loading} decoding="async" fetchPriority={fetchPriority} draggable="false" style={{ objectPosition: post.cardPosition || post.coverPosition || "center" }} />
+      ? <img className={imageClassName || undefined} src={post.cardImage || post.image} alt="" loading={loading} decoding="async" fetchPriority={fetchPriority} draggable="false" style={{ objectPosition: post.cardPosition || post.coverPosition || "center" }} />
       : placeholderClassName
         ? <span className={placeholderClassName}><BookOpenText size={iconSize} weight="duotone" /></span>
         : <BookOpenText size={iconSize} weight="duotone" />}
