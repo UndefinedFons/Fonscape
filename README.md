@@ -59,7 +59,16 @@ pnpm install --frozen-lockfile
 pnpm dev
 ```
 
-站点资料、作者信息、页面文案和头图从 [`fonscape.config.js`](./fonscape.config.js) 读取。完成基础配置后，在 `src/content/posts/hello-world.md` 创建第一篇文章：
+站点资料、作者信息、页面文案、内容板块显示开关和头图从 [`fonscape.config.js`](./fonscape.config.js) 读取。小诗与音乐默认隐藏；如需显示，可在仓库根目录配置：
+
+```js
+showPoems: true,
+showMusic: false,
+```
+
+两个开关彼此独立，完整组合和显示范围见 [使用指南](./GUIDE.md#小诗与音乐板块显示开关)。
+
+完成基础配置后，在 `src/content/posts/hello-world.md` 创建第一篇文章：
 
 ```md
 ---

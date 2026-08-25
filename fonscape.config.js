@@ -4,6 +4,8 @@ const siteConfig = {
   language: "zh-CN",
   title: "我的博客",
   description: "网站简介",
+  showPoems: false,
+  showMusic: false,
   home: {
     eyebrow: "PERSONAL BLOG",
     title: "我的博客",

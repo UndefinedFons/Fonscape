@@ -16,11 +16,31 @@
 | `author.*` | 作者名称、头像、签名、简介、兴趣与个人渠道 |
 | `about.*` | 关于页标题、摘要与正文 |
 | `pages.*Description` | 文章、小诗、音乐、友链页面简介 |
+| `showPoems` | 是否在主导航、首页显示小诗板块，默认 `false` |
+| `showMusic` | 是否在主导航、首页显示音乐板块，默认 `false` |
 | `footer.owner` | 页脚版权所有者名称 |
 
 `footer.themeName` 与 `footer.themeRepository` 用于显示 Fonscape 主题署名，应保留默认主题名称与仓库链接。页脚年份和站点运行时间会根据当前站点数据库中的建立时间自动生成。
 
 配置值采用 JavaScript 语法。文本、颜色和路径需要放在引号中，对象字段之间用逗号分隔，例如 `"我的博客"`、`"#ffb7c5"`、`"/assets/home.jpg"`。
+
+### 小诗与音乐板块显示开关
+
+两个开关位于仓库根目录 `fonscape.config.js` 的根级 `siteConfig` 对象中，与 `language`、`title`、`description` 同级。它们只控制桌面和移动主导航、首页对应板块及首页统计项的显示；小诗和音乐的路由、详情页、内容模型与搜索能力始终保留：
+
+```js
+showPoems: false,
+showMusic: false,
+```
+
+可按需组合布尔值：
+
+| `showPoems` | `showMusic` | 效果 |
+| --- | --- | --- |
+| `false` | `false` | 隐藏小诗和音乐 |
+| `true` | `false` | 只显示小诗 |
+| `false` | `true` | 只显示音乐 |
+| `true` | `true` | 显示小诗和音乐 |
 
 ### 个人渠道
 

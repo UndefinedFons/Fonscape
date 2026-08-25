@@ -17,6 +17,9 @@ import { formatContentDate, getPostWordCount } from "../siteUtils.js";
 import { getHomeContent } from "./homeContent.js";
 
 const { featuredPosts, recentPosts, latestPoems, latestMusic, musicCount } = getHomeContent(posts, poems, musicReviews);
+const showPoems = siteConfig.showPoems === true;
+const showMusic = siteConfig.showMusic === true;
+const homeStatsCount = 1 + Number(showPoems) + Number(showMusic);
 
 function applyFeaturedTone(image) {
   const feature = image.closest(".home-refresh-feature");
@@ -124,10 +127,10 @@ export function HomePage({ stats }) {
             <span><small>ABOUT ME</small><strong id="home-profile-name">{authorProfile.name}</strong><em>{authorProfile.tagline}</em></span>
           </div>
           <p>{authorProfile.introduction}</p>
-          <div className="home-refresh-stats" aria-label={`${posts.length} 篇文章，${poems.length} 首小诗，${musicCount} 篇音乐手记`}>
+          <div className="home-refresh-stats" style={{ "--home-stats-count": homeStatsCount }} aria-label={[`${posts.length} 篇文章`, showPoems && `${poems.length} 首小诗`, showMusic && `${musicCount} 篇音乐手记`].filter(Boolean).join("，")}>
             <span><strong>{posts.length}</strong><small>文章</small></span>
-            <span><strong>{poems.length}</strong><small>小诗</small></span>
-            <span><strong>{musicCount}</strong><small>音乐</small></span>
+            {showPoems && <span><strong>{poems.length}</strong><small>小诗</small></span>}
+            {showMusic && <span><strong>{musicCount}</strong><small>音乐</small></span>}
           </div>
         </aside>
       </section>
@@ -150,8 +153,8 @@ export function HomePage({ stats }) {
         </nav> : <div className="home-refresh-empty home-refresh-news-empty" role="status"><BookOpenText size={30} weight="duotone" /><strong>暂无文章</strong></div>}
       </section>
 
-      <div className="home-refresh-columns">
-        <section className="home-refresh-section home-refresh-poems material-panel" aria-labelledby="home-poems-title">
+      {(showPoems || showMusic) && <div className={`home-refresh-columns${showPoems && showMusic ? "" : " is-single"}`}>
+        {showPoems && <section className="home-refresh-section home-refresh-poems material-panel" aria-labelledby="home-poems-title">
           <header className="home-refresh-section-heading">
             <span><small>SMALL POEMS</small><h2 id="home-poems-title">三行风与梦</h2></span>
             <a href="#/poems">走进诗页</a>
@@ -162,9 +165,9 @@ export function HomePage({ stats }) {
               <span><small>小诗 · <time dateTime={poem.date}>{formatContentDate(poem.date).slice(0, 10)}</time></small><strong>{poem.title}</strong><small>{poem.lines.slice(0, 2).join(" / ")}</small></span>
             </a>)}
           </div> : <div className="home-refresh-empty" role="status"><Feather size={28} weight="duotone" /><strong>暂无小诗</strong></div>}
-        </section>
+        </section>}
 
-        <section className="home-refresh-section home-refresh-music material-panel" aria-labelledby="home-music-title">
+        {showMusic && <section className="home-refresh-section home-refresh-music material-panel" aria-labelledby="home-music-title">
           <header className="home-refresh-section-heading">
             <span><small>MUSIC NOTES</small><h2 id="home-music-title">耳边正在发生</h2></span>
             <a href="#/music">音乐手记</a>
@@ -178,8 +181,8 @@ export function HomePage({ stats }) {
               </a>;
             })}
           </div> : <div className="home-refresh-empty" role="status"><MusicNotes size={29} weight="duotone" /><strong>暂无音乐</strong></div>}
-        </section>
-      </div>
+        </section>}
+      </div>}
     </div>
   </main>;
 }
