@@ -7,8 +7,8 @@ import { formatCopyrightYears } from "../src/siteUtils.js";
 test("site configuration keeps the portable theme shape", () => {
   assert.equal(typeof siteConfig.home.eyebrow, "string");
   assert.equal(typeof siteConfig.home.description, "string");
-  assert.equal(siteConfig.showPoems, false);
-  assert.equal(siteConfig.showMusic, false);
+  assert.equal(typeof siteConfig.showPoems, "boolean");
+  assert.equal(typeof siteConfig.showMusic, "boolean");
   assert.equal(typeof siteConfig.author.tagline, "string");
   assert.equal(typeof siteConfig.author.introduction, "string");
   assert.equal(Array.isArray(siteConfig.author.interests), true);
@@ -34,6 +34,7 @@ test("site configuration keeps the portable theme shape", () => {
 
 test("poem and music navigation visibility is independently configurable", () => {
   const paths = (config) => getNavItems(config).map(([path]) => path);
+  assert.deepEqual(paths({}), ["/", "/posts", "/friends", "/about"]);
   assert.deepEqual(paths({ showPoems: false, showMusic: false }), ["/", "/posts", "/friends", "/about"]);
   assert.deepEqual(paths({ showPoems: true, showMusic: false }), ["/", "/posts", "/poems", "/friends", "/about"]);
   assert.deepEqual(paths({ showPoems: false, showMusic: true }), ["/", "/posts", "/music", "/friends", "/about"]);
