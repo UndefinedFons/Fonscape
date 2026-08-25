@@ -2699,7 +2699,7 @@ footer::before { content:""; position:absolute; top:0; left:50%; width:min(1180p
   isolation:isolate;
   min-height:100vh;
   overflow:hidden;
-  background:var(--bg);
+  background:transparent;
 }
 .home-dashboard-hero { min-height:460px; }
 .home-dashboard-body {
@@ -2709,8 +2709,7 @@ footer::before { content:""; position:absolute; top:0; left:50%; width:min(1180p
   overflow:hidden;
   background:
     radial-gradient(circle at 14% 4%,color-mix(in srgb,var(--accent) 5%,transparent),transparent 31%),
-    radial-gradient(circle at 90% 92%,color-mix(in srgb,var(--blue) 5%,transparent),transparent 28%),
-    var(--bg);
+    radial-gradient(circle at 90% 92%,color-mix(in srgb,var(--blue) 5%,transparent),transparent 28%);
 }
 .home-dashboard-background {
   display:none;
@@ -3273,7 +3272,8 @@ a.home-dash-panel:focus-visible {
   background-position:center;
   background-size:cover;
   background-repeat:no-repeat;
-  transform:translateZ(0);
+  filter:var(--glass-background-filter,none);
+  transform:var(--glass-background-transform,translateZ(0));
   backface-visibility:hidden;
   contain:strict;
 }
@@ -3293,18 +3293,11 @@ a.home-dash-panel:focus-visible {
   --glass-image-opacity:1;
   --glass-veil-opacity:1;
 }
-:root[data-glass="on"] .app-shell { background:transparent; }
+:root[data-glass="on"] .app-shell { background-color:transparent; }
 :root[data-glass="on"] .global-glass-backdrop {
   opacity:var(--glass-image-opacity);
-  filter:var(--glass-background-filter,none);
-  transform:var(--glass-background-transform,translateZ(0));
 }
 :root[data-glass="on"] .global-glass-veil { opacity:var(--glass-veil-opacity); }
-:root[data-glass="on"] .home-refresh-page,
-:root[data-glass="on"] .home-dashboard-page,
-:root[data-glass="on"] .home-dashboard-body {
-  background:transparent;
-}
 :root[data-glass="on"] .header-center,
 :root[data-glass="on"] .home-refresh-profile,
 :root[data-glass="on"] .home-refresh-section,
@@ -3725,9 +3718,7 @@ a.home-dash-panel:focus-visible {
 
 /* Homepage refresh: preserve the production reading order with a quieter editorial layout. */
 .home-refresh-page {
-  background:
-    radial-gradient(circle at 8% 38%,color-mix(in srgb,var(--accent) 7%,transparent),transparent 28%),
-    var(--bg);
+  background:radial-gradient(circle at 8% 38%,color-mix(in srgb,var(--accent) 7%,transparent),transparent 28%);
 }
 .home-refresh-hero-copy { gap:0; }
 .home-refresh-hero-copy .eyebrow { width:100%; text-align:center; }
