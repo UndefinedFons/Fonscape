@@ -1,12 +1,14 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { resolveGlassBackground } from "../src/heroImages.js";
-import { siteConfig } from "../src/siteConfig.js";
+import { getNavItems, siteConfig } from "../src/siteConfig.js";
 import { formatCopyrightYears } from "../src/siteUtils.js";
 
 test("site configuration keeps the portable theme shape", () => {
   assert.equal(typeof siteConfig.home.eyebrow, "string");
   assert.equal(typeof siteConfig.home.description, "string");
+  assert.equal(siteConfig.showPoems, false);
+  assert.equal(siteConfig.showMusic, false);
   assert.equal(typeof siteConfig.author.tagline, "string");
   assert.equal(typeof siteConfig.author.introduction, "string");
   assert.equal(Array.isArray(siteConfig.author.interests), true);
@@ -28,6 +30,14 @@ test("site configuration keeps the portable theme shape", () => {
       assert.notEqual(hero.glassImage.trim(), "");
     }
   }
+});
+
+test("poem and music navigation visibility is independently configurable", () => {
+  const paths = (config) => getNavItems(config).map(([path]) => path);
+  assert.deepEqual(paths({ showPoems: false, showMusic: false }), ["/", "/posts", "/friends", "/about"]);
+  assert.deepEqual(paths({ showPoems: true, showMusic: false }), ["/", "/posts", "/poems", "/friends", "/about"]);
+  assert.deepEqual(paths({ showPoems: false, showMusic: true }), ["/", "/posts", "/music", "/friends", "/about"]);
+  assert.deepEqual(paths({ showPoems: true, showMusic: true }), ["/", "/posts", "/poems", "/music", "/friends", "/about"]);
 });
 
 test("glass backgrounds soften ordinary hero images without double-blurring prepared assets", () => {

@@ -3994,7 +3994,7 @@ a.home-dash-panel:focus-visible {
 }
 .home-refresh-stats {
   display:grid;
-  grid-template-columns:repeat(3,1fr);
+  grid-template-columns:repeat(var(--home-stats-count,3),1fr);
   gap:8px;
   margin-top:0;
 }
@@ -4181,6 +4181,7 @@ a.home-dash-panel:focus-visible {
   gap:22px;
   align-items:stretch;
 }
+.home-refresh-columns.is-single { grid-template-columns:1fr; }
 .home-refresh-list {
   display:flex;
   gap:10px;

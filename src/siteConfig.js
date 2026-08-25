@@ -8,6 +8,8 @@ function freezeConfig(value) {
 
 export const siteConfig = freezeConfig({
   ...configuredSite,
+  showPoems: configuredSite.showPoems === true,
+  showMusic: configuredSite.showMusic === true,
   footer: {
     ...configuredSite.footer,
     themeName: "Fonscape",
@@ -17,7 +19,7 @@ export const siteConfig = freezeConfig({
 
 export const authorProfile = siteConfig.author;
 
-export const navItems = [
+const allNavItems = [
   ["/", "首页"],
   ["/posts", "文章"],
   ["/poems", "小诗"],
@@ -25,3 +27,12 @@ export const navItems = [
   ["/friends", "友链"],
   ["/about", "关于"],
 ];
+
+export function getNavItems(config = siteConfig) {
+  return allNavItems.filter(([path]) => (
+    (path !== "/poems" || config.showPoems === true)
+    && (path !== "/music" || config.showMusic === true)
+  ));
+}
+
+export const navItems = getNavItems();
