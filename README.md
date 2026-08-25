@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="./assets/readme/hero.svg" width="100%" alt="Fonscape：兼顾高颜值界面、沉浸式阅读与简洁使用流程的 React 个人博客主题">
+  <img src="./.github/assets/hero.svg" width="100%" alt="Fonscape：兼顾高颜值界面、沉浸式阅读与简洁使用流程的 React 个人博客主题">
 </p>
 
 <p align="center">
@@ -17,7 +17,7 @@
 以下截图来自 [Fonstage](https://fonstage.space/)，一个基于 Fonscape 构建的实际个人博客。桌面首页集中展示头图、导航、作者信息、置顶内容与近期文章。
 
 <p align="center">
-  <a href="https://fonstage.space/"><img src="./assets/readme/fonstage-desktop.webp" width="100%" alt="Fonstage 的 Fonscape 桌面首页，展示头图导航、作者卡、置顶文章和近期文章入口"></a>
+  <a href="https://fonstage.space/"><img src="./.github/assets/fonstage-desktop.webp" width="100%" alt="Fonstage 的 Fonscape 桌面首页，展示头图导航、作者卡、置顶文章和近期文章入口"></a>
 </p>
 
 在线示例还展示响应式布局、全局搜索、明暗主题、磨砂材质、文章目录、阅读进度和账户评论流程，以及小诗、音乐手记与友链等内容页面。
@@ -44,8 +44,8 @@ Fonscape 把公开内容与运行时数据分开管理：
 
 ### 一键部署
 
-[![Deploy to Cloudflare](./assets/readme/deploy-cloudflare-light.svg)](https://deploy.workers.cloudflare.com/?url=https://github.com/UndefinedFons/Fonscape)
-[![Deploy with Vercel](./assets/readme/deploy-vercel-light.svg)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2FUndefinedFons%2FFonscape&env=ADMIN_BOOTSTRAP_TOKEN&envDescription=%E8%AF%B7%E8%BE%93%E5%85%A5%E4%B8%80%E4%B8%AA%E7%94%B1%E4%BD%A0%E8%87%AA%E5%B7%B1%E7%94%9F%E6%88%90%E7%9A%84%E3%80%81%E6%97%A0%E9%BB%98%E8%AE%A4%E5%80%BC%E7%9A%84%E4%B8%80%E6%AC%A1%E6%80%A7%E7%AE%A1%E7%90%86%E5%91%98%E5%88%9D%E5%A7%8B%E5%8C%96%E4%BB%A4%E7%89%8C%E3%80%82Turso+%E6%95%B0%E6%8D%AE%E5%BA%93%E5%8F%98%E9%87%8F%E4%BC%9A%E7%94%B1+Marketplace+%E8%87%AA%E5%8A%A8%E6%B3%A8%E5%85%A5%E3%80%82&envLink=https%3A%2F%2Fgithub.com%2FUndefinedFons%2FFonscape%2Fblob%2Fmain%2FGUIDE.md&products=%5B%7B%22type%22%3A%22integration%22%2C%22protocol%22%3A%22storage%22%2C%22productSlug%22%3A%22database%22%2C%22integrationSlug%22%3A%22tursocloud%22%7D%5D&skippable-integrations=0)
+[![Deploy to Cloudflare](./.github/assets/deploy-cloudflare-light.svg)](https://deploy.workers.cloudflare.com/?url=https://github.com/UndefinedFons/Fonscape)
+[![Deploy with Vercel](./.github/assets/deploy-vercel-light.svg)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2FUndefinedFons%2FFonscape&env=ADMIN_BOOTSTRAP_TOKEN&envDescription=%E8%AF%B7%E8%BE%93%E5%85%A5%E4%B8%80%E4%B8%AA%E7%94%B1%E4%BD%A0%E8%87%AA%E5%B7%B1%E7%94%9F%E6%88%90%E7%9A%84%E3%80%81%E6%97%A0%E9%BB%98%E8%AE%A4%E5%80%BC%E7%9A%84%E4%B8%80%E6%AC%A1%E6%80%A7%E7%AE%A1%E7%90%86%E5%91%98%E5%88%9D%E5%A7%8B%E5%8C%96%E4%BB%A4%E7%89%8C%E3%80%82Turso+%E6%95%B0%E6%8D%AE%E5%BA%93%E5%8F%98%E9%87%8F%E4%BC%9A%E7%94%B1+Marketplace+%E8%87%AA%E5%8A%A8%E6%B3%A8%E5%85%A5%E3%80%82&envLink=https%3A%2F%2Fgithub.com%2FUndefinedFons%2FFonscape%2Fblob%2Fmain%2FGUIDE.md&products=%5B%7B%22type%22%3A%22integration%22%2C%22protocol%22%3A%22storage%22%2C%22productSlug%22%3A%22database%22%2C%22integrationSlug%22%3A%22tursocloud%22%7D%5D&skippable-integrations=0)
 
 两种部署方式均只需填写自行生成的 `ADMIN_BOOTSTRAP_TOKEN`。部署完成后，打开 `/admin/setup` 并使用同一令牌创建首位管理员；初始化成功后，该令牌将永久失效。平台差异和部署后检查见 [使用指南](./GUIDE.md#部署)。
 

@@ -957,7 +957,7 @@ footer::before { content:""; position:absolute; top:0; left:50%; width:min(1180p
   .article-filter-section { min-height:180px; }
 }
 
-/* 2026 article index and home editorial refresh */
+/* Article index and home editorial layout */
 .account-dialog { overflow-x:hidden; padding-bottom:22px; }
 .account-center-actions { margin-top:12px; padding:12px 0 0; }
 .account-center-actions::before { display:none; }
@@ -1379,7 +1379,7 @@ footer::before { content:""; position:absolute; top:0; left:50%; width:min(1180p
   .music-review-card .article-card-excerpt>span { font-size:7px; }
 }
 
-/* Final responsive composition: homepage canvas and article controls */
+/* Homepage canvas and responsive article controls */
 .home-canvas {
   position:relative;
   padding-block:38px 64px;
@@ -1674,7 +1674,7 @@ footer::before { content:""; position:absolute; top:0; left:50%; width:min(1180p
   .home-poetry-stream>div>a { grid-template-columns:23px minmax(0,1fr) 20px; }
 }
 
-/* About editorial profile and lighter community prompt */
+/* About editorial profile */
 .about-page .about-layout {
   width:min(1360px,calc(100% - clamp(28px,6vw,88px)));
   grid-template-columns:minmax(240px,.78fr) minmax(0,1.82fr);
@@ -1699,7 +1699,11 @@ footer::before { content:""; position:absolute; top:0; left:50%; width:min(1180p
 .about-channel+.about-channel { border-top:1px solid var(--line); }
 .about-channel:hover { padding-left:8px; color:var(--accent); }
 .about-channel:focus-visible { padding-left:8px; color:var(--accent); outline:2px solid var(--accent); outline-offset:3px; border-radius:8px; }
-.about-channel>svg:first-child { justify-self:center; }
+.about-channel-icon { width:34px; height:34px; display:grid; place-items:center; justify-self:center; border-radius:10px; background:color-mix(in srgb,currentColor 12%,transparent); color:var(--accent); transition:color .25s ease,transform .3s cubic-bezier(.22,1,.36,1); }
+.about-channel[data-channel="github"] .about-channel-icon,.about-channel[data-channel="x"] .about-channel-icon { color:var(--text); }
+.about-channel[data-channel="bilibili"] .about-channel-icon { color:#fb7299; }
+.about-channel[data-channel="email"] .about-channel-icon { color:var(--blue); }
+.about-channel:hover .about-channel-icon,.about-channel:focus-visible .about-channel-icon { transform:scale(1.08); }
 .about-channel>span { min-width:0; display:grid; gap:2px; }
 .about-channel small { font-size:8px; font-weight:700; letter-spacing:.13em; }
 .about-channel strong { overflow:hidden; color:var(--text); font-size:11px; text-overflow:ellipsis; white-space:nowrap; }
@@ -1764,7 +1768,7 @@ footer::before { content:""; position:absolute; top:0; left:50%; width:min(1180p
   .about-comments .comment-login-prompt { padding-top:10px; }
 }
 
-/* Local review layer: cohesive home composition */
+/* Homepage composition */
 .home-canvas {
   position:relative;
   display:grid;
@@ -2090,7 +2094,7 @@ footer::before { content:""; position:absolute; top:0; left:50%; width:min(1180p
   .home-poetry-stream>div>a { grid-template-columns:minmax(0,1fr) 22px; }
 }
 
-/* Local review: rebuilt home as one editorial journey */
+/* Homepage editorial journey */
 .home-journal {
   display:grid;
   gap:clamp(62px,7vw,94px);
@@ -2693,7 +2697,7 @@ footer::before { content:""; position:absolute; top:0; left:50%; width:min(1180p
   .article-filter-backdrop .article-filter-dialog { transition:none; }
 }
 
-/* Local review: Fonscape home dashboard */
+/* Homepage dashboard */
 .home-dashboard-page {
   position:relative;
   isolation:isolate;
@@ -3726,7 +3730,7 @@ a.home-dash-panel:focus-visible {
   .settings-button:hover svg { transform:none; }
 }
 
-/* Homepage refresh: preserve the production reading order with a quieter editorial layout. */
+/* Homepage reading order */
 .home-refresh-page {
   background:radial-gradient(circle at 8% 38%,color-mix(in srgb,var(--accent) 7%,transparent),transparent 28%);
 }

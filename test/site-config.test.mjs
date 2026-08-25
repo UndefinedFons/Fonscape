@@ -10,11 +10,13 @@ test("site configuration keeps the portable theme shape", () => {
   assert.equal(typeof siteConfig.author.tagline, "string");
   assert.equal(typeof siteConfig.author.introduction, "string");
   assert.equal(Array.isArray(siteConfig.author.interests), true);
-  const support = siteConfig.author.support || {};
-  assert.equal(typeof (support.label || ""), "string");
-  assert.equal(typeof (support.handle || ""), "string");
-  assert.equal(typeof (support.image || ""), "string");
-  assert.equal(typeof (support.imageAlt || ""), "string");
+  const channels = siteConfig.author.channels || {};
+  for (const key of ["github", "bilibili", "x"]) {
+    assert.equal(typeof (channels[key]?.label || ""), "string");
+    assert.equal(typeof (channels[key]?.url || ""), "string");
+  }
+  assert.equal(typeof (channels.email?.label || ""), "string");
+  assert.equal(typeof (channels.email?.address || ""), "string");
   assert.equal(Array.isArray(siteConfig.about.paragraphs), true);
   assert.equal(siteConfig.footer.themeName, "Fonscape");
   assert.equal(siteConfig.footer.themeRepository, "https://github.com/UndefinedFons/Fonscape");

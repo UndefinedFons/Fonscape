@@ -13,7 +13,7 @@
 | `language` | HTML 页面语言，例如 `zh-CN` |
 | `title`、`description` | 浏览器标题、站点名称与通用简介 |
 | `home.*` | 首页头图短标题、主标题与简介 |
-| `author.*` | 作者名称、头像、签名、简介、兴趣、GitHub 与赞赏入口 |
+| `author.*` | 作者名称、头像、签名、简介、兴趣与个人渠道 |
 | `about.*` | 关于页标题、摘要与正文 |
 | `pages.*Description` | 文章、小诗、音乐、友链页面简介 |
 | `footer.owner` | 页脚版权所有者名称 |
@@ -21,6 +21,21 @@
 `footer.themeName` 与 `footer.themeRepository` 用于显示 Fonscape 主题署名，应保留默认主题名称与仓库链接。页脚年份和站点运行时间会根据当前站点数据库中的建立时间自动生成。
 
 配置值采用 JavaScript 语法。文本、颜色和路径需要放在引号中，对象字段之间用逗号分隔，例如 `"我的博客"`、`"#ffb7c5"`、`"/assets/home.jpg"`。
+
+### 个人渠道
+
+关于页支持 GitHub、哔哩哔哩、X 与邮箱入口，对应配置位于 `author.channels`：
+
+```js
+channels: {
+  github: { label: "@yourname", url: "https://github.com/yourname" },
+  bilibili: { label: "@yourname", url: "https://space.bilibili.com/你的UID" },
+  x: { label: "@yourname", url: "https://x.com/yourname" },
+  email: { label: "hello@example.com", address: "hello@example.com" },
+},
+```
+
+`label` 是关于页显示的名称。外部渠道填写完整的 `url`；邮箱只填写 `address`，主题会自动生成邮件链接。删除不需要的渠道对象，或把对应地址留空，即可隐藏该入口。
 
 ### 页面头图
 

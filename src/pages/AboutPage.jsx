@@ -1,16 +1,44 @@
 import { ArrowRight } from "@phosphor-icons/react/ArrowRight";
+import { EnvelopeSimple } from "@phosphor-icons/react/EnvelopeSimple";
 import { GithubLogo } from "@phosphor-icons/react/GithubLogo";
 import { UserCircle } from "@phosphor-icons/react/UserCircle";
-import { WechatLogo } from "@phosphor-icons/react/WechatLogo";
+import { XLogo } from "@phosphor-icons/react/XLogo";
 import { CommentsSection } from "../community/CommentsSection.jsx";
 import { PageHero } from "../components/PageHero.jsx";
 import { authorProfile, siteConfig } from "../content/index.js";
-import { ZoomableImage } from "../ZoomableImage.jsx";
+
+function BilibiliLogo({ size = 24 }) {
+  return <svg width={size} height={size} viewBox="0 0 256 256" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <path d="m80 48-24-24M176 48l24-24" stroke="currentColor" strokeWidth="18" strokeLinecap="round" />
+    <rect x="24" y="56" width="208" height="152" rx="38" fill="currentColor" opacity=".14" />
+    <rect x="24" y="56" width="208" height="152" rx="38" stroke="currentColor" strokeWidth="18" />
+    <path d="M88 112v24M168 112v24" stroke="currentColor" strokeWidth="18" strokeLinecap="round" />
+  </svg>;
+}
+
+const channelTypes = [
+  { key: "github", eyebrow: "GITHUB", Icon: GithubLogo },
+  { key: "bilibili", eyebrow: "BILIBILI", Icon: BilibiliLogo },
+  { key: "x", eyebrow: "X", Icon: XLogo },
+  { key: "email", eyebrow: "EMAIL", Icon: EnvelopeSimple },
+];
+
+function resolveChannels(author) {
+  const configured = author.channels || {};
+  const legacyGithub = author.github || {};
+
+  return channelTypes.flatMap(({ key, eyebrow, Icon }) => {
+    const channel = key === "github" ? (configured.github || legacyGithub) : configured[key];
+    if (!channel) return [];
+    const address = key === "email" ? channel.address?.trim() : "";
+    const href = key === "email" ? (address ? `mailto:${address}` : "") : channel.url?.trim();
+    if (!href) return [];
+    return [{ key, eyebrow, Icon, href, label: channel.label?.trim() || address || href }];
+  });
+}
 
 export function AboutPage() {
-  const github = authorProfile.github;
-  const support = authorProfile.support || {};
-  const hasChannels = Boolean(support.image || github.url);
+  const channels = resolveChannels(authorProfile);
   return <main className="about-page">
     <PageHero kicker="HELLO" title="关于我" description={siteConfig.about.heroDescription} icon={UserCircle} variant="about" />
     <section className="about-layout material-panel page-width">
@@ -21,9 +49,8 @@ export function AboutPage() {
           <h2>{authorProfile.name}</h2>
           <p>{authorProfile.tagline}</p>
           {authorProfile.interests.length > 0 && <div className="about-interest-list" aria-label="兴趣">{authorProfile.interests.map((interest) => <span key={interest}>{interest}</span>)}</div>}
-          {hasChannels && <div className="about-channel-list" aria-label="个人渠道">
-            {support.image && <ZoomableImage src={support.image} alt={support.imageAlt || `${authorProfile.name} 的赞赏码`} showLightboxCaption={false} triggerClassName="about-channel" triggerAriaLabel={`打开${support.imageAlt || `${authorProfile.name} 的赞赏码`}`} triggerContent={<><WechatLogo size={24} weight="duotone" /><span><small>{support.label || "SUPPORT ME"}</small><strong>{support.handle || authorProfile.name}</strong></span><ArrowRight size={16} /></>} />}
-            {github.url && <a className="about-channel" href={github.url} target="_blank" rel="noreferrer" aria-label={`访问 ${authorProfile.name} 的 GitHub 主页`}><GithubLogo size={24} weight="duotone" /><span><small>FIND ME ON GITHUB</small><strong>{github.label || github.url}</strong></span><ArrowRight size={16} /></a>}
+          {channels.length > 0 && <div className="about-channel-list" aria-label="个人渠道">
+            {channels.map(({ key, eyebrow, Icon, href, label }) => <a key={key} className="about-channel" data-channel={key} href={href} target={key === "email" ? undefined : "_blank"} rel={key === "email" ? undefined : "noreferrer"} aria-label={key === "email" ? `发送邮件至 ${label}` : `访问 ${authorProfile.name} 的 ${eyebrow} 主页`}><span className="about-channel-icon"><Icon size={24} weight="duotone" /></span><span><small>{eyebrow}</small><strong>{label}</strong></span><ArrowRight size={16} /></a>)}
           </div>}
         </div>
       </aside>
