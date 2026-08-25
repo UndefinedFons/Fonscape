@@ -91,3 +91,58 @@ test("backend hygiene refuses to discard repository-era D1 content", async () =>
     await client.close();
   }
 });
+
+test("retired backend storage is removed without changing active runtime data", async () => {
+  const client = createClient({ url: ":memory:" });
+  const migrations = await readMigrations();
+  const cleanupIndex = migrations.findIndex((migration) => migration.name.endsWith("_remove_retired_backend_surface.sql"));
+  assert.notEqual(cleanupIndex, -1);
+
+  try {
+    await migrateTurso({ client, apply: true, migrations: migrations.slice(0, cleanupIndex) });
+    const now = Date.now();
+    await client.batch([
+      {
+        sql: `INSERT INTO users
+          (id, username, password_hash, password_salt, nickname, role, status, created_at, updated_at)
+          VALUES ('admin-1', 'siteadmin', 'hash', 'salt', '管理员', 'admin', 'active', ?, ?),
+                 ('member-1', 'reader01', 'hash', 'salt', '读者', 'member', 'active', ?, ?)`,
+        args: [now, now, now, now],
+      },
+      {
+        sql: `INSERT INTO comments
+          (id, content_type, content_slug, user_id, body, status, created_at, updated_at)
+          VALUES ('comment-1', 'post', 'example', 'member-1', '保留的评论', 'published', ?, ?)`,
+        args: [now, now],
+      },
+      {
+        sql: `INSERT INTO comment_reports
+          (id, comment_id, reporter_id, reason, status, created_at)
+          VALUES ('report-1', 'comment-1', 'admin-1', 'retired', 'open', ?)`,
+        args: [now],
+      },
+      {
+        sql: `INSERT INTO admin_audit
+          (id, admin_user_id, action, target_type, target_id, created_at)
+          VALUES ('audit-1', 'admin-1', 'retired', 'comment', 'comment-1', ?)`,
+        args: [now],
+      },
+    ], "write");
+
+    await migrateTurso({ client, apply: true, migrations: [migrations[cleanupIndex]] });
+
+    const tables = await tableNames(client);
+    assert.equal(tables.includes("comment_reports"), false);
+    assert.equal(tables.includes("admin_audit"), false);
+    assert.deepEqual((await client.execute("SELECT id, body, status FROM comments")).rows, [
+      { id: "comment-1", body: "保留的评论", status: "published" },
+    ]);
+    assert.deepEqual((await client.execute("SELECT id, username, role FROM users ORDER BY id")).rows, [
+      { id: "admin-1", username: "siteadmin", role: "admin" },
+      { id: "member-1", username: "reader01", role: "member" },
+    ]);
+    assert.deepEqual((await client.execute("PRAGMA foreign_key_check")).rows, []);
+  } finally {
+    await client.close();
+  }
+});

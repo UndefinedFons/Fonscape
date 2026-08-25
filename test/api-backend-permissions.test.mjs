@@ -238,7 +238,7 @@ test("public profile reads the current nickname and versioned avatar for a linke
   assert.equal((await updatedResponse.json()).profile.nickname, "新昵称");
 });
 
-test("retired administration routes are unavailable even to an administrator", async () => {
+test("retired backend routes are unavailable even to an administrator", async () => {
   const fake = createDb();
   const routes = [
     { method: "GET", path: ["admin", "overview"] },
@@ -249,6 +249,8 @@ test("retired administration routes are unavailable even to an administrator", a
     { method: "GET", path: ["admin", "friend-applications"] },
     { method: "PATCH", path: ["admin", "friend-applications", "application-1"] },
     { method: "DELETE", path: ["admin", "friend-links"] },
+    { method: "GET", path: ["articles", "stats"] },
+    { method: "POST", path: ["articles", "example", "view"] },
   ];
 
   for (const { method, path } of routes) {
