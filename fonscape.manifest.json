@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "version": "1.4.2",
+  "version": "1.5.0",
   "ownership": {
     "user": [
       ".env",
@@ -54,6 +54,7 @@
       "server/**",
       "src/**",
       "test/**",
+      "tsconfig.json",
       "vite.config.mjs",
       "worker/**"
     ]

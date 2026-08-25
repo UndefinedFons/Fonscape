@@ -13,7 +13,7 @@
 | `language` | HTML 页面语言，例如 `zh-CN` |
 | `title`、`description` | 浏览器标题、站点名称与通用简介 |
 | `home.*` | 首页头图短标题、主标题与简介 |
-| `author.*` | 作者名称、头像、签名、简介、兴趣与个人渠道 |
+| `author.*` | 作者名称、头像、签名、简介、兴趣与个人渠道；首页可另设轻量头像 |
 | `about.*` | 关于页标题、摘要与正文 |
 | `pages.*Description` | 文章、小诗、音乐、友链页面简介 |
 | `showPoems` | 是否在主导航、首页显示小诗板块，默认 `false` |
@@ -26,7 +26,7 @@
 
 ### 小诗与音乐板块显示开关
 
-两个开关位于仓库根目录 `fonscape.config.js` 的根级 `siteConfig` 对象中，与 `language`、`title`、`description` 同级。它们只控制桌面和移动主导航、首页对应板块及首页统计项的显示；小诗和音乐的路由、详情页、内容模型与搜索能力始终保留：
+两个开关位于仓库根目录 `fonscape.config.js` 的根级 `siteConfig` 对象中，与 `language`、`title`、`description` 同级。它们控制桌面和移动主导航、首页对应板块、首页统计项以及搜索范围；关闭的板块不会出现在“全部”搜索结果中。已有路由、详情页与内容文件不会被删除：
 
 ```js
 showPoems: false,
@@ -64,6 +64,7 @@ channels: {
 ```js
 home: {
   image: "/assets/home-hero.webp",
+  mobileImage: "/assets/home-hero-mobile.webp",
   position: "center",
   mobilePosition: "60% center",
   size: "cover",
@@ -71,12 +72,15 @@ home: {
 ```
 
 - `image`：普通页面头图。
+- `mobileImage`：可选的手机端轻量头图；画面和焦点应与 `image` 保持一致，省略时继续使用 `image`。
 - `glassImage`：可选的预模糊背景图；省略时主题会自动柔化普通头图。
 - `position`：桌面与平板的图片焦点。
 - `mobilePosition`：手机端的图片焦点。
 - `size`：通常使用 `cover`。
 
 自定义图片放在 `public/assets/`，配置路径从网站根目录开始写，例如 `public/assets/home.jpg` 对应 `"/assets/home.jpg"`。文件名大小写必须与仓库中的文件一致。
+
+首页作者头像可在 `author.avatarSmall` 提供同一头像的轻量版本；关于页仍使用 `author.avatar`。建议让 `avatarSmall` 至少覆盖头像实际显示尺寸的两倍像素，避免高分屏模糊。
 
 ### 友链
 
@@ -169,6 +173,7 @@ musicPlacement: "inline"
 | `featured` | 否 | 是否置顶，默认 `false` |
 | `featuredOrder` | 否 | 置顶顺序，必须是正整数；仅可在 `featured: true` 时使用 |
 | `image` | 否 | 封面路径，例如 `/assets/my-note.webp` |
+| `cardImage` | 否 | 与 `image` 同画面的轻量列表图；详情页仍使用 `image` |
 | `cardPosition` | 否 | 列表卡片图片焦点，例如 `50% 30%` |
 | `coverMode` | 否 | 详情页封面模式：`wide` 或 `none`，默认 `wide` |
 | `coverPosition` | 否 | 详情页封面焦点；不影响图片自然比例 |
@@ -296,7 +301,7 @@ pnpm check
 
 ## 部署
 
-Fonscape 支持 Cloudflare Workers + D1 与 Vercel + Turso。两种一键部署都只需要填写自行生成的 `ADMIN_BOOTSTRAP_TOKEN`；部署完成后打开 `/admin/setup`，使用同一令牌创建首位管理员。初始化成功后，数据库会永久拒绝再次使用该令牌。
+Fonscape 支持 Cloudflare Workers + D1 与 Vercel + Turso。只需准备一个 GitHub 账号，即可通过任一平台的 GitHub 登录完成授权和部署；部署表单只要求填写自行生成的 `ADMIN_BOOTSTRAP_TOKEN`。部署完成后打开 `/admin/setup`，使用同一令牌创建首位管理员。初始化成功后，数据库会永久拒绝再次使用该令牌。
 
 ### Cloudflare Workers + D1
 

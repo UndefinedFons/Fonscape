@@ -1,5 +1,11 @@
 const SLUG_PATTERN = /^[a-z0-9][a-z0-9/_-]{0,119}$/u;
 
+/**
+ * @param {string} rawValue
+ * @param {string} path
+ * @param {string} key
+ * @returns {unknown}
+ */
 function parseFrontmatterValue(rawValue, path, key) {
   const value = rawValue.trim();
   if (value === "null" || value === "~") return null;
@@ -19,9 +25,15 @@ function parseFrontmatterValue(rawValue, path, key) {
   return value;
 }
 
+/**
+ * @param {string} path
+ * @param {string} source
+ * @returns {{ data: Record<string, any>, filename: string, content: string }}
+ */
 export function parseMarkdownSource(path, source) {
   const frontmatter = source.match(/^---\s*\r?\n([\s\S]*?)\r?\n---\s*(?:\r?\n|$)/u);
   if (!frontmatter) throw new Error(`${path} 缺少 Frontmatter。`);
+  /** @type {Record<string, any>} */
   const data = {};
   frontmatter[1].split(/\r?\n/u).forEach((line, index) => {
     const trimmed = line.trim();
@@ -34,23 +46,39 @@ export function parseMarkdownSource(path, source) {
   });
   return {
     data,
-    filename: path.split("/").pop().replace(/\.md$/u, ""),
+    filename: (path.split("/").pop() || "").replace(/\.md$/u, ""),
     content: source.slice(frontmatter[0].length).trim(),
   };
 }
 
+/**
+ * @param {Record<string, any>} entry
+ * @param {string[]} fields
+ * @param {string} path
+ */
 function requireFields(entry, fields, path) {
   fields.forEach((key) => {
     if (!entry[key]) throw new Error(`${path} 的 Frontmatter 缺少 ${key}。`);
   });
 }
 
+/**
+ * @template {import("../types.js").DatedEntry} T
+ * @param {T} entry
+ * @param {string} path
+ * @returns {T}
+ */
 function validateCommonEntry(entry, path) {
   if (!SLUG_PATTERN.test(entry.slug)) throw new Error(`${path} 的 slug 格式无效。`);
   if (Number.isNaN(new Date(entry.date).getTime())) throw new Error(`${path} 的 date 格式无效。`);
   return entry;
 }
 
+/**
+ * @param {string} path
+ * @param {string} source
+ * @returns {import("../types.js").Post}
+ */
 export function parsePost(path, source) {
   const { data, filename, content } = parseMarkdownSource(path, source);
   if (Object.hasOwn(data, "coverAlt")) throw new Error(`${path} 的文章封面无需配置 coverAlt，系统会自动生成替代文字。`);
@@ -71,9 +99,14 @@ export function parsePost(path, source) {
     content,
   };
   requireFields(post, ["title", "category", "date"], path);
-  return validateCommonEntry(post, path);
+  return validateCommonEntry(/** @type {import("../types.js").Post} */ (post), path);
 }
 
+/**
+ * @param {string} path
+ * @param {string} source
+ * @returns {import("../types.js").Poem}
+ */
 export function parsePoem(path, source) {
   const { data, filename, content } = parseMarkdownSource(path, source);
   const poem = {
@@ -83,9 +116,14 @@ export function parsePoem(path, source) {
   };
   requireFields(poem, ["title", "date"], path);
   if (!poem.lines.some(Boolean)) throw new Error(`${path} 的小诗正文为空。`);
-  return validateCommonEntry(poem, path);
+  return validateCommonEntry(/** @type {import("../types.js").Poem} */ (poem), path);
 }
 
+/**
+ * @param {string} path
+ * @param {string} source
+ * @returns {import("../types.js").MusicReview}
+ */
 export function parseMusicReview(path, source) {
   const { data, filename, content } = parseMarkdownSource(path, source);
   const review = {
@@ -99,13 +137,23 @@ export function parseMusicReview(path, source) {
   if (!["songs", "artists", "albums"].includes(review.section)) {
     throw new Error(`${path} 的 section 必须是 songs、artists 或 albums。`);
   }
-  return validateCommonEntry(review, path);
+  return validateCommonEntry(/** @type {import("../types.js").MusicReview} */ (review), path);
 }
 
+/**
+ * @param {import("../types.js").DatedEntry} left
+ * @param {import("../types.js").DatedEntry} right
+ */
 export function sortNewestFirst(left, right) {
-  return new Date(right.date) - new Date(left.date) || left.slug.localeCompare(right.slug);
+  return new Date(right.date).getTime() - new Date(left.date).getTime() || left.slug.localeCompare(right.slug);
 }
 
+/**
+ * @template {import("../types.js").DatedEntry} T
+ * @param {T[]} entries
+ * @param {string} label
+ * @returns {T[]}
+ */
 export function assertUniqueEntries(entries, label) {
   const slugs = new Set();
   for (const entry of entries) {

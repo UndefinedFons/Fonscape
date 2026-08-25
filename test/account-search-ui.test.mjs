@@ -26,3 +26,14 @@ test("the combined search feed applies the shared newest-first ordering", async 
 
   assert.match(dialog, /\]\.sort\(sortNewestFirst\)/u);
 });
+
+test("search scopes and results follow the optional section switches", async () => {
+  const dialog = await readFile("src/components/Dialogs.jsx", "utf8");
+
+  assert.match(dialog, /const showPoems = siteConfig\.showPoems === true/u);
+  assert.match(dialog, /const showMusic = siteConfig\.showMusic === true/u);
+  assert.match(dialog, /showPoems \? poems\.map/u);
+  assert.match(dialog, /showMusic \? Object\.entries\(musicReviews\)/u);
+  assert.match(dialog, /showPoems \? \[\["poem", "小诗"\]\] : \[\]/u);
+  assert.match(dialog, /showMusic \? \[\["music", "音乐"\]\] : \[\]/u);
+});
