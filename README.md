@@ -113,7 +113,6 @@ pnpm check
 - [部署说明](./docs/DEPLOYMENT.md)：Cloudflare、Vercel、首次管理员设置与部署后验证。
 - [升级说明](./docs/UPGRADING.md)：Updater 预演、冲突处理、回滚与数据库迁移。
 - [故障排查](./docs/TROUBLESHOOTING.md) 与 [运行维护](./MAINTENANCE.md)：常见失败、限频与容量约束。
-- [参与贡献](./CONTRIBUTING.md)、[安全政策](./SECURITY.md) 与 [行为准则](./CODE_OF_CONDUCT.md)。
 
 ## 鸣谢
 
