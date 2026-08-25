@@ -328,15 +328,11 @@ button,input { font:inherit; } a { color:inherit; text-decoration:none; } button
 .article-page h1 { margin:15px 0; font:700 clamp(36px,6vw,60px)/1.3 "Zen Maru Gothic",sans-serif; }
 .article-intro-copy h1 { max-width:min(100%,var(--article-title-max-width)); margin-inline:auto; overflow-wrap:anywhere; }
 .article-lede { color:var(--muted); font-size:17px; line-height:1.9; }
-.article-detail--side { max-width:990px; }
 .article-intro { min-width:0; }
-.article-intro--side { display:grid; grid-template-columns:minmax(230px,320px) minmax(0,1fr); align-items:center; gap:42px; }
-.article-intro--side.article-intro--cover-left .article-cover-frame { order:-1; }
 .article-intro-copy { min-width:0; text-align:center; }
 .article-cover-frame { width:100%; max-width:100%; margin:34px auto; }
+.article-intro--wide .article-cover-frame { width:min(790px,100%); }
 .article-cover { display:block; width:auto; max-width:100%; height:auto; max-height:min(76vh,760px); margin:auto; object-fit:contain; border-radius:var(--radius); box-shadow:0 14px 38px color-mix(in srgb,var(--shadow-color) 76%,transparent); }
-.article-intro--side .article-cover-frame { margin:0; }
-.article-intro--side .article-cover { width:100%; max-height:min(58vh,460px); object-fit:cover; }
 .article-detail>.article-music-player,.article-detail>.rich-article { width:min(790px,100%); margin-inline:auto; }
 .article-prologue-anchor { display:block; height:0; scroll-margin-top:110px; }
 .article-content-loading { width:min(790px,100%); height:80px; margin:30px auto 0; border-radius:16px; background:linear-gradient(90deg,var(--surface-soft),color-mix(in srgb,var(--blue) 10%,var(--surface)),var(--surface-soft)); background-size:220% 100%; animation:content-loading 1.4s ease infinite; }
@@ -619,10 +615,6 @@ footer::before { content:""; position:absolute; top:0; left:50%; width:min(1180p
   .article-music-player { grid-template-columns:72px minmax(0,1fr); gap:14px; padding:14px 15px 14px 14px; }
   .article-music-art { width:72px; height:72px; }
   .article-music-volume { position:absolute; top:12px; right:12px; }
-  .article-intro--side { grid-template-columns:1fr; gap:24px; }
-  .article-intro--side.article-intro--cover-left .article-cover-frame { order:0; }
-  .article-intro--side .article-cover-frame { margin:4px auto 10px; }
-  .article-intro--side .article-cover { width:auto; max-height:min(58vh,500px); object-fit:contain; }
   .article-page h1 { font-size:clamp(30px,8.25vw,38px); line-height:1.32; letter-spacing:-.015em; }
   .rich-article h2 { font-size:1.45em; }
   .article-outline { top:78px; }

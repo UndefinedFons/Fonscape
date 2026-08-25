@@ -54,6 +54,10 @@ function validateCommonEntry(entry, path) {
 export function parsePost(path, source) {
   const { data, filename, content } = parseMarkdownSource(path, source);
   if (Object.hasOwn(data, "coverAlt")) throw new Error(`${path} 的文章封面无需配置 coverAlt，系统会自动生成替代文字。`);
+  if (Object.hasOwn(data, "coverSide")) throw new Error(`${path} 的文章封面不支持 coverSide。`);
+  if (Object.hasOwn(data, "coverMode") && !["wide", "none"].includes(data.coverMode)) {
+    throw new Error(`${path} 的 coverMode 必须是 wide 或 none。`);
+  }
   if (!data.featured && Object.hasOwn(data, "featuredOrder")) throw new Error(`${path} 未置顶，不能配置 featuredOrder。`);
   if (Object.hasOwn(data, "featuredOrder") && (!Number.isInteger(data.featuredOrder) || data.featuredOrder < 1)) {
     throw new Error(`${path} 的 featuredOrder 必须是正整数。`);
