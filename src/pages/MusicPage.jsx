@@ -5,12 +5,12 @@ import { ChatCircleDots } from "@phosphor-icons/react/ChatCircleDots";
 import { Eye } from "@phosphor-icons/react/Eye";
 import { MusicNotes } from "@phosphor-icons/react/MusicNotes";
 import { TextAa } from "@phosphor-icons/react/TextAa";
-import { lazy, Suspense, useEffect, useState } from "react";
+import { lazy, use, useEffect, useState } from "react";
 import { MusicReviewCard } from "../components/Cards.jsx";
 import { Pagination } from "../components/Pagination.jsx";
 import { PageHero } from "../components/PageHero.jsx";
 import { CommentsSection } from "../community/CommentsSection.jsx";
-import { musicReviews, siteConfig } from "../content/index.js";
+import { loadMusicReview, musicReviews, siteConfig } from "../content/index.js";
 import { usePagination, useResponsivePageSize } from "../hooks.js";
 import { musicSections } from "../musicSections.js";
 import { go, parseHashQuery } from "../routeState.js";
@@ -42,6 +42,7 @@ export function MusicPage({ stats }) {
 export function MusicDetailPage({ path, stats, onView }) {
   const [section, slug] = path.split("/");
   const review = musicReviews[section]?.find((item) => item.slug === slug);
+  const detailReview = review ? use(loadMusicReview(section, review.slug)) : null;
   const statsSlug = review ? `${section}/${review.slug}` : "";
   useEffect(() => { if (statsSlug) onView("music", statsSlug); }, [statsSlug, onView]);
   if (!review) return <NotFound />;
@@ -49,6 +50,6 @@ export function MusicDetailPage({ path, stats, onView }) {
     <div className="article-intro-copy"><span className="category">MUSIC NOTE</span><h1>{review.title}</h1>{review.excerpt && <p className="article-lede">{review.excerpt}</p>}<div className="post-meta"><span><TextAa size={16} />{getPostWordCount(review)} 字</span><span><CalendarBlank size={16} />{formatContentDate(review.date)}</span><span><Eye size={16} />{stats[statsSlug]?.views || 0}</span><span><ChatCircleDots size={16} />{stats[statsSlug]?.comments || 0}</span></div></div>
     {review.url && <a className="music-source-card music-source-card--lead" href={review.url} target="_blank" rel="noreferrer">{review.image && <img src={review.image} alt={`${review.sourceTitle || review.title}专辑封面`} decoding="async" />}<span><small>网易云音乐 · {review.kind}</small><strong>{review.sourceTitle || review.title}</strong><em>{review.sourceMeta || review.kind}</em></span><b>{review.action || "前往收听"}<ArrowRight size={17} /></b></a>}
     {!review.url && review.image && <img className="music-detail-cover" src={review.image} alt={`${review.title}的封面`} decoding="async" />}
-    {review.content && <Suspense fallback={<div className="article-content-loading" aria-label="正在排版正文" />}><RichArticleContent post={review} /></Suspense>}
+    {detailReview?.content && <RichArticleContent post={detailReview} />}
   </article><CommentsSection targetType="music" slug={`${section}/${review.slug}`} /></main>;
 }

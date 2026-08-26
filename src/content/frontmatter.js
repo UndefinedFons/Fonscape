@@ -1,3 +1,5 @@
+import { countWords, getArticleOutline, getFirstParagraph, getPoemLines } from "./markdown.js";
+
 const SLUG_PATTERN = /^[a-z0-9][a-z0-9/_-]{0,119}$/u;
 
 /**
@@ -77,10 +79,12 @@ function validateCommonEntry(entry, path) {
 /**
  * @param {string} path
  * @param {string} source
+ * @param {{ includeContent?: boolean }} [options]
  * @returns {import("../types.js").Post}
  */
-export function parsePost(path, source) {
+export function parsePost(path, source, options = {}) {
   const { data, filename, content } = parseMarkdownSource(path, source);
+  const { content: _frontmatterContent, ...frontmatter } = data;
   if (Object.hasOwn(data, "coverAlt")) throw new Error(`${path} 的文章封面无需配置 coverAlt，系统会自动生成替代文字。`);
   if (Object.hasOwn(data, "coverSide")) throw new Error(`${path} 的文章封面不支持 coverSide。`);
   if (Object.hasOwn(data, "coverMode") && !["wide", "none"].includes(data.coverMode)) {
@@ -91,12 +95,15 @@ export function parsePost(path, source) {
     throw new Error(`${path} 的 featuredOrder 必须是正整数。`);
   }
   const post = {
-    ...data,
+    ...frontmatter,
     slug: data.slug || filename,
     series: data.series || null,
     tags: Array.isArray(data.tags) ? data.tags : [],
     featured: Boolean(data.featured),
-    content,
+    firstParagraph: getFirstParagraph(content),
+    wordCount: countWords(content),
+    outline: getArticleOutline(content),
+    ...(options.includeContent === false ? {} : { content }),
   };
   requireFields(post, ["title", "category", "date"], path);
   return validateCommonEntry(/** @type {import("../types.js").Post} */ (post), path);
@@ -105,39 +112,76 @@ export function parsePost(path, source) {
 /**
  * @param {string} path
  * @param {string} source
+ * @param {{ includeContent?: boolean }} [options]
  * @returns {import("../types.js").Poem}
  */
-export function parsePoem(path, source) {
+export function parsePoem(path, source, options = {}) {
   const { data, filename, content } = parseMarkdownSource(path, source);
+  const { lines: _frontmatterLines, ...frontmatter } = data;
+  const lines = getPoemLines(content);
   const poem = {
-    ...data,
+    ...frontmatter,
     slug: data.slug || filename,
-    lines: content ? content.split(/\r?\n/u).map((line) => line.trimEnd()) : [],
+    previewLines: lines.slice(0, 3),
+    lineCount: lines.length,
+    ...(options.includeContent === false ? {} : { lines }),
   };
   requireFields(poem, ["title", "date"], path);
-  if (!poem.lines.some(Boolean)) throw new Error(`${path} 的小诗正文为空。`);
+  if (!lines.some(Boolean)) throw new Error(`${path} 的小诗正文为空。`);
   return validateCommonEntry(/** @type {import("../types.js").Poem} */ (poem), path);
 }
 
 /**
  * @param {string} path
  * @param {string} source
+ * @param {{ includeContent?: boolean }} [options]
  * @returns {import("../types.js").MusicReview}
  */
-export function parseMusicReview(path, source) {
+export function parseMusicReview(path, source, options = {}) {
   const { data, filename, content } = parseMarkdownSource(path, source);
+  const { content: _frontmatterContent, ...frontmatter } = data;
   const review = {
-    ...data,
+    ...frontmatter,
     slug: data.slug || filename,
     section: data.section || "songs",
     reading: data.reading || `${Math.max(1, Math.ceil(content.length / 500))} 分钟`,
-    content,
+    firstParagraph: getFirstParagraph(content),
+    wordCount: countWords(content),
+    ...(options.includeContent === false ? {} : { content }),
   };
   requireFields(review, ["title", "kind", "date"], path);
   if (!["songs", "artists", "albums"].includes(review.section)) {
     throw new Error(`${path} 的 section 必须是 songs、artists 或 albums。`);
   }
   return validateCommonEntry(/** @type {import("../types.js").MusicReview} */ (review), path);
+}
+
+/**
+ * Build-time parsers intentionally omit the Markdown body. The generated
+ * manifest is shipped as user-owned build output, while the body remains in
+ * Vite's per-file async raw modules.
+ *
+ * @param {string} path
+ * @param {string} source
+ */
+export function parsePostMetadata(path, source) {
+  return parsePost(path, source, { includeContent: false });
+}
+
+/**
+ * @param {string} path
+ * @param {string} source
+ */
+export function parsePoemMetadata(path, source) {
+  return parsePoem(path, source, { includeContent: false });
+}
+
+/**
+ * @param {string} path
+ * @param {string} source
+ */
+export function parseMusicReviewMetadata(path, source) {
+  return parseMusicReview(path, source, { includeContent: false });
 }
 
 /**

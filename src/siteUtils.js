@@ -1,7 +1,8 @@
 import { getPostPlainText } from "./richContent.js";
 
-/** @param {{ content?: string }} post */
+/** @param {{ content?: string, wordCount?: number }} post */
 function getPostWordCount(post) {
+  if (Number.isFinite(post.wordCount)) return post.wordCount;
   const text = getPostPlainText(post);
   const chineseCharacters = text.match(/[\u3400-\u9fff]/g)?.length || 0;
   const latinWords = text.match(/[A-Za-z0-9]+(?:['’-][A-Za-z0-9]+)*/g)?.length || 0;

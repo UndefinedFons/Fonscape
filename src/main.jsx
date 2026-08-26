@@ -1,6 +1,6 @@
 import React from "react";
 import { createRoot } from "react-dom/client";
-import { App } from "./App.jsx";
+import { App, preloadRoute } from "./App.jsx";
 import { CommunityProvider } from "./community/CommunityProvider.jsx";
 import "./styles.css";
 
@@ -11,9 +11,11 @@ if (directPath === "/admin/setup") {
 } else if (directPath === "/admin" || directPath.startsWith("/admin/")) {
   window.location.replace("/#/");
 } else {
-  createRoot(document.getElementById("root")).render(
-    <React.StrictMode>
-      <CommunityProvider><App /></CommunityProvider>
-    </React.StrictMode>,
+  const initialRoute = window.location.hash.slice(1).split("?")[0] || "/";
+  const render = () => createRoot(document.getElementById("root")).render(
+    <React.StrictMode><React.Suspense fallback={null}><CommunityProvider><App /></CommunityProvider></React.Suspense></React.StrictMode>,
   );
+  const initialLoader = initialRoute === "/" ? null : preloadRoute(initialRoute);
+  if (initialLoader) initialLoader.then(render, render);
+  else render();
 }

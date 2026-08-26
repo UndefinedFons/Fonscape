@@ -89,7 +89,7 @@ export function ArticleOutlinePopover({ items, open, activeId, onSelect }) {
   return <aside className={`article-outline${open ? " is-open" : ""}`} aria-hidden={!open}><header><List size={18} weight="duotone" /><span>文章导览</span><small>{activeItem?.number || "00"} / {String(items.length - (items[0]?.prologue ? 1 : 0)).padStart(2, "0")}</small></header><nav aria-label="文章章节导览">{items.map((item) => <button type="button" key={item.id} className={item.id === activeId ? "active" : ""} aria-current={item.id === activeId ? "location" : undefined} tabIndex={open ? 0 : -1} onClick={() => onSelect(item)}><span>{item.number}</span><b>{item.title}</b></button>)}</nav></aside>;
 }
 
-export function Header({ route, theme, menuOpen, onMenu, onTheme, onSearch, onSettings, viewer, onAccount, hasArticleOutline, articleOutlineOpen, onArticleOutline, onCloseArticleOutline }) {
+export function Header({ route, theme, menuOpen, onMenu, onTheme, onSearch, onSearchIntent, onSettings, onSettingsIntent, viewer, onAccount, onAccountIntent, hasArticleOutline, articleOutlineOpen, onArticleOutline, onCloseArticleOutline }) {
   const navRef = useRef(null);
   const headerCenterRef = useRef(null);
   const detailReadingTarget = getDetailReadingTarget(route);
@@ -222,12 +222,12 @@ export function Header({ route, theme, menuOpen, onMenu, onTheme, onSearch, onSe
         })}
       </nav>
       <div className="header-actions">
-        <button className="icon-button" onClick={onSearch} aria-label="打开搜索"><MagnifyingGlass size={21} /></button>
-        <button className={`icon-button account-nav-button${viewer ? " is-signed-in" : " is-signed-out"}`} onClick={onAccount} aria-label={viewer ? `打开 ${viewer.nickname} 的个人中心${viewer.unreadReplies || viewer.unreadAdminComments ? `，有 ${Number(viewer.unreadReplies || 0) + Number(viewer.unreadAdminComments || 0)} 条未读消息` : ""}` : "登录或注册"}>{viewer ? <UserCircleCheck size={22} weight="duotone" /> : <UserCircle size={22} />}{Number(viewer?.unreadReplies || 0) + Number(viewer?.unreadAdminComments || 0) > 0 && <span className="account-notification-dot" aria-hidden="true" />}</button>
+        <button className="icon-button" onClick={onSearch} onPointerEnter={onSearchIntent} onFocus={onSearchIntent} aria-label="打开搜索"><MagnifyingGlass size={21} /></button>
+        <button className={`icon-button account-nav-button${viewer ? " is-signed-in" : " is-signed-out"}`} onClick={onAccount} onPointerEnter={onAccountIntent} onFocus={onAccountIntent} aria-label={viewer ? `打开 ${viewer.nickname} 的个人中心${viewer.unreadReplies || viewer.unreadAdminComments ? `，有 ${Number(viewer.unreadReplies || 0) + Number(viewer.unreadAdminComments || 0)} 条未读消息` : ""}` : "登录或注册"}>{viewer ? <UserCircleCheck size={22} weight="duotone" /> : <UserCircle size={22} />}{Number(viewer?.unreadReplies || 0) + Number(viewer?.unreadAdminComments || 0) > 0 && <span className="account-notification-dot" aria-hidden="true" />}</button>
         <button className="icon-button theme-button" onClick={onTheme} aria-label="切换主题">{theme === "light" ? <Moon size={21} /> : <Sun size={21} />}</button>
         <button className="icon-button menu-button" onClick={onMenu} aria-label={menuOpen ? "关闭菜单" : "打开菜单"}>{menuOpen ? <X size={21} /> : <List size={21} />}</button>
         <button className={`icon-button article-outline-nav-button${hasArticleOutline ? " is-available" : ""}`} onClick={hasArticleOutline ? onArticleOutline : undefined} aria-label={hasArticleOutline ? (articleOutlineOpen ? "关闭文章导览" : "打开文章导览") : undefined} aria-expanded={hasArticleOutline ? articleOutlineOpen : undefined} aria-hidden={!hasArticleOutline} tabIndex={hasArticleOutline ? 0 : -1}><span className="icon-swap" key={articleOutlineOpen ? "close" : "outline"}>{articleOutlineOpen ? <X size={21} /> : <ListNumbers size={21} />}</span></button>
-        <button className="icon-button settings-button" onClick={onSettings} aria-label="打开显示设置"><GearSix size={21} /></button>
+        <button className="icon-button settings-button" onClick={onSettings} onPointerEnter={onSettingsIntent} onFocus={onSettingsIntent} aria-label="打开显示设置"><GearSix size={21} /></button>
         <button className="icon-button nav-collapse-button" onClick={collapseHeader} aria-label="收纳导航栏" aria-hidden={collapsed || Boolean(morphing)} tabIndex={!collapsed && !morphing ? 0 : -1} disabled={collapsed || Boolean(morphing)} hidden={collapsed && !morphing}><CaretUp size={21} weight="bold" /></button>
       </div>
       <button className="nav-morph-restore-button" type="button" onClick={restoreHeader} aria-label="展开导航栏" aria-hidden={!collapsed || Boolean(morphing)} tabIndex={collapsed && !morphing ? 0 : -1} disabled={!collapsed || Boolean(morphing)} hidden={!collapsed && morphing !== "restoring"}><CaretDown size={18} weight="bold" /></button>

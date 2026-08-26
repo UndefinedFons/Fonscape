@@ -12,6 +12,8 @@ outputs/
 .wrangler/
 .fonscape-update/
 functions/_generated/
+public/fonscape/google-fonts.css
+public/fonscape/google-fonts-full.css
 worker-configuration.d.ts
 design-qa.md
 AGENTS.md
