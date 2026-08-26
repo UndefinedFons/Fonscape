@@ -29,6 +29,7 @@ test("the combined search feed applies the shared newest-first ordering", async 
 
 test("search scopes and results follow the optional section switches", async () => {
   const dialog = await readFile("src/components/Dialogs.jsx", "utf8");
+  const styles = await readFile("src/styles.css", "utf8");
 
   assert.match(dialog, /const showPoems = siteConfig\.showPoems === true/u);
   assert.match(dialog, /const showMusic = siteConfig\.showMusic === true/u);
@@ -36,4 +37,9 @@ test("search scopes and results follow the optional section switches", async () 
   assert.match(dialog, /showMusic \? Object\.entries\(musicReviews\)/u);
   assert.match(dialog, /showPoems \? \[\["poem", "小诗"\]\] : \[\]/u);
   assert.match(dialog, /showMusic \? \[\["music", "音乐"\]\] : \[\]/u);
+  assert.match(dialog, /"--search-scope-count": scopeOptions\.length/u);
+  assert.match(dialog, /"--search-scope-offset": `\$\{activeScopeIndex \* 100\}%`/u);
+  assert.match(styles, /grid-template-columns:repeat\(var\(--search-scope-count\),minmax\(0,1fr\)\)/u);
+  assert.match(styles, /width:calc\(\(100% - 6px\)\/var\(--search-scope-count\)\)/u);
+  assert.match(styles, /transform:translateX\(var\(--search-scope-offset\)\)/u);
 });
