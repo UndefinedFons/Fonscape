@@ -3,7 +3,15 @@ import { readFile, readdir } from "node:fs/promises";
 import { join } from "node:path";
 import test from "node:test";
 import { staticContentTargets } from "../functions/_generated/content-targets.js";
-import { parseMusicReview, parsePoem, parsePost, sortNewestFirst } from "../src/content/frontmatter.js";
+import {
+  parseMusicReview,
+  parseMusicReviewMetadata,
+  parsePoem,
+  parsePoemMetadata,
+  parsePost,
+  parsePostMetadata,
+  sortNewestFirst,
+} from "../src/content/frontmatter.js";
 
 const definitions = [
   ["post", "posts", parsePost, (entry) => entry.slug],
@@ -41,6 +49,24 @@ date: "2026-01-01"
     "第三行",
     "第四行",
   ]);
+});
+
+test("metadata parsers keep listing data while omitting Markdown bodies", () => {
+  const post = parsePostMetadata("post.md", `---\ntitle: "文章"\ndate: "2026-01-01"\ncategory: "记录"\ncontent: "不应覆盖正文"\n---\n首段摘要。\n\n## 第一节\n\n正文。\n\n## 第二节\n\n更多正文。`);
+  assert.equal(Object.hasOwn(post, "content"), false);
+  assert.equal(post.firstParagraph, "首段摘要。");
+  assert.equal(post.wordCount, 16);
+  assert.deepEqual(post.outline.map((item) => item.title), ["序章", "第一节", "第二节"]);
+
+  const poem = parsePoemMetadata("poem.md", `---\ntitle: "小诗"\ndate: "2026-01-01"\n---\n一\n二\n三\n四`);
+  assert.equal(Object.hasOwn(poem, "lines"), false);
+  assert.deepEqual(poem.previewLines, ["一", "二", "三"]);
+  assert.equal(poem.lineCount, 4);
+
+  const music = parseMusicReviewMetadata("music.md", `---\ntitle: "音乐"\nkind: "歌曲"\ndate: "2026-01-01"\n---\n听见一首歌。`);
+  assert.equal(Object.hasOwn(music, "content"), false);
+  assert.equal(music.firstParagraph, "听见一首歌。");
+  assert.equal(music.wordCount, 5);
 });
 
 test("invalid or duplicate frontmatter is rejected during the build", () => {

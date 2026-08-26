@@ -88,7 +88,7 @@ export function HomePage({ stats }) {
     return { current: next, previous: current.current };
   });
   const renderFeaturedPost = (post, phase) => <a key={post.slug} className={`home-refresh-feature is-${phase}`} href={`#/post/${post.slug}`} aria-hidden={phase === "outgoing" ? "true" : undefined} tabIndex={phase === "outgoing" ? -1 : undefined}>
-    {post.image ? <img src={post.cardImage || post.image} alt="" loading={phase === "current" ? "eager" : "lazy"} decoding="async" fetchPriority={phase === "current" ? "high" : "auto"} onLoad={(event) => applyFeaturedTone(event.currentTarget)} style={{ objectPosition: post.cardPosition || post.coverPosition || "center" }} /> : <span className="home-refresh-feature-placeholder"><BookOpenText size={48} weight="duotone" /></span>}
+    {post.image ? <img src={post.cardImage || post.image} alt="" loading={phase === "current" ? "eager" : "lazy"} decoding="async" fetchPriority={phase === "current" ? "high" : "low"} onLoad={(event) => applyFeaturedTone(event.currentTarget)} style={{ objectPosition: post.cardPosition || post.coverPosition || "center" }} /> : <span className="home-refresh-feature-placeholder"><BookOpenText size={48} weight="duotone" /></span>}
     <span className="home-refresh-feature-shade" />
     <span className="home-refresh-feature-copy">
       <small>置顶阅读 · {post.category}</small>
@@ -162,7 +162,7 @@ export function HomePage({ stats }) {
           {latestPoems.length ? <div className="home-refresh-list home-refresh-mini-track" {...poemScroller}>
             {latestPoems.map((poem) => <a href={`#/poem/${poem.slug}`} key={poem.slug}>
               <Feather size={20} weight="duotone" />
-              <span><small>小诗 · <time dateTime={poem.date}>{formatContentDate(poem.date).slice(0, 10)}</time></small><strong>{poem.title}</strong><small>{poem.lines.slice(0, 2).join(" / ")}</small></span>
+              <span><small>小诗 · <time dateTime={poem.date}>{formatContentDate(poem.date).slice(0, 10)}</time></small><strong>{poem.title}</strong><small>{poem.previewLines.slice(0, 2).join(" / ")}</small></span>
             </a>)}
           </div> : <div className="home-refresh-empty" role="status"><Feather size={28} weight="duotone" /><strong>暂无小诗</strong></div>}
         </section>}

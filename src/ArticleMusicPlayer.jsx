@@ -5,65 +5,9 @@ import { Pause } from "@phosphor-icons/react/Pause";
 import { Play } from "@phosphor-icons/react/Play";
 import { SpeakerHigh } from "@phosphor-icons/react/SpeakerHigh";
 import { X } from "@phosphor-icons/react/X";
+import { acquireAudio, activateAudio, deactivateAudio, releaseAudio } from "./articleAudio.js";
 
-let primedAudio = null;
-let primedAudioSrc = "";
-let playingAudio = null;
-const audioPool = new Set();
-
-function createAudio(track) {
-  const audio = new Audio(track.src);
-  audio.preload = "auto";
-  audio.volume = 1;
-  audio.loop = true;
-  audio.load();
-  audioPool.add(audio);
-  return audio;
-}
-
-function acquireAudio(track) {
-  if (primedAudio && primedAudioSrc === track.src) return primedAudio;
-  return createAudio(track);
-}
-
-function activateAudio(audio) {
-  audioPool.forEach((item) => {
-    if (item !== audio && !item.paused) item.pause();
-  });
-  playingAudio = audio;
-}
-
-function releaseAudio(audio) {
-  audio.pause();
-  audio.currentTime = 0;
-  audioPool.delete(audio);
-  if (playingAudio === audio) playingAudio = null;
-  if (primedAudio === audio) {
-    primedAudio = null;
-    primedAudioSrc = "";
-  }
-}
-
-export function stopArticleAudio() {
-  audioPool.forEach((audio) => {
-    audio.pause();
-    audio.currentTime = 0;
-  });
-  audioPool.clear();
-  primedAudio = null;
-  primedAudioSrc = "";
-  playingAudio = null;
-}
-
-export function primeArticleAudio(track) {
-  if (!track || typeof Audio === "undefined") return;
-  stopArticleAudio();
-  primedAudio = createAudio(track);
-  primedAudioSrc = track.src;
-  primedAudio.currentTime = 0;
-  activateAudio(primedAudio);
-  primedAudio.play().catch(() => {});
-}
+export { primeArticleAudio, stopArticleAudio } from "./articleAudio.js";
 
 const formatAudioTime = (value) => {
   if (!Number.isFinite(value) || value < 0) return "0:00";
@@ -92,7 +36,7 @@ export function ArticleMusicPlayer({ track, autoplay = true }) {
     const markLoading = () => setBuffering(true);
     const markReady = () => setBuffering(false);
     const markPlaying = () => { activateAudio(audio); setPlaying(true); setBuffering(false); };
-    const markPaused = () => { if (playingAudio === audio) playingAudio = null; setPlaying(false); };
+    const markPaused = () => { deactivateAudio(audio); setPlaying(false); };
     const markEnded = () => { audio.currentTime = 0; setCurrentTime(0); audio.play().catch(() => setPlaying(false)); };
     audio.addEventListener("loadedmetadata", updateDuration);
     audio.addEventListener("durationchange", updateDuration);

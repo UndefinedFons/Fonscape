@@ -1,24 +1,51 @@
 import { mkdir, readFile, readdir, stat, writeFile } from "node:fs/promises";
-import { dirname, join, relative } from "node:path";
+import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { contentRepositoryConfig } from "../content-repository.config.mjs";
-import { parseMusicReview, parsePoem, parsePost } from "../src/content/frontmatter.js";
+import {
+  assertUniqueEntries,
+  parseMusicReviewMetadata,
+  parsePoemMetadata,
+  parsePostMetadata,
+} from "../src/content/frontmatter.js";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const outputPath = join(root, "functions", "_generated", "content-targets.js");
+const metadataOutputPath = join(root, "functions", "_generated", "content-metadata.js");
 const definitions = [
-  ["post", contentRepositoryConfig.collections.post.directory, parsePost],
-  ["poem", contentRepositoryConfig.collections.poem.directory, parsePoem],
-  ["music", contentRepositoryConfig.collections.music.directory, parseMusicReview],
+  { type: "post", ...contentRepositoryConfig.collections.post, parser: parsePostMetadata },
+  { type: "poem", ...contentRepositoryConfig.collections.poem, parser: parsePoemMetadata },
+  { type: "music", ...contentRepositoryConfig.collections.music, parser: parseMusicReviewMetadata },
 ];
 
-async function readCollection(type, directory, parser) {
-  const sourceDirectory = join(root, directory);
-  const names = (await readdir(sourceDirectory)).filter((name) => name.endsWith(".md")).sort();
+async function findMarkdownFiles(directory, extension, prefix = "") {
+  const entries = await readdir(directory, { withFileTypes: true }).catch((error) => {
+    if (error.code === "ENOENT") return [];
+    throw error;
+  });
+  const files = [];
+  for (const entry of entries.sort((left, right) => left.name.localeCompare(right.name))) {
+    if (entry.name.startsWith(".")) continue;
+    const name = prefix ? `${prefix}/${entry.name}` : entry.name;
+    const path = join(directory, entry.name);
+    if (entry.isSymbolicLink()) throw new Error(`内容文件不能是符号链接：${name}`);
+    if (entry.isDirectory()) files.push(...await findMarkdownFiles(path, extension, name));
+    else if (entry.isFile() && entry.name.endsWith(extension)) files.push(name);
+  }
+  return files;
+}
+
+async function readCollection(definition) {
+  const sourceDirectory = join(root, definition.directory);
+  const names = await findMarkdownFiles(sourceDirectory, definition.extension);
   return Promise.all(names.map(async (name) => {
     const path = join(sourceDirectory, name);
-    const entry = parser(relative(root, path), await readFile(path, "utf8"));
-    return type === "music" ? `${entry.section}/${entry.slug}` : entry.slug;
+    const sourcePath = relative(root, path).replaceAll("\\", "/");
+    const entry = definition.parser(sourcePath, await readFile(path, "utf8"));
+    return {
+      source: `./${definition.directory.replace(/^src\/content\//u, "")}/${name.replaceAll("\\", "/")}`,
+      entry,
+    };
   }));
 }
 
@@ -42,32 +69,70 @@ async function readAudioAssetSizes(directory = join(root, "public", "audio"), pr
   return sizes;
 }
 
-const targetEntries = await Promise.all(definitions.map(async ([type, directory, parser]) => [
-  type,
-  await readCollection(type, directory, parser),
-]));
-const targets = Object.fromEntries(targetEntries);
-targets.post.push("site-about", "site-friends");
-for (const values of Object.values(targets)) values.sort();
-const audioAssetSizes = await readAudioAssetSizes();
+/**
+ * Generate both the API target allowlist and the frontend metadata manifest.
+ * The latter deliberately lives in functions/_generated because that path is
+ * user-owned in an installed Fonstage site and must be regenerated from its
+ * private Markdown files on every build.
+ *
+ * @param {{ check?: boolean }} [options]
+ */
+export async function generateContentArtifacts({ check = false } = {}) {
+  const collections = await Promise.all(definitions.map(async (definition) => [
+    definition.type,
+    await readCollection(definition),
+  ]));
+  collections.forEach(([type, entries]) => {
+    assertUniqueEntries(entries.map(({ entry }) => entry), type === "music" ? "音乐" : type === "poem" ? "小诗" : "文章");
+  });
+  const targetEntries = collections.map(([type, entries]) => [
+    type,
+    entries.map(({ entry }) => type === "music" ? `${entry.section}/${entry.slug}` : entry.slug),
+  ]);
+  const targets = Object.fromEntries(targetEntries);
+  targets.post.push("site-about", "site-friends");
+  for (const values of Object.values(targets)) values.sort();
+  const metadata = Object.fromEntries(collections.map(([type, entries]) => [
+    type,
+    entries.map(({ source, entry }) => {
+      const { content: _content, lines: _lines, source: _source, ...lightweight } = entry;
+      return { ...lightweight, source };
+    }),
+  ]));
+  const audioAssetSizes = await readAudioAssetSizes();
 
-const rendered = `// Generated by scripts/generate-content-targets.mjs. Do not edit by hand.\n`
-  + `const targets = ${JSON.stringify(targets, null, 2)};\n\n`
-  + `const targetSets = Object.fromEntries(\n`
-  + `  Object.entries(targets).map(([type, slugs]) => [type, new Set(slugs)]),\n`
-  + `);\n\n`
-  + `const audioAssetSizes = Object.freeze(${JSON.stringify(audioAssetSizes, null, 2)});\n\n`
-  + `export function isStaticContentTarget(type, slug) {\n`
-  + `  return targetSets[type]?.has(slug) || false;\n`
-  + `}\n\n`
-  + `export { audioAssetSizes, targets as staticContentTargets };\n`;
+  const rendered = `// Generated by scripts/generate-content-targets.mjs. Do not edit by hand.\n`
+    + `const targets = ${JSON.stringify(targets, null, 2)};\n\n`
+    + `const targetSets = Object.fromEntries(\n`
+    + `  Object.entries(targets).map(([type, slugs]) => [type, new Set(slugs)]),\n`
+    + `);\n\n`
+    + `const audioAssetSizes = Object.freeze(${JSON.stringify(audioAssetSizes, null, 2)});\n\n`
+    + `export function isStaticContentTarget(type, slug) {\n`
+    + `  return targetSets[type]?.has(slug) || false;\n`
+    + `}\n\n`
+    + `export { audioAssetSizes, targets as staticContentTargets };\n`;
+  const renderedMetadata = `// Generated by scripts/generate-content-targets.mjs. Do not edit by hand.\n`
+    + `const contentMetadata = ${JSON.stringify(metadata, null, 2)};\n\n`
+    + `export { contentMetadata };\n`;
 
-if (process.argv.includes("--check")) {
-  const current = await readFile(outputPath, "utf8").catch(() => "");
-  if (current !== rendered) {
-    throw new Error("内容目标清单不存在或已过期；pnpm dev/build/test/check 会自动重建。");
+  if (check) {
+    const [current, currentMetadata] = await Promise.all([
+      readFile(outputPath, "utf8").catch(() => ""),
+      readFile(metadataOutputPath, "utf8").catch(() => ""),
+    ]);
+    if (current !== rendered || currentMetadata !== renderedMetadata) {
+      throw new Error("内容目标清单不存在或已过期；pnpm dev/build/test/check 会自动重建。");
+    }
+    return;
   }
-} else {
+
   await mkdir(dirname(outputPath), { recursive: true });
-  await writeFile(outputPath, rendered);
+  await Promise.all([
+    writeFile(outputPath, rendered),
+    writeFile(metadataOutputPath, renderedMetadata),
+  ]);
+}
+
+if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  await generateContentArtifacts({ check: process.argv.includes("--check") });
 }

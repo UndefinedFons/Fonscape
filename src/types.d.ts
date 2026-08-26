@@ -77,6 +77,9 @@ export interface Post extends DatedEntry {
   featured: boolean;
   featuredOrder?: number;
   excerpt?: string;
+  firstParagraph: string;
+  wordCount: number;
+  outline: ArticleOutlineItem[];
   image?: string;
   cardImage?: string;
   cardPosition?: string;
@@ -85,11 +88,25 @@ export interface Post extends DatedEntry {
   [key: string]: unknown;
 }
 
+export interface ArticleOutlineItem {
+  id: string;
+  number: string;
+  title: string;
+  line?: number;
+  prologue?: boolean;
+}
+
+export type PostMetadata = Omit<Post, "content">;
+
 export interface Poem extends DatedEntry {
   title: string;
   lines: string[];
+  previewLines: string[];
+  lineCount: number;
   [key: string]: unknown;
 }
+
+export type PoemMetadata = Omit<Poem, "lines">;
 
 export interface MusicReview extends DatedEntry {
   title: string;
@@ -97,5 +114,11 @@ export interface MusicReview extends DatedEntry {
   section: "songs" | "artists" | "albums";
   reading: string;
   content: string;
+  firstParagraph: string;
+  wordCount: number;
+  image?: string;
+  cardImage?: string;
   [key: string]: unknown;
 }
+
+export type MusicReviewMetadata = Omit<MusicReview, "content">;

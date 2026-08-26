@@ -1,28 +1,109 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { lazy, startTransition, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { flushSync } from "react-dom";
-import { AccountDialog } from "./community/AccountDialog.jsx";
 import { useCommunity } from "./community/CommunityProvider.jsx";
-import { stopArticleAudio } from "./ArticleMusicPlayer.jsx";
+import { stopArticleAudio } from "./articleAudio.js";
 import { ArticleOutlinePopover, Header } from "./components/Header.jsx";
-import { SearchDialog, SettingsDialog } from "./components/Dialogs.jsx";
 import { Footer } from "./components/Footer.jsx";
-import { posts } from "./content/index.js";
-import { AboutPage } from "./pages/AboutPage.jsx";
-import { AdminSetupPage } from "./pages/AdminSetupPage.jsx";
-import { ArticlePage } from "./pages/ArticlePage.jsx";
-import { FriendsPage } from "./pages/FriendsPage.jsx";
+import { loadMusicReview, loadPoem, loadPost, posts } from "./content/index.js";
 import { HomePage } from "./pages/HomePage.jsx";
-import { MusicDetailPage, MusicPage } from "./pages/MusicPage.jsx";
 import { NotFound } from "./pages/NotFound.jsx";
-import { PoemPage } from "./pages/PoemPage.jsx";
-import { PoemsPage } from "./pages/PoemsPage.jsx";
-import { PostsPage } from "./pages/PostsPage.jsx";
 import { getGlassBackground, preloadHeroAssets, PRIMARY_HERO_PATHS } from "./heroImages.js";
 import { getPostOutline } from "./richContent.js";
 import { clearArticleIndexState, clearPaginationFamily, markPopNavigation, markPushNavigation, paginationFamily, parseHash, parseHashQuery, readNavigationType, routeScrollPositions } from "./routeState.js";
 
+const withFullFonts = (loader) => Promise.all([loader(), ensureFullFontStylesheet()]).then(([module]) => module);
+const loadAboutModule = () => withFullFonts(() => import("./pages/AboutPage.jsx"));
+const loadAdminSetupModule = () => withFullFonts(() => import("./pages/AdminSetupPage.jsx"));
+const loadRichArticleModule = () => import("./RichArticleContent.jsx");
+const loadArticleModule = () => Promise.all([import("./pages/ArticlePage.jsx"), loadRichArticleModule(), ensureFullFontStylesheet()]).then(([module]) => module);
+const loadDialogsModule = () => withFullFonts(() => import("./components/Dialogs.jsx"));
+const loadFriendsModule = () => withFullFonts(() => import("./pages/FriendsPage.jsx"));
+const loadMusicModule = () => withFullFonts(() => import("./pages/MusicPage.jsx"));
+const loadMusicDetailModule = () => Promise.all([loadMusicModule(), loadRichArticleModule(), ensureFullFontStylesheet()]).then(([module]) => module);
+const loadPoemModule = () => Promise.all([import("./pages/PoemPage.jsx"), ensureFullFontStylesheet()]).then(([module]) => module);
+const loadPoemsModule = () => withFullFonts(() => import("./pages/PoemsPage.jsx"));
+const loadPostsModule = () => withFullFonts(() => import("./pages/PostsPage.jsx"));
+const loadAccountModule = () => withFullFonts(() => import("./community/AccountDialog.jsx"));
+
+const AboutPage = lazy(() => loadAboutModule().then((module) => ({ default: module.AboutPage })));
+const AdminSetupPage = lazy(() => loadAdminSetupModule().then((module) => ({ default: module.AdminSetupPage })));
+const ArticlePage = lazy(() => loadArticleModule().then((module) => ({ default: module.ArticlePage })));
+const SearchDialog = lazy(() => loadDialogsModule().then((module) => ({ default: module.SearchDialog })));
+const SettingsDialog = lazy(() => loadDialogsModule().then((module) => ({ default: module.SettingsDialog })));
+const FriendsPage = lazy(() => loadFriendsModule().then((module) => ({ default: module.FriendsPage })));
+const MusicPage = lazy(() => loadMusicModule().then((module) => ({ default: module.MusicPage })));
+const MusicDetailPage = lazy(() => loadMusicDetailModule().then((module) => ({ default: module.MusicDetailPage })));
+const PoemPage = lazy(() => loadPoemModule().then((module) => ({ default: module.PoemPage })));
+const PoemsPage = lazy(() => loadPoemsModule().then((module) => ({ default: module.PoemsPage })));
+const PostsPage = lazy(() => loadPostsModule().then((module) => ({ default: module.PostsPage })));
+const AccountDialog = lazy(() => loadAccountModule().then((module) => ({ default: module.AccountDialog })));
+
+const prefetchedRouteModules = new Set();
+
+let fullFontStylesheetReady;
+function ensureFullFontStylesheet() {
+  if (typeof document === "undefined") return Promise.resolve();
+  if (fullFontStylesheetReady) return fullFontStylesheetReady;
+  const stylesheet = document.querySelector('link[rel="stylesheet"][href="/fonscape/google-fonts-full.css"]');
+  if (!stylesheet || stylesheet.media === "all") return Promise.resolve();
+  fullFontStylesheetReady = new Promise((resolve) => {
+    const finish = () => {
+      stylesheet.media = "all";
+      resolve();
+    };
+    stylesheet.addEventListener("load", finish, { once: true });
+    stylesheet.addEventListener("error", finish, { once: true });
+    if (stylesheet.sheet) finish();
+  });
+  return fullFontStylesheetReady;
+}
+
+function routeModuleLoader(path) {
+  const routePath = String(path || "/").split("?")[0];
+  if (routePath.startsWith("/post/")) return loadArticleModule;
+  if (routePath.startsWith("/poem/")) return loadPoemModule;
+  if (routePath.startsWith("/music/")) return loadMusicDetailModule;
+  if (routePath === "/music") return loadMusicModule;
+  if (routePath === "/posts") return loadPostsModule;
+  if (routePath === "/poems") return loadPoemsModule;
+  if (routePath === "/friends") return loadFriendsModule;
+  if (routePath === "/about") return loadAboutModule;
+  if (routePath === "/admin/setup") return loadAdminSetupModule;
+  return null;
+}
+
+function preloadRouteModule(path) {
+  const loader = routeModuleLoader(path);
+  if (!loader || prefetchedRouteModules.has(loader)) return;
+  prefetchedRouteModules.add(loader);
+  loader().catch(() => prefetchedRouteModules.delete(loader));
+}
+
+function preloadRouteContent(path) {
+  const routePath = String(path || "/").split("?")[0];
+  const decode = (value) => {
+    try { return decodeURIComponent(value); } catch { return value; }
+  };
+  if (routePath.startsWith("/post/")) {
+    return loadPost(decode(routePath.slice("/post/".length))).catch(() => null);
+  }
+  if (routePath.startsWith("/poem/")) {
+    return loadPoem(decode(routePath.slice("/poem/".length))).catch(() => null);
+  }
+  if (routePath.startsWith("/music/")) {
+    const [, section, slug] = routePath.split("/");
+    if (section && slug) return loadMusicReview(decode(section), decode(slug)).catch(() => null);
+  }
+  return Promise.resolve(null);
+}
+
+export function preloadRoute(path) {
+  const loader = routeModuleLoader(path);
+  return Promise.all([loader ? loader() : null, preloadRouteContent(path)]);
+}
+
 export function App() {
-  const { viewer, openAccount, accountNotice, dismissAccountNotice } = useCommunity();
+  const { viewer, openAccount, accountOpen, accountNotice, dismissAccountNotice } = useCommunity();
   const [route, setRoute] = useState(parseHash);
   const [routeQuery, setRouteQuery] = useState(parseHashQuery);
   const routeRef = useRef(route);
@@ -31,6 +112,7 @@ export function App() {
   const [themeChanging, setThemeChanging] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [accountDialogRequested, setAccountDialogRequested] = useState(false);
   const [glassEnabled, setGlassEnabled] = useState(() => localStorage.getItem("fonscape:glass") !== "false");
   const [glassTransition, setGlassTransition] = useState(null);
   const glassTransitionTimerRef = useRef(0);
@@ -39,6 +121,9 @@ export function App() {
   const [articleOutlineOpen, setArticleOutlineOpen] = useState(false);
   const [activeOutlineId, setActiveOutlineId] = useState("");
   const [contentStats, setContentStats] = useState({ post: {}, poem: {}, music: {} });
+  useEffect(() => {
+    if (accountOpen) setAccountDialogRequested(true);
+  }, [accountOpen]);
   const refreshContentStats = useCallback(() => fetch("/api/content/stats", { headers: { Accept: "application/json" } })
     .then((response) => response.ok ? response.json() : Promise.reject())
     .then((result) => setContentStats({
@@ -99,8 +184,10 @@ export function App() {
       pendingScrollRef.current = readNavigationType() === "pop" ? (routeScrollPositions.get(nextRoute) || 0) : 0;
       markPopNavigation();
       routeRef.current = nextRoute;
-      setRoute(nextRoute);
-      setRouteQuery(parseHashQuery());
+      startTransition(() => {
+        setRoute(nextRoute);
+        setRouteQuery(parseHashQuery());
+      });
       setMenuOpen(false);
     };
     document.addEventListener("click", markLinkNavigation, true);
@@ -182,7 +269,11 @@ export function App() {
     const preloadLinkedRoute = (event) => {
       const anchor = event.target.closest?.('a[href^="#/"]');
       if (!anchor) return;
-      preloadHeroAssets(anchor.getAttribute("href").slice(1), compact);
+      const path = anchor.getAttribute("href")?.slice(1);
+      if (!path) return;
+      preloadHeroAssets(path, compact);
+      preloadRouteModule(path);
+      preloadRouteContent(path);
     };
     const scheduleNext = () => {
       if (cancelled || pendingPaths.length === 0) return;
@@ -276,6 +367,16 @@ export function App() {
       window.setTimeout(() => setThemeChanging(false), 560);
     });
   };
+  const requestAccount = useCallback((mode = "login") => {
+    setAccountDialogRequested(true);
+    openAccount(mode);
+  }, [openAccount]);
+  const preloadDialogs = useCallback(() => {
+    loadDialogsModule().catch(() => {});
+  }, []);
+  const preloadAccount = useCallback(() => {
+    loadAccountModule().catch(() => {});
+  }, []);
   return <div className={themeChanging ? "app-shell theme-changing" : "app-shell"} style={{
     "--glass-background-image": `url("${glassBackground.image}")`,
     "--glass-background-filter": glassBackground.needsSoftening ? "blur(14px) saturate(.86)" : "none",
@@ -283,8 +384,8 @@ export function App() {
   }}>
     <span className="global-glass-backdrop" aria-hidden="true" />
     <span className="global-glass-veil" aria-hidden="true" />
-    {!isSetupRoute && <Header route={route} theme={theme} menuOpen={menuOpen} onMenu={() => { setArticleOutlineOpen(false); setMenuOpen((value) => !value); }} onTheme={toggleTheme} onSearch={() => setSearchOpen(true)} onSettings={() => setSettingsOpen(true)} viewer={viewer} onAccount={() => openAccount(viewer ? "profile" : "login")} hasArticleOutline={hasArticleOutline} articleOutlineOpen={articleOutlineOpen} onArticleOutline={() => { setMenuOpen(false); setArticleOutlineOpen((value) => !value); }} onCloseArticleOutline={() => setArticleOutlineOpen(false)} />}
+    {!isSetupRoute && <Header route={route} theme={theme} menuOpen={menuOpen} onMenu={() => { setArticleOutlineOpen(false); setMenuOpen((value) => !value); }} onTheme={toggleTheme} onSearch={() => { preloadDialogs(); setSearchOpen(true); }} onSearchIntent={preloadDialogs} onSettings={() => { preloadDialogs(); setSettingsOpen(true); }} onSettingsIntent={preloadDialogs} viewer={viewer} onAccount={() => requestAccount(viewer ? "profile" : "login")} onAccountIntent={preloadAccount} hasArticleOutline={hasArticleOutline} articleOutlineOpen={articleOutlineOpen} onArticleOutline={() => { setMenuOpen(false); setArticleOutlineOpen((value) => !value); }} onCloseArticleOutline={() => setArticleOutlineOpen(false)} />}
     {!isSetupRoute && hasArticleOutline && <ArticleOutlinePopover items={activePostOutline} open={articleOutlineOpen} activeId={activeOutlineId || activePostOutline[0]?.id} onClose={() => setArticleOutlineOpen(false)} onSelect={(item) => { document.getElementById(item.id)?.scrollIntoView({ behavior: "smooth", block: "start" }); setActiveOutlineId(item.id); setArticleOutlineOpen(false); }} />}
-    <div className={isDetailRoute ? "route-view route-view--detail" : "route-view"} key={route}>{content}</div>{!isSetupRoute && <><Footer />{searchOpen && <SearchDialog onClose={() => setSearchOpen(false)} />}{settingsOpen && <SettingsDialog glassEnabled={glassEnabled} onGlassChange={handleGlassChange} onClose={() => setSettingsOpen(false)} />}<AccountDialog />{accountNotice && <aside className="community-account-notice" role="alert"><div><strong>账户通知</strong><p>{accountNotice}</p></div><button type="button" onClick={dismissAccountNotice}>知道了</button></aside>}</>}
+    <div className={isDetailRoute ? "route-view route-view--detail" : "route-view"} key={route}>{content}</div>{!isSetupRoute && <><Footer />{searchOpen && <Suspense fallback={null}><SearchDialog onClose={() => setSearchOpen(false)} /></Suspense>}{settingsOpen && <Suspense fallback={null}><SettingsDialog glassEnabled={glassEnabled} onGlassChange={handleGlassChange} onClose={() => setSettingsOpen(false)} /></Suspense>}{(accountDialogRequested || accountOpen) && <Suspense fallback={null}><AccountDialog /></Suspense>}{accountNotice && <aside className="community-account-notice" role="alert"><div><strong>账户通知</strong><p>{accountNotice}</p></div><button type="button" onClick={dismissAccountNotice}>知道了</button></aside>}</>}
   </div>;
 }
