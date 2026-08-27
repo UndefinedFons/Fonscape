@@ -8,7 +8,7 @@ import { TextAa } from "@phosphor-icons/react/TextAa";
 import { getPostFirstParagraph } from "../richContent.js";
 import { getMusicSectionIcon } from "../musicSections.js";
 import { formatContentDate, getPostWordCount } from "../siteUtils.js";
-import { responsiveImageProps } from "../responsiveImages.js";
+import { responsiveImageProps } from "../responsiveImages.ts";
 
 export function ArticleCover({ post, className, emptyClassName = "", imageClassName = "", placeholderClassName = "", iconSize = 34, loading = "lazy", fetchPriority, sizes = "(max-width: 760px) calc(100vw - 32px), 360px" }) {
   const mediaClassName = `${className}${!post.image && emptyClassName ? ` ${emptyClassName}` : ""}`;

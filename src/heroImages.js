@@ -1,5 +1,5 @@
 import { siteConfig } from "./siteConfig.js";
-import { responsiveImageUrl } from "./responsiveImages.js";
+import { responsiveImageUrl } from "./responsiveImages.ts";
 
 const PRIMARY_HERO_ORDER = ["home", "posts", "poems", "music", "friends", "about"];
 const PRIMARY_HERO_PATHS = ["/", "/posts", "/poems", "/music", "/friends", "/about"];

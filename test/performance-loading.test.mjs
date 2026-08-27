@@ -67,18 +67,20 @@ test("listing surfaces can use smaller sources without changing detail artwork",
 });
 
 test("responsive image generation is automatic and leaves originals user-owned", async () => {
-  const [packageSource, generator, helper, ignore, manifest] = await Promise.all([
+  const [packageSource, generator, helper, ignore, manifest, viteConfig] = await Promise.all([
     readFile("package.json", "utf8"),
     readFile("scripts/generate-responsive-images.mjs", "utf8"),
-    readFile("src/responsiveImages.js", "utf8"),
+    readFile("src/responsiveImages.ts", "utf8"),
     readFile(".gitignore", "utf8"),
     readFile("fonscape.manifest.json", "utf8"),
+    readFile("vite.config.mjs", "utf8"),
   ]);
   const packageJson = JSON.parse(packageSource);
 
   assert.equal(packageJson.devDependencies.sharp, "0.35.2");
   assert.match(packageJson.scripts.prebuild, /generate-responsive-images\.mjs/u);
-  assert.match(packageJson.scripts.precheck, /generate-responsive-images\.mjs/u);
+  assert.equal(packageJson.scripts.precheck, undefined);
+  assert.doesNotMatch(viteConfig, /buildStart/u);
   assert.match(generator, /avatar: \[128, 256, 384\]/u);
   assert.match(generator, /card: \[384, 576, 640, 768, 960, 1280\]/u);
   assert.match(generator, /hero: \[768, 960, 1600\]/u);
@@ -90,7 +92,8 @@ test("responsive image generation is automatic and leaves originals user-owned",
   assert.match(generator, /lstat\(currentPath\)/u);
   assert.match(generator, /realpath\(sourcePath\)/u);
   assert.match(generator, /shouldKeepResponsiveVariant\(sourceBuffer\.byteLength, outputBytes\)/u);
-  assert.match(generator, /if \(check\) throw new Error\(`缺少响应式图片候选/u);
+  assert.match(generator, /const outputBuffer = await renderResponsiveVariantBuffer/u);
+  assert.match(generator, /if \(!shouldKeepResponsiveVariant\(sourceBuffer\.byteLength, outputBuffer\.byteLength\)\) continue/u);
   assert.match(generator, /sharp\.versions\.sharp/u);
   assert.match(generator, /sharp\.versions\.vips/u);
   assert.match(helper, /responsiveImageCatalog\[source\]\?\.candidates/u);

@@ -134,7 +134,7 @@ async function ensureSafeGeneratedRoot() {
   }
 }
 
-export async function renderResponsiveVariant(sourceBuffer, outputPath, width, sharpLibrary) {
+async function createResponsiveVariantPipeline(sourceBuffer, outputPath, width, sharpLibrary) {
   const sharp = sharpLibrary || (await import("sharp")).default;
   const pipeline = sharp(sourceBuffer)
     .rotate()
@@ -145,7 +145,17 @@ export async function renderResponsiveVariant(sourceBuffer, outputPath, width, s
   else if (extension === ".jpg" || extension === ".jpeg") pipeline.jpeg({ quality: 92, chromaSubsampling: "4:4:4", mozjpeg: true });
   else if (extension === ".avif") pipeline.avif({ quality: 75, effort: 4, chromaSubsampling: "4:4:4" });
   else pipeline.webp({ quality: 92, alphaQuality: 100, effort: 4, smartSubsample: true });
+  return pipeline;
+}
+
+export async function renderResponsiveVariant(sourceBuffer, outputPath, width, sharpLibrary) {
+  const pipeline = await createResponsiveVariantPipeline(sourceBuffer, outputPath, width, sharpLibrary);
   await pipeline.toFile(outputPath);
+}
+
+export async function renderResponsiveVariantBuffer(sourceBuffer, outputPath, width, sharpLibrary) {
+  const pipeline = await createResponsiveVariantPipeline(sourceBuffer, outputPath, width, sharpLibrary);
+  return pipeline.toBuffer();
 }
 
 export function shouldKeepResponsiveVariant(originalBytes, variantBytes) {
@@ -209,7 +219,11 @@ export async function generateResponsiveImages({ check = false, manifestOnly = f
       }
       const outputExists = Boolean(outputInfo);
       if (!outputExists) {
-        if (check) throw new Error(`缺少响应式图片候选：${relative(root, outputPath)}`);
+        if (check) {
+          const outputBuffer = await renderResponsiveVariantBuffer(sourceBuffer, outputPath, width, sharp);
+          if (!shouldKeepResponsiveVariant(sourceBuffer.byteLength, outputBuffer.byteLength)) continue;
+          throw new Error(`缺少响应式图片候选：${relative(root, outputPath)}`);
+        }
         const temporaryPath = join(generatedRoot, `.${fileName}.${process.pid}.${randomUUID()}.tmp${extension}`);
         try {
           await renderResponsiveVariant(sourceBuffer, temporaryPath, width, sharp);

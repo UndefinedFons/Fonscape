@@ -31,7 +31,7 @@ test("homepage images receive automatic responsive candidates while retaining or
     readFile("vite.config.mjs", "utf8"),
     readFile("src/components/Cards.jsx", "utf8"),
     readFile("src/pages/HomePage.jsx", "utf8"),
-    readFile("src/responsiveImages.js", "utf8"),
+    readFile("src/responsiveImages.ts", "utf8"),
   ]);
 
   assert.match(config, /homeFeaturedImage/u);
