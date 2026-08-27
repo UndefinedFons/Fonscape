@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { existsSync, readFileSync, statSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { resolve } from "node:path";
 import { gzipSync } from "node:zlib";
 import { fileURLToPath } from "node:url";
@@ -13,6 +13,9 @@ const LOCAL_FONT_CSS_GZIP_LIMIT = 48 * 1024;
 const FULL_FONT_CSS_GZIP_LIMIT = 190 * 1024;
 const HIGH_PRIORITY_IMAGE_LIMIT = 320 * 1024;
 const GENERATED_RESPONSIVE_IMAGE_LIMIT = 512 * 1024;
+const GENERATED_RESPONSIVE_IMAGES_TOTAL_LIMIT = 64 * 1024 * 1024;
+const GENERATED_RESPONSIVE_IMAGES_COUNT_LIMIT = 800;
+const FULL_RESPONSIVE_MANIFEST_GZIP_LIMIT = 32 * 1024;
 
 function localAssetPath(url) {
   const pathname = decodeURIComponent(String(url).split(/[?#]/u)[0]);
@@ -86,8 +89,19 @@ export function checkPerformanceBudget() {
     const bytes = statSync(path).size;
     if (bytes > GENERATED_RESPONSIVE_IMAGE_LIMIT) failures.push(`响应式图片候选 ${url} 为 ${formatKiB(bytes)}，超过 ${formatKiB(GENERATED_RESPONSIVE_IMAGE_LIMIT)}`);
   }
+  const generatedImageRoot = resolve(DIST_ROOT, "fonscape/generated-images");
+  const generatedImageFiles = existsSync(generatedImageRoot) ? readdirSync(generatedImageRoot, { withFileTypes: true }).filter((entry) => entry.isFile()) : [];
+  const generatedImageBytes = generatedImageFiles.reduce((total, entry) => total + statSync(resolve(generatedImageRoot, entry.name)).size, 0);
+  if (generatedImageFiles.length > GENERATED_RESPONSIVE_IMAGES_COUNT_LIMIT) failures.push(`响应式图片候选共 ${generatedImageFiles.length} 个，超过 ${GENERATED_RESPONSIVE_IMAGES_COUNT_LIMIT} 个长期预算`);
+  if (generatedImageBytes > GENERATED_RESPONSIVE_IMAGES_TOTAL_LIMIT) failures.push(`响应式图片候选总计 ${formatKiB(generatedImageBytes)}，超过 ${formatKiB(GENERATED_RESPONSIVE_IMAGES_TOTAL_LIMIT)} 长期预算`);
+  const fullResponsiveManifest = readdirSync(resolve(DIST_ROOT, "assets")).find((name) => /^responsive-images-full-.*\.js$/u.test(name));
+  if (!fullResponsiveManifest) failures.push("找不到按需加载的完整响应式图片清单。");
+  else {
+    const fullResponsiveManifestGzip = gzipSize(resolve(DIST_ROOT, "assets", fullResponsiveManifest));
+    if (fullResponsiveManifestGzip > FULL_RESPONSIVE_MANIFEST_GZIP_LIMIT) failures.push(`完整响应式图片清单 gzip ${formatKiB(fullResponsiveManifestGzip)} 超过 ${formatKiB(FULL_RESPONSIVE_MANIFEST_GZIP_LIMIT)} 长期预算`);
+  }
   if (failures.length) throw new Error(`性能预算未通过：\n- ${failures.join("\n- ")}`);
-  console.log(`性能预算通过：首页 HTML ${formatKiB(htmlGzip)} gzip；JS ${formatKiB(scriptGzip)} gzip；CSS ${formatKiB(styleGzip)} gzip；首屏字体 CSS ${formatKiB(fontStyleGzip)} gzip；检查 ${highPriorityImages.length} 张首屏高优先级图片与 ${generatedResponsiveImageUrls.size} 个自动生成候选。`);
+  console.log(`性能预算通过：首页 HTML ${formatKiB(htmlGzip)} gzip；JS ${formatKiB(scriptGzip)} gzip；CSS ${formatKiB(styleGzip)} gzip；首屏字体 CSS ${formatKiB(fontStyleGzip)} gzip；检查 ${highPriorityImages.length} 张首屏高优先级图片；自动生成 ${generatedImageFiles.length} 个候选，共 ${formatKiB(generatedImageBytes)}。`);
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {

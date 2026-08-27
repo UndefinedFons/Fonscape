@@ -89,6 +89,8 @@ test("responsive image generation is automatic and leaves originals user-owned",
   assert.match(generator, /webp\(\{ quality: 92/u);
   assert.match(generator, /lstat\(currentPath\)/u);
   assert.match(generator, /realpath\(sourcePath\)/u);
+  assert.match(generator, /shouldKeepResponsiveVariant\(sourceBuffer\.byteLength, outputBytes\)/u);
+  assert.match(generator, /if \(check\) throw new Error\(`缺少响应式图片候选/u);
   assert.match(generator, /sharp\.versions\.sharp/u);
   assert.match(generator, /sharp\.versions\.vips/u);
   assert.match(helper, /responsiveImageCatalog\[source\]\?\.candidates/u);
@@ -96,6 +98,7 @@ test("responsive image generation is automatic and leaves originals user-owned",
   assert.match(ignore, /public\/fonscape\/generated-images\//u);
   assert.match(manifest, /"public\/assets\/\*\*"/u);
   assert.match(manifest, /"public\/fonscape\/generated-images\/\*\*"/u);
+  assert.match(await readFile("scripts/check-performance-budget.mjs", "utf8"), /GENERATED_RESPONSIVE_IMAGES_TOTAL_LIMIT/u);
 });
 
 test("Markdown bodies stay out of the initial module and detail loaders remain available", async () => {

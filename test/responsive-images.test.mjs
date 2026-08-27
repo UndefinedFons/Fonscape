@@ -9,6 +9,7 @@ import {
   isLocalRasterSource,
   renderResponsiveVariant,
   safeLocalSourcePath,
+  shouldKeepResponsiveVariant,
   sourceAssetPath,
 } from "../scripts/generate-responsive-images.mjs";
 import { responsiveImageProps, responsiveImageUrl } from "../src/responsiveImages.js";
@@ -54,6 +55,12 @@ test("responsive variants keep aspect ratio and never enlarge an original", asyn
   } finally {
     await rm(directory, { recursive: true, force: true });
   }
+});
+
+test("responsive variants are retained only when they reduce transfer size", () => {
+  assert.equal(shouldKeepResponsiveVariant(10_000, 9_999), true);
+  assert.equal(shouldKeepResponsiveVariant(10_000, 10_000), false);
+  assert.equal(shouldKeepResponsiveVariant(10_000, 10_001), false);
 });
 
 test("responsive manifests are deterministic and missing entries retain the original", async () => {
