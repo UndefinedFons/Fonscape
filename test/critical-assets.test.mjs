@@ -26,16 +26,22 @@ test("homepage fonts are inlined while the complete catalog loads only on demand
   assert.ok(fontCss.length < fullFontCss.length / 2, "首屏字体声明应明显小于完整字符目录");
 });
 
-test("homepage image candidates retain the explicit lightweight source", async () => {
-  const [config, cards, home] = await Promise.all([
+test("homepage images receive automatic responsive candidates while retaining original fallbacks", async () => {
+  const [config, cards, home, responsive] = await Promise.all([
     readFile("vite.config.mjs", "utf8"),
     readFile("src/components/Cards.jsx", "utf8"),
     readFile("src/pages/HomePage.jsx", "utf8"),
+    readFile("src/responsiveImages.js", "utf8"),
   ]);
 
   assert.match(config, /homeFeaturedImage/u);
   assert.match(config, /post\?\.cardImage \|\| post\?\.image/u);
-  assert.match(cards, /src=\{post\.cardImage \|\| post\.image\}/u);
-  assert.doesNotMatch(cards, /srcSet=/u);
-  assert.doesNotMatch(home, /srcSet=/u);
+  assert.match(config, /imagesrcset=/u);
+  assert.match(config, /if \(desktopImage && mobileImage\) \{\s*preloads\.push\(preloadImage\(mobileImage, \{ media: "\(max-width: 760px\)", intendedWidth: 960/u);
+  assert.match(config, /preloads\.push\(preloadImage\(desktopImage, \{ media: "\(min-width: 761px\)", intendedWidth: 1600/u);
+  assert.match(cards, /responsiveImageProps\(imageSource, sizes\)/u);
+  assert.match(home, /responsiveImageProps\(post\.cardImage \|\| post\.image/u);
+  assert.match(home, /responsiveImageProps\(authorProfile\.avatarSmall \|\| authorProfile\.avatar/u);
+  assert.match(responsive, /srcSet:/u);
+  assert.match(responsive, /candidates\.at\(-1\)\?\.src \|\| source/u);
 });

@@ -1,4 +1,5 @@
 import { siteConfig } from "./siteConfig.js";
+import { responsiveImageUrl } from "./responsiveImages.js";
 
 const PRIMARY_HERO_ORDER = ["home", "posts", "poems", "music", "friends", "about"];
 const PRIMARY_HERO_PATHS = ["/", "/posts", "/poems", "/music", "/friends", "/about"];
@@ -20,9 +21,11 @@ function getHeroConfig(variant) {
 /** @param {string} variant */
 function getHeroStyle(variant) {
   const hero = getHeroConfig(variant);
+  const desktopImage = responsiveImageUrl(hero.image, 1600);
+  const mobileImage = responsiveImageUrl(hero.mobileImage || hero.image, 960);
   return {
-    "--hero-art-image": `url("${hero.image}")`,
-    "--hero-art-image-mobile": `url("${hero.mobileImage || hero.image}")`,
+    "--hero-art-image": `url("${desktopImage}")`,
+    "--hero-art-image-mobile": `url("${mobileImage}")`,
     "--hero-art-position": hero.position || "center",
     "--hero-art-position-mobile": hero.mobilePosition || hero.position || "center",
     "--hero-art-size": hero.size || "cover",
@@ -65,7 +68,7 @@ const inFlightHeroImages = new Map();
 function preloadHeroAssets(path, mobile = false) {
   const hero = getHeroConfig(pathVariant(path));
   const sources = [
-    mobile ? (hero.mobileImage || hero.image) : hero.image,
+    mobile ? responsiveImageUrl(hero.mobileImage || hero.image, 960) : responsiveImageUrl(hero.image, 1600),
     resolveGlassBackground(hero).image,
   ];
   for (const source of sources) {

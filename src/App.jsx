@@ -10,19 +10,21 @@ import { NotFound } from "./pages/NotFound.jsx";
 import { getGlassBackground, preloadHeroAssets, PRIMARY_HERO_PATHS } from "./heroImages.js";
 import { getPostOutline } from "./richContent.js";
 import { clearArticleIndexState, clearPaginationFamily, markPopNavigation, markPushNavigation, paginationFamily, parseHash, parseHashQuery, readNavigationType, routeScrollPositions } from "./routeState.js";
+import { ensureFullResponsiveImages } from "./responsiveImages.js";
 
 const withFullFonts = (loader) => Promise.all([loader(), ensureFullFontStylesheet()]).then(([module]) => module);
-const loadAboutModule = () => withFullFonts(() => import("./pages/AboutPage.jsx"));
+const withFullAssets = (loader) => Promise.all([loader(), ensureFullFontStylesheet(), ensureFullResponsiveImages()]).then(([module]) => module);
+const loadAboutModule = () => withFullAssets(() => import("./pages/AboutPage.jsx"));
 const loadAdminSetupModule = () => withFullFonts(() => import("./pages/AdminSetupPage.jsx"));
 const loadRichArticleModule = () => import("./RichArticleContent.jsx");
-const loadArticleModule = () => Promise.all([import("./pages/ArticlePage.jsx"), loadRichArticleModule(), ensureFullFontStylesheet()]).then(([module]) => module);
+const loadArticleModule = () => Promise.all([import("./pages/ArticlePage.jsx"), loadRichArticleModule(), ensureFullFontStylesheet(), ensureFullResponsiveImages()]).then(([module]) => module);
 const loadDialogsModule = () => withFullFonts(() => import("./components/Dialogs.jsx"));
-const loadFriendsModule = () => withFullFonts(() => import("./pages/FriendsPage.jsx"));
-const loadMusicModule = () => withFullFonts(() => import("./pages/MusicPage.jsx"));
+const loadFriendsModule = () => withFullAssets(() => import("./pages/FriendsPage.jsx"));
+const loadMusicModule = () => withFullAssets(() => import("./pages/MusicPage.jsx"));
 const loadMusicDetailModule = () => Promise.all([loadMusicModule(), loadRichArticleModule(), ensureFullFontStylesheet()]).then(([module]) => module);
-const loadPoemModule = () => Promise.all([import("./pages/PoemPage.jsx"), ensureFullFontStylesheet()]).then(([module]) => module);
-const loadPoemsModule = () => withFullFonts(() => import("./pages/PoemsPage.jsx"));
-const loadPostsModule = () => withFullFonts(() => import("./pages/PostsPage.jsx"));
+const loadPoemModule = () => Promise.all([import("./pages/PoemPage.jsx"), ensureFullFontStylesheet(), ensureFullResponsiveImages()]).then(([module]) => module);
+const loadPoemsModule = () => withFullAssets(() => import("./pages/PoemsPage.jsx"));
+const loadPostsModule = () => withFullAssets(() => import("./pages/PostsPage.jsx"));
 const loadAccountModule = () => withFullFonts(() => import("./community/AccountDialog.jsx"));
 
 const AboutPage = lazy(() => loadAboutModule().then((module) => ({ default: module.AboutPage })));

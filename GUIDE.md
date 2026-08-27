@@ -64,7 +64,6 @@ channels: {
 ```js
 home: {
   image: "/assets/home-hero.webp",
-  mobileImage: "/assets/home-hero-mobile.webp",
   position: "center",
   mobilePosition: "60% center",
   size: "cover",
@@ -72,15 +71,14 @@ home: {
 ```
 
 - `image`：普通页面头图。
-- `mobileImage`：可选的手机端轻量头图；画面和焦点应与 `image` 保持一致，省略时继续使用 `image`。
 - `glassImage`：可选的预模糊背景图；省略时主题会自动柔化普通头图。
 - `position`：桌面与平板的图片焦点。
 - `mobilePosition`：手机端的图片焦点。
 - `size`：通常使用 `cover`。
 
-自定义图片放在 `public/assets/`，配置路径从网站根目录开始写，例如 `public/assets/home.jpg` 对应 `"/assets/home.jpg"`。文件名大小写必须与仓库中的文件一致。
+自定义图片放在 `public/assets/`，配置路径从网站根目录开始写，例如 `public/assets/home.jpg` 对应 `"/assets/home.jpg"`。文件名大小写必须与仓库中的文件一致。每个位置只需提供一张质量足够的原图；Fonscape 会在开发、检查和生产构建时自动生成保持原格式的响应式衍生图，并让手机、桌面和高分屏浏览器选择合适尺寸。PNG 衍生图保持无损，其他格式采用高质量编码；衍生图位于忽略提交的构建目录，不需要手工维护，也不会替换原图。
 
-首页作者头像可在 `author.avatarSmall` 提供同一头像的轻量版本；关于页仍使用 `author.avatar`。建议让 `avatarSmall` 至少覆盖头像实际显示尺寸的两倍像素，避免高分屏模糊。
+头像同样只配置 `author.avatar`。旧站点已有的 `mobileImage`、`avatarSmall` 或文章 `cardImage` 仍会兼容读取，并自动继续优化，但新内容无需再创建这些轻量副本。
 
 ### 友链
 
@@ -173,7 +171,6 @@ musicPlacement: "inline"
 | `featured` | 否 | 是否置顶，默认 `false` |
 | `featuredOrder` | 否 | 置顶顺序，必须是正整数；仅可在 `featured: true` 时使用 |
 | `image` | 否 | 封面路径，例如 `/assets/my-note.webp` |
-| `cardImage` | 否 | 与 `image` 同画面的轻量列表图；详情页仍使用 `image` |
 | `cardPosition` | 否 | 列表卡片图片焦点，例如 `50% 30%` |
 | `coverMode` | 否 | 详情页封面模式：`wide` 或 `none`，默认 `wide` |
 | `coverPosition` | 否 | 详情页封面焦点；不影响图片自然比例 |

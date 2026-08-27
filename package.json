@@ -1,6 +1,6 @@
 {
   "name": "fonscape",
-  "version": "1.6.1",
+  "version": "1.7.0",
   "description": "Fonscape（风栖），一款清新、响应式、注重阅读体验的 React 个人博客主题模板。",
   "private": true,
   "license": "MIT",
@@ -27,24 +27,26 @@
   "scripts": {
     "generate:content-targets": "node scripts/generate-content-targets.mjs",
     "generate:font-css": "node scripts/generate-font-css.mjs",
+    "generate:responsive-images": "node scripts/generate-responsive-images.mjs",
     "check:content-targets": "node scripts/generate-content-targets.mjs --check",
     "check:font-css": "node scripts/generate-font-css.mjs --check",
+    "check:responsive-images": "node scripts/generate-responsive-images.mjs --check",
     "check:performance-budget": "node scripts/check-performance-budget.mjs",
-    "pnpm:devPreinstall": "node scripts/generate-content-targets.mjs && node scripts/generate-font-css.mjs",
-    "predev": "node scripts/generate-content-targets.mjs && node scripts/generate-font-css.mjs",
+    "pnpm:devPreinstall": "node scripts/generate-content-targets.mjs && node scripts/generate-font-css.mjs && node scripts/generate-responsive-images.mjs --manifest-only",
+    "predev": "node scripts/generate-content-targets.mjs && node scripts/generate-font-css.mjs && node scripts/generate-responsive-images.mjs",
     "dev": "vite",
-    "prebuild": "node scripts/generate-content-targets.mjs && node scripts/generate-font-css.mjs",
+    "prebuild": "node scripts/generate-content-targets.mjs && node scripts/generate-font-css.mjs && node scripts/generate-responsive-images.mjs",
     "build": "vite build",
     "build:vercel": "pnpm migrate:turso --apply && pnpm build",
     "preview": "vite preview",
-    "pretest": "node scripts/generate-content-targets.mjs && node scripts/generate-font-css.mjs",
+    "pretest": "node scripts/generate-content-targets.mjs && node scripts/generate-font-css.mjs && node scripts/generate-responsive-images.mjs",
     "test": "node --test",
     "typecheck": "tsc -p tsconfig.json",
     "db:migrate:cloudflare": "wrangler d1 migrations apply DB --remote",
     "deploy": "pnpm db:migrate:cloudflare && wrangler deploy",
     "migrate:turso": "node scripts/migrate-turso.mjs",
     "fonscape": "node scripts/fonscape-update.mjs",
-    "precheck": "node scripts/generate-content-targets.mjs && node scripts/generate-font-css.mjs",
+    "precheck": "node scripts/generate-content-targets.mjs && node scripts/generate-font-css.mjs && node scripts/generate-responsive-images.mjs",
     "check": "node --test && pnpm typecheck && vite build && pnpm check:performance-budget"
   },
   "dependencies": {
@@ -60,6 +62,7 @@
     "vite": "6.4.3"
   },
   "devDependencies": {
+    "sharp": "0.35.2",
     "typescript": "^5.9.2",
     "wrangler": "4.120.0"
   }

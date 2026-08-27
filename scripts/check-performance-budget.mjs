@@ -12,6 +12,7 @@ const ENTRY_HTML_GZIP_LIMIT = 52 * 1024;
 const LOCAL_FONT_CSS_GZIP_LIMIT = 48 * 1024;
 const FULL_FONT_CSS_GZIP_LIMIT = 190 * 1024;
 const HIGH_PRIORITY_IMAGE_LIMIT = 320 * 1024;
+const GENERATED_RESPONSIVE_IMAGE_LIMIT = 512 * 1024;
 
 function localAssetPath(url) {
   const pathname = decodeURIComponent(String(url).split(/[?#]/u)[0]);
@@ -35,6 +36,9 @@ export function checkPerformanceBudget() {
   const criticalFontStyles = [...html.matchAll(/<style\b[^>]*\bdata-fonscape-critical-fonts[^>]*>([\s\S]*?)<\/style>/giu)];
   const preloadImageUrls = [...html.matchAll(/<link\b[^>]*\brel="preload"[^>]*\bas="image"[^>]*>/giu)]
     .map((match) => match[0].match(/\bhref="([^"]+)"/iu)?.[1])
+    .filter(Boolean);
+  const responsiveImageUrls = [...html.matchAll(/\bimagesrcset="([^"]+)"/giu)]
+    .flatMap((match) => match[1].split(",").map((candidate) => candidate.trim().split(/\s+/u)[0]))
     .filter(Boolean);
   if (scriptUrls.length !== 1) throw new Error(`首页入口脚本数量异常：${scriptUrls.length}。`);
   const entryStyleUrls = styleUrls;
@@ -72,8 +76,18 @@ export function checkPerformanceBudget() {
     const bytes = statSync(image.path).size;
     if (bytes > HIGH_PRIORITY_IMAGE_LIMIT) failures.push(`首屏高优先级图片 ${image.url} 为 ${formatKiB(bytes)}，超过 ${formatKiB(HIGH_PRIORITY_IMAGE_LIMIT)}`);
   }
+  const generatedResponsiveImageUrls = new Set(responsiveImageUrls.filter((url) => url.startsWith("/fonscape/generated-images/")));
+  for (const url of generatedResponsiveImageUrls) {
+    const path = localAssetPath(url);
+    if (!path || !existsSync(path)) {
+      failures.push(`找不到响应式图片候选：${url}`);
+      continue;
+    }
+    const bytes = statSync(path).size;
+    if (bytes > GENERATED_RESPONSIVE_IMAGE_LIMIT) failures.push(`响应式图片候选 ${url} 为 ${formatKiB(bytes)}，超过 ${formatKiB(GENERATED_RESPONSIVE_IMAGE_LIMIT)}`);
+  }
   if (failures.length) throw new Error(`性能预算未通过：\n- ${failures.join("\n- ")}`);
-  console.log(`性能预算通过：首页 HTML ${formatKiB(htmlGzip)} gzip；JS ${formatKiB(scriptGzip)} gzip；CSS ${formatKiB(styleGzip)} gzip；首屏字体 CSS ${formatKiB(fontStyleGzip)} gzip；检查 ${highPriorityImages.length} 张首屏高优先级图片。`);
+  console.log(`性能预算通过：首页 HTML ${formatKiB(htmlGzip)} gzip；JS ${formatKiB(scriptGzip)} gzip；CSS ${formatKiB(styleGzip)} gzip；首屏字体 CSS ${formatKiB(fontStyleGzip)} gzip；检查 ${highPriorityImages.length} 张首屏高优先级图片与 ${generatedResponsiveImageUrls.size} 个自动生成候选。`);
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {

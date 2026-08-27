@@ -6,6 +6,7 @@ import { XLogo } from "@phosphor-icons/react/XLogo";
 import { CommentsSection } from "../community/CommentsSection.jsx";
 import { PageHero } from "../components/PageHero.jsx";
 import { authorProfile, siteConfig } from "../content/index.js";
+import { responsiveImageProps } from "../responsiveImages.js";
 
 function BilibiliLogo({ size = 24 }) {
   return <svg width={size} height={size} viewBox="0 0 256 256" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
@@ -43,7 +44,7 @@ export function AboutPage() {
     <PageHero kicker="HELLO" title="关于我" description={siteConfig.about.heroDescription} icon={UserCircle} variant="about" />
     <section className="about-layout material-panel page-width">
       <aside className="about-profile">
-        <div className="about-portrait">{authorProfile.avatar ? <img src={authorProfile.avatar} alt={authorProfile.avatarAlt} loading="lazy" decoding="async" /> : <span className="about-portrait-placeholder" role="img" aria-label={authorProfile.avatarAlt}><UserCircle size={112} weight="duotone" /></span>}</div>
+        <div className="about-portrait">{authorProfile.avatar ? <img src={authorProfile.avatar} {...responsiveImageProps(authorProfile.avatar, "(max-width: 760px) min(70vw, 320px), 320px")} alt={authorProfile.avatarAlt} loading="lazy" decoding="async" /> : <span className="about-portrait-placeholder" role="img" aria-label={authorProfile.avatarAlt}><UserCircle size={112} weight="duotone" /></span>}</div>
         <div className="about-profile-copy">
           <span className="eyebrow">ABOUT ME</span>
           <h2>{authorProfile.name}</h2>

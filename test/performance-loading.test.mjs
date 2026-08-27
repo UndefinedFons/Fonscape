@@ -22,8 +22,10 @@ test("route and feature surfaces stay out of the initial module", async () => {
   assert.match(app, /import\("\.\/pages\/ArticlePage\.jsx"\)/u);
   assert.match(app, /loadRichArticleModule/u);
   assert.match(app, /ensureFullFontStylesheet\(\)/u);
+  assert.match(app, /ensureFullResponsiveImages\(\)/u);
   assert.match(app, /const withFullFonts = \(loader\) => Promise\.all/u);
-  assert.match(app, /const loadPostsModule = \(\) => withFullFonts\(\(\) => import\("\.\/pages\/PostsPage\.jsx"\)\)/u);
+  assert.match(app, /const withFullAssets = \(loader\) => Promise\.all/u);
+  assert.match(app, /const loadPostsModule = \(\) => withFullAssets\(\(\) => import\("\.\/pages\/PostsPage\.jsx"\)\)/u);
   assert.match(app, /const loadDialogsModule = \(\) => withFullFonts\(\(\) => import\("\.\/components\/Dialogs\.jsx"\)\)/u);
   assert.match(app, /const loadAccountModule = \(\) => withFullFonts\(\(\) => import\("\.\/community\/AccountDialog\.jsx"\)\)/u);
   assert.match(app, /const ArticlePage = lazy\(/u);
@@ -58,10 +60,42 @@ test("listing surfaces can use smaller sources without changing detail artwork",
     readFile("src/pages/ArticlePage.jsx", "utf8"),
   ]);
 
-  assert.match(cards, /src=\{post\.cardImage \|\| post\.image\}/u);
-  assert.match(home, /src=\{post\.cardImage \|\| post\.image\}/u);
+  assert.match(cards, /responsiveImageProps\(imageSource, sizes\)/u);
+  assert.match(home, /responsiveImageProps\(post\.cardImage \|\| post\.image/u);
   assert.match(home, /authorProfile\.avatarSmall \|\| authorProfile\.avatar/u);
   assert.match(article, /src=\{post\.image\}/u);
+});
+
+test("responsive image generation is automatic and leaves originals user-owned", async () => {
+  const [packageSource, generator, helper, ignore, manifest] = await Promise.all([
+    readFile("package.json", "utf8"),
+    readFile("scripts/generate-responsive-images.mjs", "utf8"),
+    readFile("src/responsiveImages.js", "utf8"),
+    readFile(".gitignore", "utf8"),
+    readFile("fonscape.manifest.json", "utf8"),
+  ]);
+  const packageJson = JSON.parse(packageSource);
+
+  assert.equal(packageJson.devDependencies.sharp, "0.35.2");
+  assert.match(packageJson.scripts.prebuild, /generate-responsive-images\.mjs/u);
+  assert.match(packageJson.scripts.precheck, /generate-responsive-images\.mjs/u);
+  assert.match(generator, /avatar: \[128, 256, 384\]/u);
+  assert.match(generator, /card: \[384, 576, 640, 768, 960, 1280\]/u);
+  assert.match(generator, /hero: \[768, 960, 1600\]/u);
+  assert.match(generator, /post\.cardImage \|\| post\.image/u);
+  assert.match(generator, /withoutEnlargement: true/u);
+  assert.match(generator, /png\(\{ compressionLevel: 9/u);
+  assert.match(generator, /jpeg\(\{ quality: 92/u);
+  assert.match(generator, /webp\(\{ quality: 92/u);
+  assert.match(generator, /lstat\(currentPath\)/u);
+  assert.match(generator, /realpath\(sourcePath\)/u);
+  assert.match(generator, /sharp\.versions\.sharp/u);
+  assert.match(generator, /sharp\.versions\.vips/u);
+  assert.match(helper, /responsiveImageCatalog\[source\]\?\.candidates/u);
+  assert.match(helper, /import\("\.\.\/functions\/_generated\/responsive-images-full\.js"\)/u);
+  assert.match(ignore, /public\/fonscape\/generated-images\//u);
+  assert.match(manifest, /"public\/assets\/\*\*"/u);
+  assert.match(manifest, /"public\/fonscape\/generated-images\/\*\*"/u);
 });
 
 test("Markdown bodies stay out of the initial module and detail loaders remain available", async () => {
