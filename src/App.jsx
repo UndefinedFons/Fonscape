@@ -44,16 +44,18 @@ let fullFontStylesheetReady;
 function ensureFullFontStylesheet() {
   if (typeof document === "undefined") return Promise.resolve();
   if (fullFontStylesheetReady) return fullFontStylesheetReady;
-  const stylesheet = document.querySelector('link[rel="stylesheet"][href="/fonscape/google-fonts-full.css"]');
-  if (!stylesheet || stylesheet.media === "all") return Promise.resolve();
+  const existing = document.querySelector('link[rel="stylesheet"][href="/fonscape/google-fonts-full.css"]');
+  if (existing?.sheet && existing.media !== "print") return Promise.resolve();
   fullFontStylesheetReady = new Promise((resolve) => {
+    const stylesheet = existing || Object.assign(document.createElement("link"), { rel: "stylesheet", href: "/fonscape/google-fonts-full.css" });
     const finish = () => {
       stylesheet.media = "all";
       resolve();
     };
     stylesheet.addEventListener("load", finish, { once: true });
     stylesheet.addEventListener("error", finish, { once: true });
-    if (stylesheet.sheet) finish();
+    if (existing?.sheet) finish();
+    else if (!existing) document.head.append(stylesheet);
   });
   return fullFontStylesheetReady;
 }
