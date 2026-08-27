@@ -110,6 +110,7 @@ test("the production check enforces an initial-load performance budget", async (
   assert.match(packageSource, /vite build && pnpm check:performance-budget/u);
   assert.match(budgetSource, /ENTRY_JAVASCRIPT_GZIP_LIMIT/u);
   assert.match(budgetSource, /ENTRY_CSS_GZIP_LIMIT/u);
+  assert.match(budgetSource, /ENTRY_HTML_GZIP_LIMIT/u);
   assert.match(budgetSource, /LOCAL_FONT_CSS_GZIP_LIMIT/u);
   assert.match(budgetSource, /FULL_FONT_CSS_GZIP_LIMIT/u);
   assert.match(budgetSource, /HIGH_PRIORITY_IMAGE_LIMIT/u);

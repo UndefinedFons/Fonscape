@@ -7,6 +7,7 @@ import {
   parsePostMetadata,
 } from "../src/content/frontmatter.js";
 import { getHomeContent } from "../src/pages/homeContent.js";
+import { authorProfile, siteConfig } from "../src/siteConfig.js";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const catalogPath = join(root, "scripts", "vendor", "google-fonts.css");
@@ -32,7 +33,7 @@ function codePoints(value) {
   return new Set([...value].map((character) => character.codePointAt(0)));
 }
 
-async function criticalContentSource(files) {
+async function criticalContentSources(files) {
   const posts = [];
   const poems = [];
   const music = [];
@@ -48,11 +49,19 @@ async function criticalContentSource(files) {
     music.filter((entry) => entry.section === section),
   ]));
   const { featuredPosts, recentPosts, latestPoems, latestMusic } = getHomeContent(posts, poems, musicReviews);
-  return JSON.stringify({
-    posts: [...new Set([...featuredPosts, ...recentPosts])].map(({ title, category, excerpt, firstParagraph }) => ({ title, category, excerpt, firstParagraph })),
-    poems: latestPoems.map(({ title, previewLines }) => ({ title, previewLines })),
-    music: latestMusic.map(({ title, kind }) => ({ title, kind })),
-  });
+  const homePosts = [...new Set([...featuredPosts, ...recentPosts])];
+  return {
+    noto: JSON.stringify({
+      posts: homePosts.map(({ title, category, excerpt, firstParagraph }) => ({ title, category, excerpt, firstParagraph })),
+      poems: latestPoems.map(({ title, previewLines }) => ({ title, previewLines })),
+      music: latestMusic.map(({ title, kind }) => ({ title, kind })),
+    }),
+    zen: JSON.stringify({
+      posts: homePosts.map(({ title }) => title),
+      poems: latestPoems.map(({ title }) => title),
+      music: latestMusic.map(({ title }) => title),
+    }),
+  };
 }
 
 function rangeContainsCodePoint(range, points) {
@@ -79,25 +88,38 @@ function blockMatches(block, points) {
 }
 
 async function renderFontStylesheets() {
-  const [catalog, srcFiles, indexSource, configSource] = await Promise.all([
+  const [catalog, srcFiles, indexSource] = await Promise.all([
     readFile(catalogPath, "utf8"),
     sourceFiles(join(root, "src")),
     readFile(join(root, "index.html"), "utf8"),
-    readFile(join(root, "fonscape.config.js"), "utf8"),
   ]);
-  const srcSources = await Promise.all(srcFiles
-    .filter((path) => extname(path) !== ".md")
-    .map((path) => readFile(path, "utf8")));
-  const allSource = [indexSource, configSource, ...srcSources, await criticalContentSource(srcFiles)].join("\n");
-  const notoPoints = codePoints(allSource);
+  const criticalUiSources = await Promise.all([
+    "src/pages/HomePage.jsx",
+    "src/components/Header.jsx",
+    "src/components/Footer.jsx",
+    "src/components/PageHero.jsx",
+    "src/siteConfig.js",
+  ].map((path) => readFile(join(root, path), "utf8")));
+  const contentSources = await criticalContentSources(srcFiles);
+  const sharedSource = [indexSource, ...criticalUiSources, JSON.stringify({ home: siteConfig.home, author: {
+    name: authorProfile.name,
+    tagline: authorProfile.tagline,
+    introduction: authorProfile.introduction,
+  }, footer: siteConfig.footer })].join("\n");
+  const notoPoints = codePoints(`${sharedSource}\n${contentSources.noto}`);
+  const zenPoints = codePoints(`${sharedSource}\n${contentSources.zen}`);
   const blocks = [...catalog.matchAll(/@font-face\s*\{[\s\S]*?\}/gu)].map((match) => match[0]);
   if (!blocks.length) throw new Error("字体目录中没有 @font-face 声明。");
   const criticalBlocks = blocks.filter((block) => {
     if (block.includes("font-family: 'Noto Sans SC'")) return blockMatches(block, notoPoints);
+    if (block.includes("font-family: 'Zen Maru Gothic'") && block.includes("font-weight: 700;")) return blockMatches(block, zenPoints);
     return false;
   });
   if (!criticalBlocks.some((block) => block.includes("font-family: 'Noto Sans SC'"))) {
     throw new Error("字体目录未覆盖站点使用的 Noto Sans SC 字符。");
+  }
+  if (!criticalBlocks.some((block) => block.includes("font-family: 'Zen Maru Gothic'"))) {
+    throw new Error("字体目录未覆盖首页使用的 Zen Maru Gothic 字符。");
   }
   return {
     critical: `${criticalBlocks.join("\n")}\n`,

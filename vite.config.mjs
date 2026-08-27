@@ -12,13 +12,10 @@ function escapeAttribute(value) {
 }
 
 export function localizeGoogleFontStylesheet(html) {
+  const criticalFontCss = readFileSync(resolve(process.cwd(), "public/fonscape/google-fonts.css"), "utf8");
   return html
     .replace(/\s*<link\s+rel="preconnect"\s+href="https:\/\/fonts\.googleapis\.com"\s*\/?>/u, "")
-    .replace(/([ \t]*)<link\s+rel="stylesheet"\s+href="https:\/\/fonts\.googleapis\.com\/css2\?[^"]+"\s*\/?>/u, (_match, indent) => [
-      `${indent}<link rel="stylesheet" href="/fonscape/google-fonts.css" />`,
-      `${indent}<link rel="preload" as="style" href="/fonscape/google-fonts-full.css" fetchpriority="low" />`,
-      `${indent}<link rel="stylesheet" href="/fonscape/google-fonts-full.css" media="print" onload="this.media='all'" />`,
-    ].join("\n"));
+    .replace(/([ \t]*)<link\s+rel="stylesheet"\s+href="https:\/\/fonts\.googleapis\.com\/css2\?[^"]+"\s*\/?>/u, (_match, indent) => `${indent}<style data-fonscape-critical-fonts>${criticalFontCss}</style>`);
 }
 
 function markdownFiles(directory) {
