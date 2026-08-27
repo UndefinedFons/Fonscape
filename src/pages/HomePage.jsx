@@ -13,6 +13,7 @@ import { HeroShell } from "../components/PageHero.jsx";
 import { useHorizontalScroller } from "../hooks.js";
 import { getMusicSectionIcon } from "../musicSections.js";
 import { getPostFirstParagraph } from "../richContent.js";
+import { responsiveImageProps, responsiveImageUrl } from "../responsiveImages.js";
 import { formatContentDate, getPostWordCount } from "../siteUtils.js";
 import { getHomeContent } from "./homeContent.js";
 
@@ -77,9 +78,13 @@ export function HomePage({ stats }) {
     if (featuredPosts.length < 2) return;
     const nextPost = featuredPosts[(featuredIndex + 1) % featuredPosts.length];
     if (!nextPost.image) return;
+    const source = nextPost.cardImage || nextPost.image;
     const image = new Image();
     image.decoding = "async";
-    image.src = nextPost.cardImage || nextPost.image;
+    const responsive = responsiveImageProps(source, "(max-width: 760px) calc(100vw - 24px), min(62vw, 760px)");
+    if (responsive.srcSet) image.srcset = responsive.srcSet;
+    if (responsive.sizes) image.sizes = responsive.sizes;
+    image.src = responsiveImageUrl(source, 768);
   }, [featuredIndex]);
   const showNextFeaturedPost = () => setFeaturedState((current) => {
     if (featuredPosts.length < 2) return current;
@@ -88,7 +93,7 @@ export function HomePage({ stats }) {
     return { current: next, previous: current.current };
   });
   const renderFeaturedPost = (post, phase) => <a key={post.slug} className={`home-refresh-feature is-${phase}`} href={`#/post/${post.slug}`} aria-hidden={phase === "outgoing" ? "true" : undefined} tabIndex={phase === "outgoing" ? -1 : undefined}>
-    {post.image ? <img src={post.cardImage || post.image} alt="" loading={phase === "current" ? "eager" : "lazy"} decoding="async" fetchPriority={phase === "current" ? "high" : "low"} onLoad={(event) => applyFeaturedTone(event.currentTarget)} style={{ objectPosition: post.cardPosition || post.coverPosition || "center" }} /> : <span className="home-refresh-feature-placeholder"><BookOpenText size={48} weight="duotone" /></span>}
+    {post.image ? <img src={post.cardImage || post.image} {...responsiveImageProps(post.cardImage || post.image, "(max-width: 760px) calc(100vw - 24px), min(62vw, 760px)")} alt="" loading={phase === "current" ? "eager" : "lazy"} decoding="async" fetchPriority={phase === "current" ? "high" : "low"} onLoad={(event) => applyFeaturedTone(event.currentTarget)} style={{ objectPosition: post.cardPosition || post.coverPosition || "center" }} /> : <span className="home-refresh-feature-placeholder"><BookOpenText size={48} weight="duotone" /></span>}
     <span className="home-refresh-feature-shade" />
     <span className="home-refresh-feature-copy">
       <small>置顶阅读 · {post.category}</small>
@@ -123,7 +128,7 @@ export function HomePage({ stats }) {
 
         <aside className="home-refresh-profile material-panel" aria-labelledby="home-profile-name">
           <div className="home-refresh-profile-heading">
-            <a href="#/about" aria-label="查看关于我">{authorProfile.avatar ? <img src={authorProfile.avatarSmall || authorProfile.avatar} alt={authorProfile.avatarAlt} width="132" height="132" loading="eager" decoding="async" /> : <span className="home-refresh-profile-avatar-placeholder" role="img" aria-label={authorProfile.avatarAlt}><UserCircle size={62} weight="duotone" /></span>}</a>
+            <a href="#/about" aria-label="查看关于我">{authorProfile.avatar ? <img src={authorProfile.avatarSmall || authorProfile.avatar} {...responsiveImageProps(authorProfile.avatarSmall || authorProfile.avatar, "132px")} alt={authorProfile.avatarAlt} width="132" height="132" loading="eager" decoding="async" /> : <span className="home-refresh-profile-avatar-placeholder" role="img" aria-label={authorProfile.avatarAlt}><UserCircle size={62} weight="duotone" /></span>}</a>
             <span><small>ABOUT ME</small><strong id="home-profile-name">{authorProfile.name}</strong><em>{authorProfile.tagline}</em></span>
           </div>
           <p>{authorProfile.introduction}</p>
@@ -142,7 +147,7 @@ export function HomePage({ stats }) {
         </header>
         {recentPosts.length ? <nav className="home-refresh-news-track" aria-label="近期文章，横向滑动查看更多" {...articleScroller}>
           {recentPosts.map((post) => <a className="home-refresh-news-card" href={`#/post/${post.slug}`} key={post.slug}>
-            <ArticleCover post={post} className="home-refresh-news-cover" emptyClassName="is-placeholder" placeholderClassName="home-refresh-news-placeholder" />
+            <ArticleCover post={post} className="home-refresh-news-cover" emptyClassName="is-placeholder" placeholderClassName="home-refresh-news-placeholder" sizes="(max-width: 760px) calc(100vw - 84px), 360px" />
             <span className="home-refresh-news-copy">
               <span className="home-refresh-news-meta"><small>{post.category}</small><time dateTime={post.date}>{formatContentDate(post.date).slice(0, 10)}</time></span>
               <strong>{post.title}</strong>

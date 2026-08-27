@@ -14,6 +14,7 @@ outputs/
 functions/_generated/
 public/fonscape/google-fonts.css
 public/fonscape/google-fonts-full.css
+public/fonscape/generated-images/
 worker-configuration.d.ts
 design-qa.md
 AGENTS.md

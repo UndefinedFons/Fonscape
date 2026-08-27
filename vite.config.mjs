@@ -6,6 +6,8 @@ import { parsePost } from "./src/content/frontmatter.js";
 import siteConfig from "./fonscape.config.js";
 import { generateContentArtifacts } from "./scripts/generate-content-targets.mjs";
 import { generateFontStylesheets } from "./scripts/generate-font-css.mjs";
+import { generateResponsiveImages } from "./scripts/generate-responsive-images.mjs";
+import { responsiveImageCandidates, responsiveImageUrl } from "./src/responsiveImages.js";
 
 function escapeAttribute(value) {
   return String(value).replaceAll("&", "&amp;").replaceAll('"', "&quot;").replaceAll("<", "&lt;");
@@ -43,6 +45,22 @@ function homeFeaturedImage() {
   return post?.cardImage || post?.image || "";
 }
 
+function preloadImage(source, { media = "", sizes = "", intendedWidth = 0, includeCandidates = true } = {}) {
+  if (!source) return "";
+  const candidates = includeCandidates ? responsiveImageCandidates(source) : [];
+  const href = intendedWidth ? responsiveImageUrl(source, intendedWidth) : source;
+  const attributes = [
+    `rel="preload"`,
+    `href="${escapeAttribute(href)}"`,
+    `as="image"`,
+    media && `media="${escapeAttribute(media)}"`,
+    candidates.length > 1 && `imagesrcset="${escapeAttribute(candidates.map(({ src, width }) => `${src} ${width}w`).join(", "))}"`,
+    candidates.length > 1 && sizes && `imagesizes="${escapeAttribute(sizes)}"`,
+    `fetchpriority="high"`,
+  ].filter(Boolean);
+  return `<link ${attributes.join(" ")} />`;
+}
+
 function heroPreloadPlugin() {
   return {
     name: "fonscape-hero-preload",
@@ -52,18 +70,18 @@ function heroPreloadPlugin() {
       const desktopImage = homeHero.image;
       const mobileImage = homeHero.mobileImage || desktopImage;
       const preloads = [];
-      if (desktopImage && mobileImage !== desktopImage) {
-        preloads.push(`<link rel="preload" href="${escapeAttribute(mobileImage)}" as="image" media="(max-width: 760px)" fetchpriority="high" />`);
-        preloads.push(`<link rel="preload" href="${escapeAttribute(desktopImage)}" as="image" media="(min-width: 761px)" fetchpriority="high" />`);
+      if (desktopImage && mobileImage) {
+        preloads.push(preloadImage(mobileImage, { media: "(max-width: 760px)", intendedWidth: 960, includeCandidates: false }));
+        preloads.push(preloadImage(desktopImage, { media: "(min-width: 761px)", intendedWidth: 1600, includeCandidates: false }));
       } else if (desktopImage) {
-        preloads.push(`<link rel="preload" href="${escapeAttribute(desktopImage)}" as="image" fetchpriority="high" />`);
+        preloads.push(preloadImage(desktopImage, { intendedWidth: 1600, includeCandidates: false }));
       }
       if (homeHero.glassImage) {
-        preloads.push(`<link rel="preload" href="${escapeAttribute(homeHero.glassImage)}" as="image" fetchpriority="high" />`);
+        preloads.push(preloadImage(homeHero.glassImage, { intendedWidth: 1280, includeCandidates: false }));
       }
       const featuredImage = homeFeaturedImage();
       if (featuredImage && !preloads.some((preload) => preload.includes(`href="${escapeAttribute(featuredImage)}"`))) {
-        preloads.push(`<link rel="preload" href="${escapeAttribute(featuredImage)}" as="image" fetchpriority="high" />`);
+        preloads.push(preloadImage(featuredImage, { sizes: "(max-width: 760px) calc(100vw - 24px), min(62vw, 760px)", intendedWidth: 768 }));
       }
       const withoutStaticHeroPreloads = optimizedHtml.replace(/\s*<link\s+rel="preload"\s+href="[^"]+"\s+as="image"[^>]*fetchpriority="high"\s*\/?>/gu, "");
       return withoutStaticHeroPreloads.replace("</head>", `    ${preloads.join("\n    ")}\n  </head>`);
@@ -73,10 +91,11 @@ function heroPreloadPlugin() {
 
 function contentMetadataPlugin() {
   const contentRoot = resolve(process.cwd(), "src/content");
+  const imageRoot = resolve(process.cwd(), "public/assets");
   const metadataPath = resolve(process.cwd(), "functions/_generated/content-metadata.js");
   let generation = Promise.resolve();
   const regenerate = () => {
-    generation = generation.then(() => Promise.all([generateContentArtifacts(), generateFontStylesheets()]));
+    generation = generation.then(() => Promise.all([generateContentArtifacts(), generateFontStylesheets(), generateResponsiveImages()]));
     return generation;
   };
   return {
@@ -85,6 +104,11 @@ function contentMetadataPlugin() {
       await regenerate();
     },
     async handleHotUpdate({ file, modules, server }) {
+      if (file.startsWith(`${imageRoot}/`) && /\.(?:avif|jpe?g|png|webp)$/iu.test(file)) {
+        await generateResponsiveImages();
+        server.ws.send({ type: "full-reload" });
+        return [];
+      }
       if (!file.startsWith(`${contentRoot}/`) || !file.endsWith(".md")) return undefined;
       await regenerate();
       const metadataModule = server.moduleGraph.getModuleById(metadataPath);
