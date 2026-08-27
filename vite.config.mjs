@@ -7,7 +7,7 @@ import siteConfig from "./fonscape.config.js";
 import { generateContentArtifacts } from "./scripts/generate-content-targets.mjs";
 import { generateFontStylesheets } from "./scripts/generate-font-css.mjs";
 import { generateResponsiveImages } from "./scripts/generate-responsive-images.mjs";
-import { responsiveImageCandidates, responsiveImageUrl } from "./src/responsiveImages.js";
+import { responsiveImageCandidates, responsiveImageUrl } from "./src/responsiveImages.ts";
 
 function escapeAttribute(value) {
   return String(value).replaceAll("&", "&amp;").replaceAll('"', "&quot;").replaceAll("<", "&lt;");
@@ -100,9 +100,6 @@ function contentMetadataPlugin() {
   };
   return {
     name: "fonscape-content-metadata",
-    async buildStart() {
-      await regenerate();
-    },
     async handleHotUpdate({ file, modules, server }) {
       if (file.startsWith(`${imageRoot}/`) && /\.(?:avif|jpe?g|png|webp)$/iu.test(file)) {
         await generateResponsiveImages();

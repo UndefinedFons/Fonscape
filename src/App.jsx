@@ -10,7 +10,7 @@ import { NotFound } from "./pages/NotFound.jsx";
 import { getGlassBackground, preloadHeroAssets, PRIMARY_HERO_PATHS } from "./heroImages.js";
 import { getPostOutline } from "./richContent.js";
 import { clearArticleIndexState, clearPaginationFamily, markPopNavigation, markPushNavigation, paginationFamily, parseHash, parseHashQuery, readNavigationType, routeScrollPositions } from "./routeState.js";
-import { ensureFullResponsiveImages } from "./responsiveImages.js";
+import { ensureFullResponsiveImages } from "./responsiveImages.ts";
 
 const withFullFonts = (loader) => Promise.all([loader(), ensureFullFontStylesheet()]).then(([module]) => module);
 const withFullAssets = (loader) => Promise.all([loader(), ensureFullFontStylesheet(), ensureFullResponsiveImages()]).then(([module]) => module);

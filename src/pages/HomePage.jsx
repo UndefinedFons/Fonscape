@@ -13,7 +13,7 @@ import { HeroShell } from "../components/PageHero.jsx";
 import { useHorizontalScroller } from "../hooks.js";
 import { getMusicSectionIcon } from "../musicSections.js";
 import { getPostFirstParagraph } from "../richContent.js";
-import { responsiveImageProps, responsiveImageUrl } from "../responsiveImages.js";
+import { responsiveImageProps, responsiveImageUrl } from "../responsiveImages.ts";
 import { formatContentDate, getPostWordCount } from "../siteUtils.js";
 import { getHomeContent } from "./homeContent.js";
 

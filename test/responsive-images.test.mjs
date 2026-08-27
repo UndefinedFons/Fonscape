@@ -8,11 +8,12 @@ import {
   generateResponsiveImages,
   isLocalRasterSource,
   renderResponsiveVariant,
+  renderResponsiveVariantBuffer,
   safeLocalSourcePath,
   shouldKeepResponsiveVariant,
   sourceAssetPath,
 } from "../scripts/generate-responsive-images.mjs";
-import { responsiveImageProps, responsiveImageUrl } from "../src/responsiveImages.js";
+import { responsiveImageProps, responsiveImageUrl } from "../src/responsiveImages.ts";
 
 test("responsive image source selection stays inside local raster assets", () => {
   assert.equal(isLocalRasterSource("/assets/cover.jpg"), true);
@@ -61,6 +62,13 @@ test("responsive variants are retained only when they reduce transfer size", () 
   assert.equal(shouldKeepResponsiveVariant(10_000, 9_999), true);
   assert.equal(shouldKeepResponsiveVariant(10_000, 10_000), false);
   assert.equal(shouldKeepResponsiveVariant(10_000, 10_001), false);
+});
+
+test("read-only checks can size a missing candidate without writing it", async () => {
+  const source = await sharp({ create: { width: 100, height: 50, channels: 4, background: "#d97aa8" } }).png().toBuffer();
+  const output = await renderResponsiveVariantBuffer(source, "candidate.png", 60, sharp);
+  const metadata = await sharp(output).metadata();
+  assert.deepEqual([metadata.width, Buffer.isBuffer(output)], [60, true]);
 });
 
 test("responsive manifests are deterministic and missing entries retain the original", async () => {

@@ -1,6 +1,7 @@
 {
   "compilerOptions": {
     "allowJs": true,
+    "allowImportingTsExtensions": true,
     "checkJs": true,
     "noEmit": true,
     "strict": true,
@@ -16,6 +17,7 @@
     "src/heroImages.js",
     "src/routeState.js",
     "src/richContent.js",
+    "src/responsiveImages.ts",
     "src/siteConfig.js",
     "src/siteUtils.js",
     "src/types.d.ts"

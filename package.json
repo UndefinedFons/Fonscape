@@ -1,6 +1,6 @@
 {
   "name": "fonscape",
-  "version": "1.7.1",
+  "version": "1.7.2",
   "description": "Fonscape（风栖），一款清新、响应式、注重阅读体验的 React 个人博客主题模板。",
   "private": true,
   "license": "MIT",
@@ -46,8 +46,7 @@
     "deploy": "pnpm db:migrate:cloudflare && wrangler deploy",
     "migrate:turso": "node scripts/migrate-turso.mjs",
     "fonscape": "node scripts/fonscape-update.mjs",
-    "precheck": "node scripts/generate-content-targets.mjs && node scripts/generate-font-css.mjs && node scripts/generate-responsive-images.mjs",
-    "check": "node --test && pnpm typecheck && vite build && pnpm check:performance-budget"
+    "check": "pnpm test && pnpm typecheck && vite build && pnpm check:performance-budget"
   },
   "dependencies": {
     "@libsql/client": "0.17.4",
