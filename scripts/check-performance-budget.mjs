@@ -14,7 +14,10 @@ const LOCAL_FONT_CSS_GZIP_LIMIT = 48 * 1024;
 const FULL_FONT_CSS_GZIP_LIMIT = 190 * 1024;
 const HIGH_PRIORITY_IMAGE_LIMIT = 320 * 1024;
 const GENERATED_RESPONSIVE_IMAGE_LIMIT = 512 * 1024;
-const FULL_RESPONSIVE_MANIFEST_GZIP_LIMIT = 32 * 1024;
+const RESPONSIVE_MANIFEST_CHUNK_GZIP_LIMIT = 32 * 1024;
+const CONTENT_PAGE_GZIP_LIMIT = 96 * 1024;
+const CONTENT_INDEX_GZIP_LIMIT = 48 * 1024;
+const CONTENT_ENTRY_GZIP_LIMIT = 48 * 1024;
 
 function localAssetPath(url) {
   const pathname = decodeURIComponent(String(url).split(/[?#]/u)[0]);
@@ -34,6 +37,17 @@ function collectJavaScriptFiles(directory) {
       const path = resolve(directory, entry.name);
       if (entry.isDirectory()) return collectJavaScriptFiles(path);
       return entry.isFile() && entry.name.endsWith(".js") ? [path] : [];
+    });
+}
+
+function collectFiles(directory) {
+  if (!existsSync(directory)) return [];
+  return readdirSync(directory, { withFileTypes: true })
+    .sort((left, right) => left.name.localeCompare(right.name))
+    .flatMap((entry) => {
+      const path = resolve(directory, entry.name);
+      if (entry.isDirectory()) return collectFiles(path);
+      return entry.isFile() ? [path] : [];
     });
 }
 
@@ -120,15 +134,29 @@ export function checkPerformanceBudget() {
   const generatedImageRoot = resolve(DIST_ROOT, "fonscape/generated-images");
   const generatedImageFiles = existsSync(generatedImageRoot) ? readdirSync(generatedImageRoot, { withFileTypes: true }).filter((entry) => entry.isFile()) : [];
   const generatedImageBytes = generatedImageFiles.reduce((total, entry) => total + statSync(resolve(generatedImageRoot, entry.name)).size, 0);
-  const fullResponsiveManifest = readdirSync(resolve(DIST_ROOT, "assets")).find((name) => /^responsive-images-full-.*\.js$/u.test(name));
-  if (!fullResponsiveManifest) failures.push("找不到按需加载的完整响应式图片清单。");
-  else {
-    const fullResponsiveManifestGzip = gzipSize(resolve(DIST_ROOT, "assets", fullResponsiveManifest));
-    if (fullResponsiveManifestGzip > FULL_RESPONSIVE_MANIFEST_GZIP_LIMIT) failures.push(`完整响应式图片清单 gzip ${formatKiB(fullResponsiveManifestGzip)} 超过 ${formatKiB(FULL_RESPONSIVE_MANIFEST_GZIP_LIMIT)} 长期预算`);
+  const responsiveManifestAssets = javascriptAssets.filter(({ path }) => /^responsive-images-full-.*\.js$/u.test(path.split(/[\\/]/u).at(-1) || ""));
+  if (responsiveManifestAssets.length === 0) failures.push("找不到按需加载的响应式图片清单索引。");
+  for (const asset of responsiveManifestAssets.filter(({ path }) => /^responsive-images-full-\d+-/u.test(path.split(/[\\/]/u).at(-1) || ""))) {
+    if (asset.gzip > RESPONSIVE_MANIFEST_CHUNK_GZIP_LIMIT) {
+      failures.push(`响应式图片清单分块 ${formatAssetPath(asset.path)} gzip ${formatKiB(asset.gzip)} 超过 ${formatKiB(RESPONSIVE_MANIFEST_CHUNK_GZIP_LIMIT)} 分块预算`);
+    }
+  }
+
+  const contentRoot = resolve(DIST_ROOT, "fonscape/content");
+  const contentDataFiles = collectFiles(contentRoot).filter((path) => path.endsWith(".json"));
+  for (const path of contentDataFiles) {
+    const relativePath = relative(contentRoot, path).split("\\").join("/");
+    const limit = relativePath.startsWith("pages/")
+      ? CONTENT_PAGE_GZIP_LIMIT
+      : relativePath.startsWith("entries/")
+        ? CONTENT_ENTRY_GZIP_LIMIT
+        : CONTENT_INDEX_GZIP_LIMIT;
+    const bytes = gzipSize(path);
+    if (bytes > limit) failures.push(`内容数据分块 ${relativePath} gzip ${formatKiB(bytes)} 超过 ${formatKiB(limit)} 分块预算`);
   }
   if (failures.length) throw new Error(`性能预算未通过：\n- ${failures.join("\n- ")}`);
   const dynamicSummary = largestDynamic ? `最大非入口动态 JS ${formatAssetPath(largestDynamic.path)} ${formatKiB(largestDynamic.gzip)} gzip` : "无非入口动态 JS";
-  console.log(`性能预算通过：首页 HTML ${formatKiB(htmlGzip)} gzip；入口 JS ${formatKiB(scriptGzip)} gzip；非入口 JS ${javascriptAssets.length - 1} 个文件（${dynamicSummary}）；CSS ${formatKiB(styleGzip)} gzip；首屏字体 CSS ${formatKiB(fontStyleGzip)} gzip；检查 ${highPriorityImages.length} 张首屏高优先级图片；自动生成 ${generatedImageFiles.length} 个候选，共 ${formatKiB(generatedImageBytes)}。`);
+  console.log(`性能预算通过：首页 HTML ${formatKiB(htmlGzip)} gzip；入口 JS ${formatKiB(scriptGzip)} gzip；非入口 JS ${javascriptAssets.length - 1} 个文件（${dynamicSummary}）；CSS ${formatKiB(styleGzip)} gzip；首屏字体 CSS ${formatKiB(fontStyleGzip)} gzip；检查 ${highPriorityImages.length} 张首屏高优先级图片；自动生成 ${generatedImageFiles.length} 个候选，共 ${formatKiB(generatedImageBytes)}；内容数据 ${contentDataFiles.length} 个固定分块。`);
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {

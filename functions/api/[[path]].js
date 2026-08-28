@@ -32,8 +32,7 @@ import {
   protectLogin,
   protectProfileUpdate,
   protectRegistration,
-  releaseCommentStorage,
-  reserveCommentStorage,
+  insertCommentAtomically,
   reserveRegistrationSlot,
   scheduleMaintenance,
 } from "../_lib/abuse.js";
@@ -43,6 +42,14 @@ export const AVATAR_TOTAL_MAX_BYTES = 100 * 1024 * 1024;
 const USER_FIELDS = `u.id, u.username, u.password_hash, u.password_salt, u.nickname, u.role, u.status,
   u.created_at, u.updated_at, u.notifications_seen_at, u.admin_comments_seen_at,
   ua.user_id AS avatar_user_id, ua.updated_at AS avatar_updated_at`;
+
+function isUsernameConflict(error) {
+  const code = String(error?.code || "");
+  const message = error instanceof Error ? error.message : String(error);
+  return /SQLITE_CONSTRAINT(?:_UNIQUE)?/iu.test(code)
+    || /UNIQUE constraint failed:\s*(?:main\.)?users\.username/iu.test(message)
+    || /users_username_unique_idx/iu.test(message);
+}
 
 async function userById(db, userId) {
   return db.prepare(`SELECT ${USER_FIELDS} FROM users u
@@ -100,7 +107,12 @@ async function register(context) {
       db.prepare("INSERT INTO account_usage (user_id, comments_created, updated_at) VALUES (?, 0, ?)").bind(id, now),
     ]);
   } catch (error) {
-    await releaseRegistrationSlot();
+    try {
+      await releaseRegistrationSlot();
+    } catch (rollbackError) {
+      console.error(JSON.stringify({ event: "registration_capacity_rollback_failed", error: rollbackError instanceof Error ? rollbackError.message : String(rollbackError) }));
+    }
+    if (isUsernameConflict(error)) throw new ApiError(409, "这个账户名已经被使用。", "username_exists");
     throw error;
   }
   const auth = await createSession(db, id, context.request, limitFromEnv(context.env, "MAX_ACTIVE_SESSIONS"));
@@ -140,23 +152,29 @@ async function setupAdmin(context) {
   const id = crypto.randomUUID();
   const claim = crypto.randomUUID();
   const now = Date.now();
-  const results = await db.batch([
-    db.prepare(`UPDATE site_runtime
-      SET admin_initialized_at = ?, admin_bootstrap_claim = ?
-      WHERE id = 1 AND admin_initialized_at IS NULL
-        AND NOT EXISTS (SELECT 1 FROM users WHERE role = 'admin')`)
-      .bind(now, claim),
-    db.prepare(`INSERT INTO users
-      (id, username, password_hash, password_salt, nickname, role, created_at, updated_at)
-      SELECT ?, ?, ?, ?, ?, 'admin', ?, ?
-      FROM site_runtime
-      WHERE id = 1 AND admin_bootstrap_claim = ?
-        AND NOT EXISTS (SELECT 1 FROM users WHERE role = 'admin')`)
-      .bind(id, username, credentials.hash, credentials.salt, nickname, now, now, claim),
-    db.prepare(`INSERT INTO account_usage (user_id, comments_created, updated_at)
-      SELECT ?, 0, ? WHERE EXISTS (SELECT 1 FROM users WHERE id = ? AND role = 'admin')`)
-      .bind(id, now, id),
-  ]);
+  let results;
+  try {
+    results = await db.batch([
+      db.prepare(`UPDATE site_runtime
+        SET admin_initialized_at = ?, admin_bootstrap_claim = ?
+        WHERE id = 1 AND admin_initialized_at IS NULL
+          AND NOT EXISTS (SELECT 1 FROM users WHERE role = 'admin')`)
+        .bind(now, claim),
+      db.prepare(`INSERT INTO users
+        (id, username, password_hash, password_salt, nickname, role, created_at, updated_at)
+        SELECT ?, ?, ?, ?, ?, 'admin', ?, ?
+        FROM site_runtime
+        WHERE id = 1 AND admin_bootstrap_claim = ?
+          AND NOT EXISTS (SELECT 1 FROM users WHERE role = 'admin')`)
+        .bind(id, username, credentials.hash, credentials.salt, nickname, now, now, claim),
+      db.prepare(`INSERT INTO account_usage (user_id, comments_created, updated_at)
+        SELECT ?, 0, ? WHERE EXISTS (SELECT 1 FROM users WHERE id = ? AND role = 'admin')`)
+        .bind(id, now, id),
+    ]);
+  } catch (error) {
+    if (isUsernameConflict(error)) throw new ApiError(409, "这个账户名已经被使用。", "username_exists");
+    throw error;
+  }
   if (Number(results[1]?.meta?.changes || 0) !== 1) {
     throw new ApiError(409, "管理员账户已经完成初始化。", "admin_already_initialized");
   }
@@ -342,14 +360,17 @@ async function createComment(context) {
   }
   const id = crypto.randomUUID();
   const now = Date.now();
-  const rollbackCommentStorage = await reserveCommentStorage(db, user, target, body, context.env);
-  try {
-    await db.prepare("INSERT INTO comments (id, content_type, content_slug, parent_id, reply_to_user_id, reply_to_comment_id, user_id, body, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'published', ?, ?)")
-      .bind(id, target.type, target.slug, parentId, replyToUserId, replyToCommentId, user.id, body, now, now).run();
-  } catch (error) {
-    await rollbackCommentStorage();
-    throw error;
-  }
+  await insertCommentAtomically(db, {
+    id,
+    userId: user.id,
+    role: user.role,
+    target,
+    body,
+    parentId,
+    replyToUserId,
+    replyToCommentId,
+    now,
+  }, context.env);
   const row = await db.prepare(`${commentSelect} WHERE c.id = ?`).bind(id).first();
   return json({ comment: commentRow(row, user.id, publicUser(user, context.env).role) }, 201);
 }
@@ -366,7 +387,6 @@ async function deleteComment(context, commentId) {
   const now = Date.now();
   const result = await db.prepare("UPDATE comments SET body = '[已删除]', status = 'deleted', updated_at = ?, moderated_at = ?, moderated_by = ? WHERE id = ? AND status != 'deleted'")
     .bind(now, viewer.role === "admin" ? now : null, viewer.role === "admin" ? user.id : null, commentId).run();
-  if (Number(result.meta?.changes || 0) === 1) await releaseCommentStorage(db, existing.user_id);
   return json({ ok: true });
 }
 
@@ -413,7 +433,10 @@ async function markReplyNotificationsRead(context) {
   await protectProfileUpdate(context, user);
   const db = requireDatabase(context.env);
   const now = Date.now();
-  await db.prepare("UPDATE users SET notifications_seen_at = ?, updated_at = ? WHERE id = ?").bind(now, now, user.id).run();
+  await db.prepare(`UPDATE users
+    SET notifications_seen_at = MAX(COALESCE(notifications_seen_at, 0), ?),
+        updated_at = MAX(updated_at, ?)
+    WHERE id = ?`).bind(now, now, user.id).run();
   return json({ ok: true });
 }
 
@@ -444,29 +467,116 @@ async function markAdminCommentsRead(context) {
   await protectProfileUpdate(context, admin);
   const db = requireDatabase(context.env);
   const now = Date.now();
-  await db.prepare("UPDATE users SET admin_comments_seen_at = ?, updated_at = ? WHERE id = ?").bind(now, now, admin.id).run();
-  context.data.currentUser = { ...admin, admin_comments_seen_at: now };
+  await db.prepare(`UPDATE users
+    SET admin_comments_seen_at = MAX(COALESCE(admin_comments_seen_at, 0), ?),
+        updated_at = MAX(updated_at, ?)
+    WHERE id = ?`).bind(now, now, admin.id).run();
+  context.data.currentUser = {
+    ...admin,
+    admin_comments_seen_at: Math.max(Number(admin.admin_comments_seen_at || 0), now),
+  };
   return json({ ok: true });
 }
 
-async function readContentStats(context) {
-  const db = requireDatabase(context.env);
-  const [views, comments] = await db.batch([
-    db.prepare("SELECT content_type AS type, content_slug AS slug, views FROM content_metrics"),
-    db.prepare("SELECT content_type AS type, content_slug AS slug, COUNT(*) AS comments FROM comments WHERE status = 'published' GROUP BY content_type, content_slug"),
-  ]);
-  const stats = { post: {}, poem: {}, music: {} };
-  for (const row of views.results || []) {
-    if (stats[row.type]) stats[row.type][row.slug] = { views: Number(row.views || 0), comments: 0 };
+const CONTENT_STATS_TARGET_LIMIT = 100;
+const CONTENT_STATS_DEFAULT_LIMIT = 200;
+
+function parseContentStatsRequest(url) {
+  const targetValues = url.searchParams.getAll("target");
+  const legacyType = url.searchParams.get("type");
+  const legacySlug = url.searchParams.get("slug");
+  if (legacyType || legacySlug) {
+    if (!legacyType || !legacySlug || targetValues.length) {
+      throw new ApiError(400, "内容统计参数无效。", "invalid_stats_query");
+    }
+    targetValues.push(`${legacyType}:${legacySlug}`);
   }
-  for (const row of comments.results || []) {
-    if (stats[row.type]) stats[row.type][row.slug] = { views: stats[row.type][row.slug]?.views || 0, comments: Number(row.comments || 0) };
+  if (targetValues.length > CONTENT_STATS_TARGET_LIMIT) {
+    throw new ApiError(400, `一次最多查询 ${CONTENT_STATS_TARGET_LIMIT} 个内容目标。`, "stats_target_limit");
+  }
+  if (targetValues.length) {
+    const targets = targetValues.map((value) => {
+      const separator = value.indexOf(":");
+      if (separator <= 0) throw new ApiError(400, "内容统计目标无效。", "invalid_stats_query");
+      return validateTarget(value.slice(0, separator), value.slice(separator + 1));
+    });
+    const unique = new Map(targets.map((target) => [`${target.type}:${target.slug}`, target]));
+    return { targets: [...unique.values()] };
+  }
+  const limitValue = url.searchParams.get("limit");
+  const limit = limitValue === null ? CONTENT_STATS_DEFAULT_LIMIT : Number(limitValue);
+  if (!Number.isSafeInteger(limit) || limit < 1 || limit > CONTENT_STATS_DEFAULT_LIMIT) {
+    throw new ApiError(400, `内容统计 limit 必须是 1–${CONTENT_STATS_DEFAULT_LIMIT} 的整数。`, "invalid_stats_query");
+  }
+  return { targets: null, limit };
+}
+
+function statsFromRows(rows) {
+  const stats = {};
+  for (const row of rows || []) {
+    const type = String(row.type || "");
+    const slug = String(row.slug || "");
+    if (!type || !slug) continue;
+    stats[type] ||= {};
+    stats[type][slug] = {
+      views: Number(row.views || 0),
+      comments: Number(row.comments || 0),
+    };
   }
   return stats;
 }
 
-async function contentStats(context) {
-  return json({ stats: await readContentStats(context) });
+async function readContentStats(context, url) {
+  const db = requireDatabase(context.env);
+  const request = parseContentStatsRequest(url);
+  let result;
+  if (request.targets) {
+    const values = request.targets.flatMap((target) => [target.type, target.slug]);
+    const placeholders = request.targets.map(() => "(?, ?)").join(", ");
+    result = await db.prepare(`WITH requested(content_type, content_slug) AS (VALUES ${placeholders})
+      SELECT requested.content_type AS type,
+        requested.content_slug AS slug,
+        COALESCE(metrics.views, 0) AS views,
+        COALESCE(usage.published_comments, 0) AS comments
+      FROM requested
+      LEFT JOIN content_metrics metrics
+        ON metrics.content_type = requested.content_type
+        AND metrics.content_slug = requested.content_slug
+      LEFT JOIN comment_target_usage usage
+        ON usage.content_type = requested.content_type
+        AND usage.content_slug = requested.content_slug`)
+      .bind(...values).all();
+  } else {
+    result = await db.prepare(`SELECT type, slug, views, comments FROM (
+      SELECT metrics.content_type AS type,
+        metrics.content_slug AS slug,
+        COALESCE(metrics.views, 0) AS views,
+        COALESCE(usage.published_comments, 0) AS comments,
+        metrics.updated_at AS updated_at
+      FROM content_metrics metrics
+      LEFT JOIN comment_target_usage usage
+        ON usage.content_type = metrics.content_type
+        AND usage.content_slug = metrics.content_slug
+      UNION ALL
+      SELECT usage.content_type AS type,
+        usage.content_slug AS slug,
+        0 AS views,
+        usage.published_comments AS comments,
+        usage.updated_at AS updated_at
+      FROM comment_target_usage usage
+      LEFT JOIN content_metrics metrics
+        ON metrics.content_type = usage.content_type
+        AND metrics.content_slug = usage.content_slug
+      WHERE metrics.content_type IS NULL
+    )
+    ORDER BY updated_at DESC, type ASC, slug ASC
+    LIMIT ?`).bind(request.limit).all();
+  }
+  return statsFromRows(result.results);
+}
+
+async function contentStats(context, url) {
+  return json({ stats: await readContentStats(context, url) });
 }
 
 async function siteRuntime(context) {
@@ -534,7 +644,7 @@ async function handle(context) {
   if (method === "PATCH" && parts[0] === "me" && parts[1] === "admin-comments") return markAdminCommentsRead(context);
   if (method === "GET" && parts[0] === "profile" && parts[1] && parts.length === 2) return profile(context, parts[1]);
   if ((method === "GET" || method === "HEAD") && parts[0] === "avatar" && parts[1]) return avatar(context, parts[1]);
-  if (method === "GET" && parts[0] === "content" && parts[1] === "stats" && parts.length === 2) return contentStats(context);
+  if (method === "GET" && parts[0] === "content" && parts[1] === "stats" && parts.length === 2) return contentStats(context, url);
   if (method === "POST" && parts[0] === "content" && parts[1] === "view" && parts.length === 2) return recordContentView(context);
   if (method === "GET" && parts[0] === "site" && parts[1] === "runtime" && parts.length === 2) return siteRuntime(context);
   if (method === "GET" && parts[0] === "comments" && parts.length === 1) return listComments(context, url);

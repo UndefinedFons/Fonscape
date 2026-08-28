@@ -197,9 +197,10 @@ test("runtime maintenance cleans temporary rows and reconciles capacity counters
     await client.execute("CREATE TABLE sessions (id_hash TEXT PRIMARY KEY, expires_at INTEGER NOT NULL)");
     await client.execute("CREATE TABLE rate_limits (key TEXT PRIMARY KEY, updated_at INTEGER NOT NULL)");
     await client.execute("CREATE TABLE users (id TEXT PRIMARY KEY, role TEXT NOT NULL)");
-    await client.execute("CREATE TABLE comments (id TEXT PRIMARY KEY, user_id TEXT NOT NULL, status TEXT NOT NULL)");
+    await client.execute("CREATE TABLE comments (id TEXT PRIMARY KEY, user_id TEXT NOT NULL, content_type TEXT NOT NULL, content_slug TEXT NOT NULL, status TEXT NOT NULL)");
     await client.execute("CREATE TABLE account_usage (user_id TEXT PRIMARY KEY, comments_created INTEGER NOT NULL, updated_at INTEGER NOT NULL)");
     await client.execute("CREATE TABLE storage_counters (metric TEXT PRIMARY KEY, value INTEGER NOT NULL, updated_at INTEGER NOT NULL)");
+    await client.execute("CREATE TABLE comment_target_usage (content_type TEXT NOT NULL, content_slug TEXT NOT NULL, active_comments INTEGER NOT NULL, published_comments INTEGER NOT NULL, updated_at INTEGER NOT NULL, PRIMARY KEY (content_type, content_slug))");
     await client.execute("CREATE TABLE user_avatars (user_id TEXT PRIMARY KEY, byte_size INTEGER NOT NULL)");
     await client.batch([
       { sql: "INSERT INTO sessions VALUES (?, ?)", args: ["expired", 999] },
@@ -207,8 +208,8 @@ test("runtime maintenance cleans temporary rows and reconciles capacity counters
       { sql: "INSERT INTO rate_limits VALUES (?, ?)", args: ["stale", 1_000 - 9 * 86_400_000] },
       { sql: "INSERT INTO rate_limits VALUES (?, ?)", args: ["fresh", 1_000] },
       { sql: "INSERT INTO users VALUES (?, ?)", args: ["member-1", "member"] },
-      { sql: "INSERT INTO comments VALUES (?, ?, ?)", args: ["published", "member-1", "published"] },
-      { sql: "INSERT INTO comments VALUES (?, ?, ?)", args: ["deleted", "member-1", "deleted"] },
+      { sql: "INSERT INTO comments VALUES (?, ?, ?, ?, ?)", args: ["published", "member-1", "post", "example", "published"] },
+      { sql: "INSERT INTO comments VALUES (?, ?, ?, ?, ?)", args: ["deleted", "member-1", "post", "example", "deleted"] },
       { sql: "INSERT INTO account_usage VALUES (?, ?, ?)", args: ["member-1", 99, 0] },
     ], "write");
     const result = await cleanupRuntimeData(createTursoD1Database({ client }), 1_000);
@@ -216,6 +217,12 @@ test("runtime maintenance cleans temporary rows and reconciles capacity counters
     assert.deepEqual((await client.execute("SELECT id_hash FROM sessions ORDER BY id_hash")).rows, [{ id_hash: "active" }]);
     assert.deepEqual((await client.execute("SELECT key FROM rate_limits ORDER BY key")).rows, [{ key: "fresh" }]);
     assert.deepEqual((await client.execute("SELECT comments_created FROM account_usage")).rows, [{ comments_created: 1 }]);
+    assert.deepEqual((await client.execute("SELECT content_type, content_slug, active_comments, published_comments FROM comment_target_usage")).rows, [{
+      content_type: "post",
+      content_slug: "example",
+      active_comments: 1,
+      published_comments: 1,
+    }]);
     assert.deepEqual((await client.execute("SELECT metric, value FROM storage_counters ORDER BY metric")).rows, [
       { metric: "avatar_bytes", value: 0 },
       { metric: "comments_created", value: 1 },

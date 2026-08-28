@@ -99,13 +99,16 @@ test("responsive image generation is automatic and leaves originals user-owned",
   assert.match(generator, /sharp\.versions\.vips/u);
   assert.match(helper, /responsiveImageCatalog\[source\]\?\.candidates/u);
   assert.match(helper, /import\("\.\.\/functions\/_generated\/responsive-images-full\.js"\)/u);
+  assert.match(helper, /responsiveImageChunkLoaders/u);
+  assert.match(generator, /chunkResponsiveEntries/u);
+  assert.match(generator, /responsive-images-full-\$\{index\}\.js/u);
   assert.match(ignore, /public\/fonscape\/generated-images\//u);
   assert.match(manifest, /"public\/assets\/\*\*"/u);
   assert.match(manifest, /"public\/fonscape\/generated-images\/\*\*"/u);
   assert.doesNotMatch(await readFile("scripts/check-performance-budget.mjs", "utf8"), /GENERATED_RESPONSIVE_IMAGES_TOTAL_LIMIT/u);
 });
 
-test("Markdown bodies stay out of the initial module and detail loaders remain available", async () => {
+test("Markdown bodies stay out of the initial module and load only with their detail metadata", async () => {
   const [contentIndex, generator, article, poem, music] = await Promise.all([
     readFile("src/content/index.js", "utf8"),
     readFile("scripts/generate-content-targets.mjs", "utf8"),
@@ -114,16 +117,19 @@ test("Markdown bodies stay out of the initial module and detail loaders remain a
     readFile("src/pages/MusicPage.jsx", "utf8"),
   ]);
 
-  assert.match(contentIndex, /import\.meta\.glob\("\.\/posts\/\*\*\/\*\.md",\s*\{[\s\S]*?query: "\?raw"/u);
+  assert.doesNotMatch(contentIndex, /import\.meta\.glob/u);
+  assert.match(contentIndex, /export function loadContentEntry\(type, key/u);
+  assert.match(contentIndex, /fetch\(metadata\.body/u);
+  assert.match(contentIndex, /export function loadCollection\(type\)/u);
   assert.match(contentIndex, /export function loadPost\(slug\)/u);
   assert.match(contentIndex, /export function loadPoem\(slug\)/u);
   assert.match(contentIndex, /export function loadMusicReview\(section, slug\)/u);
-  assert.doesNotMatch(contentIndex, /eager:\s*true/u);
   assert.match(generator, /content-metadata\.js/u);
-  assert.match(generator, /parsePostMetadata/u);
-  assert.match(article, /loadPost\(post\.slug\)/u);
-  assert.match(poem, /loadPoem\(poem\.slug\)/u);
-  assert.match(music, /loadMusicReview\(section, review\.slug\)/u);
+  assert.match(generator, /CONTENT_PAGE_CHUNK_SIZE = 50/u);
+  assert.match(generator, /parseGenericContentMetadata/u);
+  assert.match(article, /loadPost\(slug\)/u);
+  assert.match(poem, /loadPoem\(slug\)/u);
+  assert.match(music, /loadMusicReview\(section, slug\)/u);
 });
 
 test("the check command enforces static contracts across core JavaScript boundaries", async () => {
@@ -156,6 +162,8 @@ test("the production check enforces an initial-load performance budget", async (
   assert.match(budgetSource, /LOCAL_FONT_CSS_GZIP_LIMIT/u);
   assert.match(budgetSource, /FULL_FONT_CSS_GZIP_LIMIT/u);
   assert.match(budgetSource, /HIGH_PRIORITY_IMAGE_LIMIT/u);
+  assert.match(budgetSource, /CONTENT_PAGE_GZIP_LIMIT/u);
+  assert.match(budgetSource, /RESPONSIVE_MANIFEST_CHUNK_GZIP_LIMIT/u);
 });
 
 test("the JavaScript budget inspects every asset and isolates the largest non-entry chunk", () => {

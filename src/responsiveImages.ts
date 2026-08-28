@@ -11,9 +11,14 @@ let fullResponsiveImageCatalogPromise: Promise<void> | undefined;
 
 export function ensureFullResponsiveImages() {
   if (!fullResponsiveImageCatalogPromise) {
-    fullResponsiveImageCatalogPromise = import("../functions/_generated/responsive-images-full.js").then(({ fullResponsiveImages }) => {
-      fullResponsiveImageCatalog = fullResponsiveImages as Record<string, ResponsiveImage>;
-    });
+    fullResponsiveImageCatalogPromise = import("../functions/_generated/responsive-images-full.js")
+      .then(({ responsiveImageChunkLoaders }) => Promise.all(responsiveImageChunkLoaders.map((loadChunk) => loadChunk())))
+      .then((modules) => {
+        fullResponsiveImageCatalog = Object.assign(
+          {},
+          ...modules.map(({ responsiveImageChunk }) => responsiveImageChunk as Record<string, ResponsiveImage>),
+        );
+      });
   }
   return fullResponsiveImageCatalogPromise;
 }

@@ -185,6 +185,21 @@ export function parseMusicReviewMetadata(path, source) {
 }
 
 /**
+ * Minimal metadata contract for future repository-owned content collections.
+ * A collection can opt into a richer parser later without changing the
+ * distribution pipeline.
+ *
+ * @param {string} path
+ * @param {string} source
+ */
+export function parseGenericContentMetadata(path, source) {
+  const { data, filename } = parseMarkdownSource(path, source);
+  const entry = { ...data, slug: data.slug || filename };
+  requireFields(entry, ["title", "date"], path);
+  return validateCommonEntry(/** @type {import("../types.js").DatedEntry & Record<string, any>} */ (entry), path);
+}
+
+/**
  * @param {import("../types.js").DatedEntry} left
  * @param {import("../types.js").DatedEntry} right
  */

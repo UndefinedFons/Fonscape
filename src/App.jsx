@@ -4,11 +4,10 @@ import { useCommunity } from "./community/CommunityProvider.jsx";
 import { stopArticleAudio } from "./articleAudio.js";
 import { ArticleOutlinePopover, Header } from "./components/Header.jsx";
 import { Footer } from "./components/Footer.jsx";
-import { loadMusicReview, loadPoem, loadPost, posts } from "./content/index.js";
+import { loadCollection, loadMusicReview, loadPoem, loadPost } from "./content/index.js";
 import { HomePage } from "./pages/HomePage.jsx";
 import { NotFound } from "./pages/NotFound.jsx";
 import { getGlassBackground, preloadHeroAssets, PRIMARY_HERO_PATHS } from "./heroImages.js";
-import { getPostOutline } from "./richContent.js";
 import { clearArticleIndexState, clearPaginationFamily, markPopNavigation, markPushNavigation, paginationFamily, parseHash, parseHashQuery, readNavigationType, routeScrollPositions } from "./routeState.js";
 import { ensureFullResponsiveImages } from "./responsiveImages.ts";
 
@@ -98,6 +97,9 @@ function preloadRouteContent(path) {
     const [, section, slug] = routePath.split("/");
     if (section && slug) return loadMusicReview(decode(section), decode(slug)).catch(() => null);
   }
+  if (routePath === "/posts") return loadCollection("post").catch(() => null);
+  if (routePath === "/poems") return loadCollection("poem").catch(() => null);
+  if (routePath === "/music") return loadCollection("music").catch(() => null);
   return Promise.resolve(null);
 }
 
@@ -124,18 +126,34 @@ export function App() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [articleOutlineOpen, setArticleOutlineOpen] = useState(false);
   const [activeOutlineId, setActiveOutlineId] = useState("");
+  const [activePostOutline, setActivePostOutline] = useState([]);
   const [contentStats, setContentStats] = useState({ post: {}, poem: {}, music: {} });
+  const requestedStatsRef = useRef(new Set());
   useEffect(() => {
     if (accountOpen) setAccountDialogRequested(true);
   }, [accountOpen]);
-  const refreshContentStats = useCallback(() => fetch("/api/content/stats", { headers: { Accept: "application/json" } })
-    .then((response) => response.ok ? response.json() : Promise.reject())
-    .then((result) => setContentStats({
-      post: result.stats?.post || {},
-      poem: result.stats?.poem || {},
-      music: result.stats?.music || {},
-    }))
-    .catch(() => {}), []);
+  const requestContentStats = useCallback(async (targets) => {
+    const pending = [...new Map((targets || []).map((target) => [`${target.type}:${target.slug}`, target])).entries()]
+      .filter(([key]) => !requestedStatsRef.current.has(key));
+    pending.forEach(([key]) => requestedStatsRef.current.add(key));
+    for (let index = 0; index < pending.length; index += 100) {
+      const batch = pending.slice(index, index + 100);
+      const parameters = new URLSearchParams();
+      batch.forEach(([key]) => parameters.append("target", key));
+      try {
+        const response = await fetch(`/api/content/stats?${parameters}`, { headers: { Accept: "application/json" } });
+        if (!response.ok) throw new Error("stats failed");
+        const result = await response.json();
+        setContentStats((current) => {
+          const next = { ...current };
+          for (const [type, entries] of Object.entries(result.stats || {})) next[type] = { ...(next[type] || {}), ...entries };
+          return next;
+        });
+      } catch {
+        batch.forEach(([key]) => requestedStatsRef.current.delete(key));
+      }
+    }
+  }, []);
   const recordContentView = useCallback(async (type, slug) => {
     const storageKey = `fonscape:view:${type}:${slug}`;
     if (sessionStorage.getItem(storageKey)) return;
@@ -159,7 +177,6 @@ export function App() {
       sessionStorage.removeItem(storageKey);
     }
   }, []);
-  useEffect(() => { refreshContentStats(); }, [refreshContentStats]);
   useEffect(() => {
     const previousScrollRestoration = history.scrollRestoration;
     history.scrollRestoration = "manual";
@@ -314,22 +331,20 @@ export function App() {
     if (isRetiredAdminRoute) window.location.replace("#/");
   }, [isRetiredAdminRoute]);
   const content = useMemo(() => {
-    if (route.startsWith("/post/")) return <ArticlePage slug={route.replace("/post/", "")} stats={contentStats.post} onView={recordContentView} />;
-    if (route.startsWith("/poem/")) return <PoemPage slug={route.replace("/poem/", "")} stats={contentStats.poem} onView={recordContentView} />;
-    if (route.startsWith("/music/")) return <MusicDetailPage path={route.replace("/music/", "")} stats={contentStats.music} onView={recordContentView} />;
-    if (route === "/") return <HomePage stats={contentStats.post} />;
-    if (route === "/posts") return <PostsPage query={routeQuery} stats={contentStats.post} />;
-    if (route === "/poems") return <PoemsPage stats={contentStats.poem} />;
-    if (route === "/music") return <MusicPage stats={contentStats.music} />;
+    if (route.startsWith("/post/")) return <ArticlePage slug={route.replace("/post/", "")} stats={contentStats.post || {}} onView={recordContentView} onOutline={setActivePostOutline} onStatsTargets={requestContentStats} />;
+    if (route.startsWith("/poem/")) return <PoemPage slug={route.replace("/poem/", "")} stats={contentStats.poem || {}} onView={recordContentView} onStatsTargets={requestContentStats} />;
+    if (route.startsWith("/music/")) return <MusicDetailPage path={route.replace("/music/", "")} stats={contentStats.music || {}} onView={recordContentView} onStatsTargets={requestContentStats} />;
+    if (route === "/") return <HomePage stats={contentStats.post || {}} onStatsTargets={requestContentStats} />;
+    if (route === "/posts") return <PostsPage query={routeQuery} stats={contentStats.post || {}} onStatsTargets={requestContentStats} />;
+    if (route === "/poems") return <PoemsPage stats={contentStats.poem || {}} onStatsTargets={requestContentStats} />;
+    if (route === "/music") return <MusicPage stats={contentStats.music || {}} onStatsTargets={requestContentStats} />;
     if (route === "/friends") return <FriendsPage />;
     if (route === "/about") return <AboutPage />;
     if (route === "/admin/setup") return <AdminSetupPage />;
     if (isRetiredAdminRoute) return <HomePage stats={contentStats.post} />;
     return <NotFound />;
-  }, [route, routeQuery, contentStats, recordContentView, isRetiredAdminRoute]);
+  }, [route, routeQuery, contentStats, recordContentView, requestContentStats, isRetiredAdminRoute]);
   const isDetailRoute = route.startsWith("/post/") || route.startsWith("/poem/") || route.startsWith("/music/");
-  const activePost = useMemo(() => route.startsWith("/post/") ? posts.find((post) => post.slug === route.replace("/post/", "")) : null, [route]);
-  const activePostOutline = useMemo(() => activePost ? getPostOutline(activePost) : [], [activePost]);
   const hasArticleOutline = activePostOutline.length > 1;
   useEffect(() => {
     setArticleOutlineOpen(false);

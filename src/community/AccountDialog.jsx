@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { use, useEffect, useRef, useState } from "react";
 import { ArrowRight } from "@phosphor-icons/react/ArrowRight";
 import { ArrowClockwise } from "@phosphor-icons/react/ArrowClockwise";
 import { Camera } from "@phosphor-icons/react/Camera";
@@ -14,7 +14,7 @@ import { X } from "@phosphor-icons/react/X";
 import { Avatar } from "./Avatar.jsx";
 import { AVATAR_MAX_BYTES, api, compressAvatar, contentHref, formatCommunityTime, validateAvatarFile } from "./api.js";
 import { useCommunity } from "./CommunityProvider.jsx";
-import { musicReviews, poems, posts } from "../content/index.js";
+import { loadSearchIndex } from "../content/index.js";
 import { lockPageScroll } from "../lockPageScroll.js";
 
 const commentsCache = new Map();
@@ -23,20 +23,21 @@ const repliesCache = new Map();
 const repliesRequests = new Map();
 const receivedCommentsCache = new Map();
 const receivedCommentsRequests = new Map();
+let contentLookup = new Map();
 
 function contentMeta(item) {
   if (item.contentType === "post") {
     if (item.contentSlug === "site-friends") return { title: "友链", section: "页面 · 友链" };
     if (item.contentSlug === "site-about") return { title: "关于我", section: "页面 · 关于" };
-    const post = posts.find((entry) => entry.slug === item.contentSlug);
+    const post = contentLookup.get(`post:${item.contentSlug}`);
     return { title: post?.title || item.contentSlug, section: `文章${post?.category ? ` · ${post.category}` : ""}` };
   }
   if (item.contentType === "poem") {
-    const poem = poems.find((entry) => entry.slug === item.contentSlug);
+    const poem = contentLookup.get(`poem:${item.contentSlug}`);
     return { title: poem?.title || item.contentSlug, section: "小诗" };
   }
   const [section, slug] = String(item.contentSlug || "").split("/");
-  const review = musicReviews[section]?.find((entry) => entry.slug === slug);
+  const review = contentLookup.get(`music:${section}/${slug}`);
   return { title: item.contentTitle || review?.title || slug || item.contentSlug, section: `音乐 · ${review?.kind || "内容"}` };
 }
 
@@ -414,6 +415,8 @@ function AccountCenter() {
 }
 
 export function AccountDialog() {
+  const indexedContent = use(loadSearchIndex());
+  contentLookup = new Map(indexedContent.map((entry) => [`${entry.type}:${entry.key}`, entry]));
   const { accountOpen, closeAccount, viewer } = useCommunity();
   const closeButton = useRef(null);
   const exitTimer = useRef(null);
