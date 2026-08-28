@@ -5,6 +5,7 @@ import { join, resolve } from "node:path";
 import test from "node:test";
 import sharp from "sharp";
 import {
+  extractLocalRasterSources,
   generateResponsiveImages,
   isLocalRasterSource,
   renderResponsiveVariant,
@@ -14,6 +15,30 @@ import {
   sourceAssetPath,
 } from "../scripts/generate-responsive-images.mjs";
 import { responsiveImageProps, responsiveImageUrl } from "../src/responsiveImages.ts";
+
+test("Markdown image discovery includes rendered local rasters and ignores code or remote sources", () => {
+  const markdown = [
+    "![正文图](/assets/posts/body.png)",
+    "![重复图](/assets/posts/body.png)",
+    "![带空格](</assets/posts/space image.jpg>)",
+    "![完整引用][figure]",
+    "![折叠引用][]",
+    "[figure]: /assets/posts/reference.webp \"图注\"",
+    "[折叠引用]: /assets/posts/collapsed.avif",
+    "`![代码示例](/assets/posts/code.png)`",
+    "~~~md",
+    "![代码块](/assets/posts/fenced.png)",
+    "~~~",
+    "<img src='/assets/posts/raw-html.png' alt='不会渲染'>",
+    "![远程图](https://example.com/remote.png)",
+  ].join("\n");
+  assert.deepEqual(extractLocalRasterSources(markdown), [
+    "/assets/posts/body.png",
+    "/assets/posts/space image.jpg",
+    "/assets/posts/reference.webp",
+    "/assets/posts/collapsed.avif",
+  ]);
+});
 
 test("responsive image source selection stays inside local raster assets", () => {
   assert.equal(isLocalRasterSource("/assets/cover.jpg"), true);
