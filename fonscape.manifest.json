@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "version": "1.8.1",
+  "version": "1.9.0",
   "ownership": {
     "user": [
       ".env",
@@ -9,6 +9,7 @@
       ".dev.vars.*",
       "fonscape.config.js",
       "functions/_generated/**",
+      "public/fonscape/content/**",
       "public/fonscape/generated-images/**",
       "src/content/friends.json",
       "src/content/posts/**",

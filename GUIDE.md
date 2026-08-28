@@ -288,6 +288,8 @@ date: "2026-07-27T20:00"
 
 安装、开发、构建、测试与检查命令会先由 `scripts/generate-content-targets.mjs` 生成前端与 API 共用的内容目标清单。Frontmatter 缺少必填字段、日期无效或 slug 重复时，命令会直接报错，避免错误内容进入线上。
 
+生成器只把首页需要的少量摘要和各板块计数放进主题入口；列表、筛选与搜索索引按固定大小分块，详情正文按单条内容独立加载，响应式图片清单也按块加载。性能预算约束入口主题包和每个分块，不约束全站内容总数；内容增加时增长的是分块数量，不会在达到某个总条目数后阻止继续发布。分块规则以 `scripts/generate-content-targets.mjs` 中的 `CONTENT_PAGE_CHUNK_SIZE`、`CONTENT_INDEX_CHUNK_SIZE` 和 `scripts/generate-responsive-images.mjs` 中的 `fullManifestChunkSize` 为准。
+
 新增、删除或重命名内容后只需运行：
 
 ```bash
@@ -410,6 +412,7 @@ pnpm fonscape update --rollback .fonscape-update/backups/<备份目录>
 - 仓库保存已发布内容、正式友链与资源；D1 或 Turso 保存账户、评论、会话、统计、审核和限频数据。
 - 数据库迁移只追加到 `migrations/`，已经执行的迁移文件不得删除、重命名或改写。
 - 当前限频与容量默认值以 `functions/_lib/abuse.js` 中的 `DEFAULT_ABUSE_LIMITS` 为准。
+- 评论容量与公开统计由数据库聚合表和触发器维护；内容列表只按当前可见条目查询统计，不随全站评论总量扫描。
 - 头像输入与存储限制以 `functions/api/[[path]].js` 中的 `AVATAR_MAX_BYTES`、`AVATAR_TOTAL_MAX_BYTES` 为准。
 - 主题改动在合并前运行 `pnpm check`，并检查桌面、平板、手机与窄屏布局；数据库迁移先在独立测试数据库演练。
 

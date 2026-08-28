@@ -24,7 +24,7 @@ test("read-receipt failures cannot replace an already loaded message feed", asyn
 test("the combined search feed applies the shared newest-first ordering", async () => {
   const dialog = await readFile("src/components/Dialogs.jsx", "utf8");
 
-  assert.match(dialog, /\]\.sort\(sortNewestFirst\)/u);
+  assert.match(dialog, /indexedContent\.map\([\s\S]*?\)\.sort\(sortNewestFirst\)/u);
 });
 
 test("search scopes and results follow the optional section switches", async () => {
@@ -33,8 +33,11 @@ test("search scopes and results follow the optional section switches", async () 
 
   assert.match(dialog, /const showPoems = siteConfig\.showPoems === true/u);
   assert.match(dialog, /const showMusic = siteConfig\.showMusic === true/u);
-  assert.match(dialog, /showPoems \? poems\.map/u);
-  assert.match(dialog, /showMusic \? Object\.entries\(musicReviews\)/u);
+  assert.match(dialog, /\["post", showPoems && "poem", showMusic && "music"\]\.filter\(Boolean\)/u);
+  assert.match(dialog, /loadSearchIndex\(enabledTypes\)\.then/u);
+  assert.match(dialog, /正在加载搜索内容/u);
+  assert.match(dialog, /entry\.type === "poem"/u);
+  assert.match(dialog, /kind: "music"/u);
   assert.match(dialog, /showPoems \? \[\["poem", "小诗"\]\] : \[\]/u);
   assert.match(dialog, /showMusic \? \[\["music", "音乐"\]\] : \[\]/u);
   assert.match(dialog, /"--search-scope-count": scopeOptions\.length/u);

@@ -10,7 +10,7 @@ import { MusicReviewCard } from "../components/Cards.jsx";
 import { Pagination } from "../components/Pagination.jsx";
 import { PageHero } from "../components/PageHero.jsx";
 import { CommentsSection } from "../community/CommentsSection.jsx";
-import { loadMusicReview, musicReviews, siteConfig } from "../content/index.js";
+import { loadCollection, loadMusicReview, siteConfig } from "../content/index.js";
 import { usePagination, useResponsivePageSize } from "../hooks.js";
 import { musicSections } from "../musicSections.js";
 import { go, parseHashQuery } from "../routeState.js";
@@ -20,13 +20,16 @@ import { NotFound } from "./NotFound.jsx";
 
 const RichArticleContent = lazy(() => import("../RichArticleContent.jsx").then((module) => ({ default: module.RichArticleContent })));
 
-export function MusicPage({ stats }) {
+export function MusicPage({ stats, onStatsTargets }) {
+  const allMusicReviews = use(loadCollection("music"));
   const requestedSection = new URLSearchParams(parseHashQuery()).get("section");
   const [section, setSection] = useState(() => musicSections.some((item) => item.id === requestedSection) ? requestedSection : "songs");
   const activeIndex = musicSections.findIndex((item) => item.id === section);
-  const activeEntries = musicReviews[section];
+  const activeEntries = allMusicReviews.filter((entry) => entry.section === section);
   const ActiveSectionIcon = musicSections.find((item) => item.id === section).icon;
   const pagination = usePagination(activeEntries, useResponsivePageSize(6, 3), section, "music");
+  const pageStatsKey = pagination.pageItems.map((entry) => `${entry.section}/${entry.slug}`).join("|");
+  useEffect(() => { onStatsTargets(pagination.pageItems.map((entry) => ({ type: "music", slug: `${entry.section}/${entry.slug}` }))); }, [onStatsTargets, pageStatsKey]);
   const selectSection = (nextSection) => {
     setSection(nextSection);
     const nextQuery = nextSection === "songs" ? "" : `?section=${nextSection}`;
@@ -40,12 +43,13 @@ export function MusicPage({ stats }) {
   </main>;
 }
 
-export function MusicDetailPage({ path, stats, onView }) {
+export function MusicDetailPage({ path, stats, onView, onStatsTargets }) {
   const [section, slug] = path.split("/");
-  const review = musicReviews[section]?.find((item) => item.slug === slug);
-  const detailReview = review ? use(loadMusicReview(section, review.slug)) : null;
+  const review = section && slug ? use(loadMusicReview(section, slug)) : null;
+  const detailReview = review;
   const statsSlug = review ? `${section}/${review.slug}` : "";
   useEffect(() => { if (statsSlug) onView("music", statsSlug); }, [statsSlug, onView]);
+  useEffect(() => { if (statsSlug) onStatsTargets([{ type: "music", slug: statsSlug }]); }, [statsSlug, onStatsTargets]);
   if (!review) return <NotFound />;
   return <main className="article-page music-detail-page material-panel page-width"><button className="back-button" onClick={() => history.length > 1 ? history.back() : go(`/music${section === "songs" ? "" : `?section=${section}`}`)}><ArrowLeft size={17} />返回</button><article className="article-detail article-detail--music">
     <div className="article-intro-copy"><span className="category">MUSIC NOTE</span><h1>{review.title}</h1>{review.excerpt && <p className="article-lede">{review.excerpt}</p>}<div className="post-meta"><span><TextAa size={16} />{getPostWordCount(review)} 字</span><span><CalendarBlank size={16} />{formatContentDate(review.date)}</span><span><Eye size={16} />{stats[statsSlug]?.views || 0}</span><span><ChatCircleDots size={16} />{stats[statsSlug]?.comments || 0}</span></div></div>

@@ -6,24 +6,30 @@ import { lazy, use, useEffect, useMemo } from "react";
 import { ArticleMusicPlayer } from "../ArticleMusicPlayer.jsx";
 import { CommentsSection } from "../community/CommentsSection.jsx";
 import { PostMeta } from "../components/Cards.jsx";
-import { loadPost, posts } from "../content/index.js";
+import { loadCollectionFacets, loadPost } from "../content/index.js";
 import { detailImageSizes } from "../responsiveImages.ts";
 import { go } from "../routeState.js";
+import { getPostOutline } from "../richContent.js";
 import { ZoomableImage } from "../ZoomableImage.jsx";
 import { NotFound } from "./NotFound.jsx";
 
 const RichArticleContent = lazy(() => import("../RichArticleContent.jsx").then((module) => ({ default: module.RichArticleContent })));
 
-export function ArticlePage({ slug, stats, onView }) {
-  const post = posts.find((item) => item.slug === slug);
-  const detailPost = post ? use(loadPost(post.slug)) : null;
+export function ArticlePage({ slug, stats, onView, onOutline, onStatsTargets }) {
+  const post = use(loadPost(slug));
+  const detailPost = post;
   const inlineMusicPlayer = useMemo(() => post?.music && post.musicPlacement === "inline" ? <ArticleMusicPlayer track={post.music} autoplay={false} /> : null, [post]);
   const inlineMusicPlayers = useMemo(() => Object.fromEntries((post?.musicBlocks || []).map((track) => [track.id, <ArticleMusicPlayer key={track.id} track={track} autoplay={Boolean(track.autoplay)} />])), [post]);
   useEffect(() => { if (post?.slug) onView("post", post.slug); }, [post?.slug, onView]);
+  useEffect(() => { if (post?.slug) onStatsTargets([{ type: "post", slug: post.slug }]); }, [post?.slug, onStatsTargets]);
+  useEffect(() => {
+    onOutline(getPostOutline(post));
+    return () => onOutline([]);
+  }, [post, onOutline]);
   if (!post) return <NotFound />;
   const coverMode = post.image && post.coverMode !== "none" ? "wide" : "none";
   const showDetailCover = coverMode !== "none";
-  const seriesPosts = post.series ? posts.filter((item) => item.series === post.series).sort((a, b) => (a.seriesOrder || 0) - (b.seriesOrder || 0) || a.date.localeCompare(b.date)) : [];
+  const seriesPosts = post.series ? use(loadCollectionFacets("post")).filter((item) => item.series === post.series).sort((a, b) => (a.seriesOrder || 0) - (b.seriesOrder || 0) || a.date.localeCompare(b.date)) : [];
   const seriesIndex = seriesPosts.findIndex((item) => item.slug === post.slug);
   const previousChapter = seriesIndex > 0 ? seriesPosts[seriesIndex - 1] : null;
   const nextChapter = seriesIndex >= 0 && seriesIndex < seriesPosts.length - 1 ? seriesPosts[seriesIndex + 1] : null;

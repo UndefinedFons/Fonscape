@@ -258,7 +258,9 @@ async function reserveStorageCounter(db, metric, amount, maximum, now = Date.now
 }
 
 async function rollbackStorageCounter(db, metric, amount) {
-  if (amount) await reserveStorageCounter(db, metric, -amount, Number.MAX_SAFE_INTEGER);
+  if (amount) await db.prepare(`UPDATE storage_counters
+    SET value = MAX(0, value - ?), updated_at = ?
+    WHERE metric = ?`).bind(amount, Date.now(), metric).run();
 }
 
 export async function reserveRegistrationSlot(db, env) {
@@ -269,63 +271,84 @@ export async function reserveRegistrationSlot(db, env) {
   return () => rollbackStorageCounter(db, "member_accounts", 1);
 }
 
-async function reserveUserComment(db, userId, maximum, now = Date.now()) {
-  const result = await db.prepare(`INSERT INTO account_usage (user_id, comments_created, updated_at)
-    VALUES (?, 1, ?)
-    ON CONFLICT(user_id) DO UPDATE SET comments_created = account_usage.comments_created + 1, updated_at = excluded.updated_at
-    WHERE account_usage.comments_created < ?`)
-    .bind(userId, now, maximum).run();
-  return Number(result.meta?.changes || 0) === 1;
-}
+const COMMENT_DUPLICATE_WINDOW = 10 * MINUTE;
 
-async function releaseUserComment(db, userId) {
-  await db.prepare("UPDATE account_usage SET comments_created = MAX(0, comments_created - 1), updated_at = ? WHERE user_id = ?")
-    .bind(Date.now(), userId).run();
-}
-
-export async function reserveCommentStorage(db, user, target, body, env) {
-  const [counts, duplicate] = await db.batch([
-    db.prepare(`SELECT
-      (SELECT COUNT(*) FROM comments WHERE user_id = ? AND status != 'deleted') AS user_count,
-      (SELECT COUNT(*) FROM comments WHERE content_type = ? AND content_slug = ? AND status != 'deleted') AS target_count`)
-      .bind(user.id, target.type, target.slug),
-    db.prepare(`SELECT id FROM comments
-      WHERE user_id = ? AND content_type = ? AND content_slug = ? AND body = ?
-        AND status != 'deleted' AND created_at > ? LIMIT 1`)
-      .bind(user.id, target.type, target.slug, body, Date.now() - 10 * MINUTE),
-  ]);
-  const countRow = counts.results?.[0] || {};
+/**
+ * Insert and validate one comment in a single SQLite write statement. D1 and
+ * libSQL serialize the conditional INSERT together with its counter triggers,
+ * so concurrent writers cannot pass a stale read-side capacity check.
+ */
+export async function insertCommentAtomically(db, {
+  id,
+  userId,
+  role,
+  target,
+  body,
+  parentId = null,
+  replyToUserId = null,
+  replyToCommentId = null,
+  now = Date.now(),
+}, env) {
   const userMaximum = limitFromEnv(env, "MAX_COMMENTS_PER_USER");
   const targetMaximum = limitFromEnv(env, "MAX_COMMENTS_PER_TARGET");
-  if (user.role !== "admin" && Number(countRow.user_count || 0) >= userMaximum) {
-    throw new ApiError(429, "该账户已达到评论存储上限。", "comment_storage_limit");
-  }
-  if (Number(countRow.target_count || 0) >= targetMaximum) {
-    throw new ApiError(429, "该页面的评论数量已达到上限。", "comment_target_full");
-  }
-  if (duplicate.results?.length) throw new ApiError(409, "请勿重复发布相同评论。", "duplicate_comment");
-
   const totalMaximum = limitFromEnv(env, "MAX_TOTAL_COMMENTS");
-  if (!await reserveStorageCounter(db, "comments_created", 1, totalMaximum)) {
-    throw new ApiError(503, "评论区暂时无法接收更多内容。", "comment_capacity_reached");
-  }
-  const accountMaximum = user.role === "admin" ? Number.MAX_SAFE_INTEGER : userMaximum;
-  if (!await reserveUserComment(db, user.id, accountMaximum)) {
-    await rollbackStorageCounter(db, "comments_created", 1);
-    throw new ApiError(429, "该账户已达到评论存储上限。", "comment_storage_limit");
-  }
-  return async () => {
-    await rollbackStorageCounter(db, "comments_created", 1);
-    await releaseUserComment(db, user.id);
-  };
-}
+  const duplicateCutoff = now - COMMENT_DUPLICATE_WINDOW;
+  const result = await db.prepare(`INSERT INTO comments
+    (id, content_type, content_slug, parent_id, reply_to_user_id,
+      reply_to_comment_id, user_id, body, status, created_at, updated_at)
+    SELECT ?, ?, ?, ?, ?, ?, ?, ?, 'published', ?, ?
+    WHERE EXISTS (
+      SELECT 1 FROM storage_counters
+      WHERE metric = 'comments_created' AND value < ?
+    )
+      AND (? = 'admin' OR EXISTS (
+        SELECT 1 FROM account_usage
+        WHERE user_id = ? AND comments_created < ?
+      ))
+      AND COALESCE((
+        SELECT active_comments FROM comment_target_usage
+        WHERE content_type = ? AND content_slug = ?
+      ), 0) < ?
+      AND NOT EXISTS (
+        SELECT 1 FROM comments
+        WHERE user_id = ? AND content_type = ? AND content_slug = ?
+          AND body = ? AND status != 'deleted' AND created_at > ?
+      )`)
+    .bind(
+      id, target.type, target.slug, parentId, replyToUserId,
+      replyToCommentId, userId, body, now, now,
+      totalMaximum, role, userId, userMaximum,
+      target.type, target.slug, targetMaximum,
+      userId, target.type, target.slug, body, duplicateCutoff,
+    ).run();
+  if (Number(result.meta?.changes || 0) === 1) return;
 
-export async function releaseCommentStorage(db, userId) {
-  const now = Date.now();
-  await db.batch([
-    db.prepare("UPDATE storage_counters SET value = MAX(0, value - 1), updated_at = ? WHERE metric = 'comments_created'").bind(now),
-    db.prepare("UPDATE account_usage SET comments_created = MAX(0, comments_created - 1), updated_at = ? WHERE user_id = ?").bind(now, userId),
-  ]);
+  const state = await db.prepare(`SELECT
+    CASE WHEN ? != 'admin' AND NOT EXISTS (
+      SELECT 1 FROM account_usage WHERE user_id = ? AND comments_created < ?
+    ) THEN 1 ELSE 0 END AS user_full,
+    CASE WHEN COALESCE((
+      SELECT active_comments FROM comment_target_usage
+      WHERE content_type = ? AND content_slug = ?
+    ), 0) >= ? THEN 1 ELSE 0 END AS target_full,
+    CASE WHEN EXISTS (
+      SELECT 1 FROM comments
+      WHERE user_id = ? AND content_type = ? AND content_slug = ?
+        AND body = ? AND status != 'deleted' AND created_at > ?
+    ) THEN 1 ELSE 0 END AS duplicate,
+    CASE WHEN COALESCE((
+      SELECT value FROM storage_counters WHERE metric = 'comments_created'
+    ), ?) >= ? THEN 1 ELSE 0 END AS total_full`)
+    .bind(
+      role, userId, userMaximum,
+      target.type, target.slug, targetMaximum,
+      userId, target.type, target.slug, body, duplicateCutoff,
+      totalMaximum, totalMaximum,
+    ).first();
+  if (Number(state?.user_full || 0)) throw new ApiError(429, "该账户已达到评论存储上限。", "comment_storage_limit");
+  if (Number(state?.target_full || 0)) throw new ApiError(429, "该页面的评论数量已达到上限。", "comment_target_full");
+  if (Number(state?.duplicate || 0)) throw new ApiError(409, "请勿重复发布相同评论。", "duplicate_comment");
+  throw new ApiError(503, "评论区暂时无法接收更多内容。", "comment_capacity_reached");
 }
 
 export async function assertTargetExists(db, target) {
@@ -348,6 +371,15 @@ export async function cleanupRuntimeData(db, now = Date.now()) {
     db.prepare(`INSERT INTO storage_counters (metric, value, updated_at)
       VALUES ('comments_created', (SELECT COUNT(*) FROM comments WHERE status != 'deleted'), ?)
       ON CONFLICT(metric) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at`).bind(now),
+    db.prepare("DELETE FROM comment_target_usage"),
+    db.prepare(`INSERT INTO comment_target_usage
+      (content_type, content_slug, active_comments, published_comments, updated_at)
+      SELECT content_type, content_slug,
+        SUM(CASE WHEN status != 'deleted' THEN 1 ELSE 0 END),
+        SUM(CASE WHEN status = 'published' THEN 1 ELSE 0 END),
+        ?
+      FROM comments
+      GROUP BY content_type, content_slug`).bind(now),
     db.prepare(`INSERT INTO storage_counters (metric, value, updated_at)
       VALUES ('avatar_bytes', (SELECT COALESCE(SUM(byte_size), 0) FROM user_avatars), ?)
       ON CONFLICT(metric) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at`).bind(now),

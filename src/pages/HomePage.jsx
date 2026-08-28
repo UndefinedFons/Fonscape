@@ -7,7 +7,7 @@ import { MusicNotes } from "@phosphor-icons/react/MusicNotes";
 import { TextAa } from "@phosphor-icons/react/TextAa";
 import { UserCircle } from "@phosphor-icons/react/UserCircle";
 import { useEffect, useState } from "react";
-import { authorProfile, musicReviews, poems, posts, siteConfig } from "../content/index.js";
+import { authorProfile, homeContent, loadFeaturedChunk, siteConfig } from "../content/index.js";
 import { ArticleCover } from "../components/Cards.jsx";
 import { HeroShell } from "../components/PageHero.jsx";
 import { useHorizontalScroller } from "../hooks.js";
@@ -15,9 +15,7 @@ import { getMusicSectionIcon } from "../musicSections.js";
 import { getPostFirstParagraph } from "../richContent.js";
 import { responsiveImageProps, responsiveImageUrl } from "../responsiveImages.ts";
 import { formatContentDate, getPostWordCount } from "../siteUtils.js";
-import { getHomeContent } from "./homeContent.js";
-
-const { featuredPosts, recentPosts, latestPoems, latestMusic, musicCount } = getHomeContent(posts, poems, musicReviews);
+const { recentPosts, latestPoems, latestMusic } = homeContent;
 const showPoems = siteConfig.showPoems === true;
 const showMusic = siteConfig.showMusic === true;
 const homeStatsCount = 1 + Number(showPoems) + Number(showMusic);
@@ -59,9 +57,12 @@ function applyFeaturedTone(image) {
   }
 }
 
-export function HomePage({ stats }) {
+export function HomePage({ stats, onStatsTargets }) {
+  const [featuredPosts, setFeaturedPosts] = useState(() => [...homeContent.featuredPosts]);
   const [featuredState, setFeaturedState] = useState({ current: 0, previous: null });
-  const featuredIndex = featuredPosts.length ? featuredState.current % featuredPosts.length : 0;
+  const [featuredLoading, setFeaturedLoading] = useState(false);
+  const featuredCount = homeContent.featuredCount || featuredPosts.length;
+  const featuredIndex = featuredCount ? featuredState.current % featuredCount : 0;
   const featuredPost = featuredPosts[featuredIndex] || null;
   const previousFeaturedPost = featuredState.previous === null || !featuredPosts.length
     ? null
@@ -70,6 +71,9 @@ export function HomePage({ stats }) {
   const poemScroller = useHorizontalScroller();
   const musicScroller = useHorizontalScroller();
   useEffect(() => {
+    onStatsTargets(featuredPosts.map((post) => ({ type: "post", slug: post.slug })));
+  }, [featuredPosts, onStatsTargets]);
+  useEffect(() => {
     if (featuredState.previous === null) return undefined;
     const timer = window.setTimeout(() => setFeaturedState((current) => ({ ...current, previous: null })), 560);
     return () => window.clearTimeout(timer);
@@ -77,7 +81,7 @@ export function HomePage({ stats }) {
   useEffect(() => {
     if (featuredPosts.length < 2) return;
     const nextPost = featuredPosts[(featuredIndex + 1) % featuredPosts.length];
-    if (!nextPost.image) return;
+    if (!nextPost?.image) return;
     const source = nextPost.cardImage || nextPost.image;
     const image = new Image();
     image.decoding = "async";
@@ -86,12 +90,23 @@ export function HomePage({ stats }) {
     if (responsive.sizes) image.sizes = responsive.sizes;
     image.src = responsiveImageUrl(source, 768);
   }, [featuredIndex]);
-  const showNextFeaturedPost = () => setFeaturedState((current) => {
-    if (featuredPosts.length < 2) return current;
-    const next = (current.current + 1) % featuredPosts.length;
-    if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return { current: next, previous: null };
-    return { current: next, previous: current.current };
-  });
+  const showNextFeaturedPost = () => {
+    if (featuredCount < 2 || featuredLoading) return;
+    const next = (featuredState.current + 1) % featuredCount;
+    if (next >= featuredPosts.length) {
+      setFeaturedLoading(true);
+      loadFeaturedChunk("post", Math.floor(next / homeContent.featuredChunkSize)).then((chunk) => {
+        setFeaturedPosts((loaded) => loaded.length > next ? loaded : [...loaded, ...chunk]);
+        setFeaturedState((current) => window.matchMedia?.("(prefers-reduced-motion: reduce)").matches
+          ? { current: next, previous: null }
+          : { current: next, previous: current.current });
+      }).catch(() => {}).finally(() => setFeaturedLoading(false));
+      return;
+    }
+    setFeaturedState((current) => window.matchMedia?.("(prefers-reduced-motion: reduce)").matches
+      ? { current: next, previous: null }
+      : { current: next, previous: current.current });
+  };
   const renderFeaturedPost = (post, phase) => <a key={post.slug} className={`home-refresh-feature is-${phase}`} href={`#/post/${post.slug}`} aria-hidden={phase === "outgoing" ? "true" : undefined} tabIndex={phase === "outgoing" ? -1 : undefined}>
     {post.image ? <img src={post.cardImage || post.image} {...responsiveImageProps(post.cardImage || post.image, "(max-width: 760px) calc(100vw - 24px), min(62vw, 760px)")} alt="" loading={phase === "current" ? "eager" : "lazy"} decoding="async" fetchPriority={phase === "current" ? "high" : "low"} onLoad={(event) => applyFeaturedTone(event.currentTarget)} style={{ objectPosition: post.cardPosition || post.coverPosition || "center" }} /> : <span className="home-refresh-feature-placeholder"><BookOpenText size={48} weight="duotone" /></span>}
     <span className="home-refresh-feature-shade" />
@@ -123,7 +138,7 @@ export function HomePage({ stats }) {
             <span className="home-refresh-feature-empty-icon" aria-hidden="true"><BookOpenText size={48} weight="duotone" /></span>
             <strong>暂无置顶文章</strong>
           </div>}
-          {featuredPosts.length > 1 && <button type="button" className="home-refresh-feature-switch" onClick={showNextFeaturedPost} onPointerUp={(event) => event.currentTarget.blur()} aria-label={`下一篇置顶文章，当前第 ${featuredIndex + 1} 篇，共 ${featuredPosts.length} 篇：《${featuredPost.title}》`} title="切换到下一篇置顶文章"><Article size={15} weight="bold" aria-hidden="true" /><span aria-hidden="true"><strong>{featuredIndex + 1}</strong><i>/</i>{featuredPosts.length}</span></button>}
+          {featuredCount > 1 && featuredPost && <button type="button" className="home-refresh-feature-switch" onClick={showNextFeaturedPost} onPointerUp={(event) => event.currentTarget.blur()} aria-label={`下一篇置顶文章，当前第 ${featuredIndex + 1} 篇，共 ${featuredCount} 篇：《${featuredPost.title}》`} title="切换到下一篇置顶文章"><Article size={15} weight="bold" aria-hidden="true" /><span aria-hidden="true"><strong>{featuredIndex + 1}</strong><i>/</i>{featuredCount}</span></button>}
         </div>
 
         <aside className="home-refresh-profile material-panel" aria-labelledby="home-profile-name">
@@ -132,10 +147,10 @@ export function HomePage({ stats }) {
             <span><small>ABOUT ME</small><strong id="home-profile-name">{authorProfile.name}</strong><em>{authorProfile.tagline}</em></span>
           </div>
           <p>{authorProfile.introduction}</p>
-          <div className="home-refresh-stats" style={{ "--home-stats-count": homeStatsCount }} aria-label={[`${posts.length} 篇文章`, showPoems && `${poems.length} 首小诗`, showMusic && `${musicCount} 篇音乐手记`].filter(Boolean).join("，")}>
-            <span><strong>{posts.length}</strong><small>文章</small></span>
-            {showPoems && <span><strong>{poems.length}</strong><small>小诗</small></span>}
-            {showMusic && <span><strong>{musicCount}</strong><small>音乐</small></span>}
+          <div className="home-refresh-stats" style={{ "--home-stats-count": homeStatsCount }} aria-label={[`${homeContent.counts.post || 0} 篇文章`, showPoems && `${homeContent.counts.poem || 0} 首小诗`, showMusic && `${homeContent.counts.music || 0} 篇音乐手记`].filter(Boolean).join("，")}>
+            <span><strong>{homeContent.counts.post || 0}</strong><small>文章</small></span>
+            {showPoems && <span><strong>{homeContent.counts.poem || 0}</strong><small>小诗</small></span>}
+            {showMusic && <span><strong>{homeContent.counts.music || 0}</strong><small>音乐</small></span>}
           </div>
         </aside>
       </section>

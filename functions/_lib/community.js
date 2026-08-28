@@ -182,10 +182,11 @@ export function normalizeComment(value) {
 }
 
 export function validateTarget(type, slug) {
-  if (!["post", "poem", "music"].includes(type)) throw new ApiError(400, "内容类型无效。", "invalid_target");
+  const normalizedType = String(type || "").trim();
+  if (!/^[a-z][a-z0-9_-]{0,31}$/u.test(normalizedType)) throw new ApiError(400, "内容类型无效。", "invalid_target");
   const normalizedSlug = String(slug || "").trim();
   if (!/^[a-z0-9][a-z0-9/_-]{0,119}$/u.test(normalizedSlug)) throw new ApiError(400, "内容地址无效。", "invalid_target");
-  return { type, slug: normalizedSlug };
+  return { type: normalizedType, slug: normalizedSlug };
 }
 
 export function parseCookies(request) {
@@ -223,8 +224,8 @@ export async function createSession(db, userId, request, maximumActiveSessions =
     db.prepare(`DELETE FROM sessions WHERE user_id = ? AND id_hash NOT IN (
       SELECT id_hash FROM sessions WHERE user_id = ? ORDER BY created_at DESC LIMIT ?
     )`).bind(userId, userId, keepExisting),
-    db.prepare("INSERT INTO sessions (id_hash, user_id, expires_at, created_at, last_seen_at) VALUES (?, ?, ?, ?, ?)")
-      .bind(await sha256(token), userId, now + SESSION_TTL_SECONDS * 1000, now, now),
+    db.prepare("INSERT INTO sessions (id_hash, user_id, expires_at, created_at) VALUES (?, ?, ?, ?)")
+      .bind(await sha256(token), userId, now + SESSION_TTL_SECONDS * 1000, now),
   ]);
   return { token, cookie: sessionCookie(token, request) };
 }

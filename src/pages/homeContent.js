@@ -1,8 +1,12 @@
-export function getHomeContent(posts, poems, musicReviews) {
-  const featuredPosts = posts
+export function sortFeaturedPosts(posts) {
+  return [...posts]
     .filter((post) => post.featured)
     .sort((left, right) => (left.featuredOrder ?? Number.MAX_SAFE_INTEGER) - (right.featuredOrder ?? Number.MAX_SAFE_INTEGER)
       || new Date(left.date) - new Date(right.date));
+}
+
+export function getHomeContent(posts, poems, musicReviews) {
+  const featuredPosts = sortFeaturedPosts(posts);
   const recentPosts = [...posts]
     .sort((left, right) => new Date(right.date) - new Date(left.date))
     .slice(0, 5);
