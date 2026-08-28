@@ -26,12 +26,18 @@ test("homepage fonts are inlined while the complete catalog loads only on demand
   assert.ok(fontCss.length < fullFontCss.length / 2, "首屏字体声明应明显小于完整字符目录");
 });
 
-test("homepage images receive automatic responsive candidates while retaining original fallbacks", async () => {
-  const [config, cards, home, responsive] = await Promise.all([
+test("homepage and detail images use shared responsive candidates while retaining original fallbacks", async () => {
+  const [config, cards, home, responsive, zoomable, richArticle, article, music, generator, player] = await Promise.all([
     readFile("vite.config.mjs", "utf8"),
     readFile("src/components/Cards.jsx", "utf8"),
     readFile("src/pages/HomePage.jsx", "utf8"),
     readFile("src/responsiveImages.ts", "utf8"),
+    readFile("src/ZoomableImage.jsx", "utf8"),
+    readFile("src/RichArticleContent.jsx", "utf8"),
+    readFile("src/pages/ArticlePage.jsx", "utf8"),
+    readFile("src/pages/MusicPage.jsx", "utf8"),
+    readFile("scripts/generate-responsive-images.mjs", "utf8"),
+    readFile("src/ArticleMusicPlayer.jsx", "utf8"),
   ]);
 
   assert.match(config, /homeFeaturedImage/u);
@@ -44,4 +50,16 @@ test("homepage images receive automatic responsive candidates while retaining or
   assert.match(home, /responsiveImageProps\(authorProfile\.avatarSmall \|\| authorProfile\.avatar/u);
   assert.match(responsive, /srcSet:/u);
   assert.match(responsive, /candidates\.at\(-1\)\?\.src \|\| source/u);
+  assert.match(zoomable, /responsiveImageProps\(src, sizes\)/u);
+  assert.match(zoomable, /<img src=\{src\} alt=\{alt\} \/>/u);
+  assert.match(richArticle, /sizes="\(max-width: 760px\) calc\(100vw - 68px\), 790px"/u);
+  assert.match(article, /sizes="\(max-width: 760px\) calc\(100vw - 68px\), 790px"/u);
+  assert.match(music, /responsiveImageProps\(review\.image,/u);
+  assert.match(generator, /detail: \[384, 576, 768, 960, 1280, 1600\]/u);
+  assert.match(generator, /extractLocalRasterSources/u);
+  assert.match(generator, /addTarget\(targets, post\.image, "detail"\)/u);
+  assert.match(generator, /post\.musicBlocks/iu);
+  assert.match(generator, /track\?\.cover/iu);
+  assert.match(generator, /addTarget\(targets, entry\.image, "thumbnail"\)/u);
+  assert.match(player, /responsiveImageProps\(track\.cover,/u);
 });

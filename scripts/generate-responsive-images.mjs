@@ -2,7 +2,7 @@ import { createHash, randomUUID } from "node:crypto";
 import { lstat, mkdir, readFile, readdir, realpath, rename, stat, unlink, writeFile } from "node:fs/promises";
 import { basename, dirname, extname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { parseMusicReviewMetadata, parsePostMetadata } from "../src/content/frontmatter.js";
+import { parseMarkdownSource, parseMusicReviewMetadata, parsePostMetadata } from "../src/content/frontmatter.js";
 import { getHomeContent } from "../src/pages/homeContent.js";
 import { siteConfig } from "../src/siteConfig.js";
 
@@ -15,7 +15,9 @@ const supportedExtensions = new Set([".avif", ".jpeg", ".jpg", ".png", ".webp"])
 const roleWidths = {
   avatar: [128, 256, 384],
   card: [384, 576, 640, 768, 960, 1280],
+  detail: [384, 576, 768, 960, 1280, 1600],
   hero: [768, 960, 1600],
+  thumbnail: [128, 256, 384],
 };
 const encoderVersion = "native-format-v2";
 
@@ -50,6 +52,58 @@ function addTarget(targets, source, role) {
   targets.get(source).add(role);
 }
 
+function stripMarkdownCode(markdown) {
+  const lines = String(markdown || "").split(/\r?\n/u);
+  let fence = null;
+  return lines.map((line) => {
+    const marker = line.match(/^\s{0,3}(`{3,}|~{3,})/u)?.[1];
+    if (fence) {
+      if (marker && marker[0] === fence.marker && marker.length >= fence.length) fence = null;
+      return "";
+    }
+    if (marker) {
+      fence = { marker: marker[0], length: marker.length };
+      return "";
+    }
+    if (/^(?: {4}|\t)/u.test(line)) return "";
+    return line.replace(/`+[^`\r\n]*`+/gu, "");
+  }).join("\n");
+}
+
+/**
+ * Find local raster sources that ReactMarkdown can render from a Markdown
+ * body. Code blocks and inline code are ignored so examples do not create
+ * build artifacts. The returned order follows the source and is deduplicated.
+ *
+ * @param {string} markdown
+ * @returns {string[]}
+ */
+export function extractLocalRasterSources(markdown) {
+  const body = stripMarkdownCode(markdown);
+  const sources = new Set();
+  const references = new Map();
+  for (const match of body.matchAll(/^\s{0,3}\[([^\]]+)\]:\s*(?:<([^>]+)>|(\S+))/gmu)) {
+    references.set(match[1].trim().toLowerCase(), match[2] || match[3]);
+  }
+  const add = (source) => {
+    const value = source?.trim();
+    if (isLocalRasterSource(value)) sources.add(value);
+  };
+  for (const match of body.matchAll(/!\[[^\]]*\]\(\s*(?:<([^>]+)>|([^\s)]+))/gu)) add(match[1] || match[2]);
+  for (const match of body.matchAll(/!\[([^\]]*)\]\[([^\]]*)\]/gu)) {
+    const reference = (match[2].trim() || match[1].trim()).toLowerCase();
+    add(references.get(reference));
+  }
+  for (const match of body.matchAll(/!\[([^\]]+)\](?!\s*(?:\(|\[))/gu)) {
+    add(references.get(match[1].trim().toLowerCase()));
+  }
+  return [...sources];
+}
+
+function addMarkdownTargets(targets, markdown) {
+  for (const source of extractLocalRasterSources(markdown)) addTarget(targets, source, "detail");
+}
+
 async function referencedLocalImages() {
   const targets = new Map();
   const criticalSources = new Set();
@@ -72,11 +126,19 @@ async function referencedLocalImages() {
     const sourcePath = relative(root, path).replaceAll("\\", "/");
     if (sourcePath.startsWith("src/content/posts/")) {
       const post = parsePostMetadata(sourcePath, source);
+      const { content } = parseMarkdownSource(sourcePath, source);
       posts.push(post);
       addTarget(targets, post.cardImage || post.image, "card");
+      if (post.coverMode !== "none") addTarget(targets, post.image, "detail");
+      addTarget(targets, post.music?.cover, "thumbnail");
+      for (const track of Array.isArray(post.musicBlocks) ? post.musicBlocks : []) addTarget(targets, track?.cover, "thumbnail");
+      addMarkdownTargets(targets, content);
     } else if (sourcePath.startsWith("src/content/music/")) {
       const entry = parseMusicReviewMetadata(sourcePath, source);
       addTarget(targets, entry.cardImage || entry.image, "card");
+      addTarget(targets, entry.image, "thumbnail");
+      if (!entry.url) addTarget(targets, entry.image, "detail");
+      addMarkdownTargets(targets, parseMarkdownSource(sourcePath, source).content);
     }
   }
   const { featuredPosts, recentPosts } = getHomeContent(posts, [], {});

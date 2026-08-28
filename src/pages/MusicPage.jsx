@@ -14,6 +14,7 @@ import { loadMusicReview, musicReviews, siteConfig } from "../content/index.js";
 import { usePagination, useResponsivePageSize } from "../hooks.js";
 import { musicSections } from "../musicSections.js";
 import { go, parseHashQuery } from "../routeState.js";
+import { responsiveImageProps } from "../responsiveImages.ts";
 import { formatContentDate, getPostWordCount } from "../siteUtils.js";
 import { NotFound } from "./NotFound.jsx";
 
@@ -48,8 +49,8 @@ export function MusicDetailPage({ path, stats, onView }) {
   if (!review) return <NotFound />;
   return <main className="article-page music-detail-page material-panel page-width"><button className="back-button" onClick={() => history.length > 1 ? history.back() : go(`/music${section === "songs" ? "" : `?section=${section}`}`)}><ArrowLeft size={17} />返回</button><article className="article-detail article-detail--music">
     <div className="article-intro-copy"><span className="category">MUSIC NOTE</span><h1>{review.title}</h1>{review.excerpt && <p className="article-lede">{review.excerpt}</p>}<div className="post-meta"><span><TextAa size={16} />{getPostWordCount(review)} 字</span><span><CalendarBlank size={16} />{formatContentDate(review.date)}</span><span><Eye size={16} />{stats[statsSlug]?.views || 0}</span><span><ChatCircleDots size={16} />{stats[statsSlug]?.comments || 0}</span></div></div>
-    {review.url && <a className="music-source-card music-source-card--lead" href={review.url} target="_blank" rel="noreferrer">{review.image && <img src={review.image} alt={`${review.sourceTitle || review.title}专辑封面`} decoding="async" />}<span><small>网易云音乐 · {review.kind}</small><strong>{review.sourceTitle || review.title}</strong><em>{review.sourceMeta || review.kind}</em></span><b>{review.action || "前往收听"}<ArrowRight size={17} /></b></a>}
-    {!review.url && review.image && <img className="music-detail-cover" src={review.image} alt={`${review.title}的封面`} decoding="async" />}
+    {review.url && <a className="music-source-card music-source-card--lead" href={review.url} target="_blank" rel="noreferrer">{review.image && <img src={review.image} {...responsiveImageProps(review.image, "(max-width: 760px) 88px, 104px")} alt={`${review.sourceTitle || review.title}专辑封面`} decoding="async" />}<span><small>网易云音乐 · {review.kind}</small><strong>{review.sourceTitle || review.title}</strong><em>{review.sourceMeta || review.kind}</em></span><b>{review.action || "前往收听"}<ArrowRight size={17} /></b></a>}
+    {!review.url && review.image && <img className="music-detail-cover" src={review.image} {...responsiveImageProps(review.image, "(max-width: 760px) calc(100vw - 68px), 790px")} alt={`${review.title}的封面`} decoding="async" />}
     {detailReview?.content && <RichArticleContent post={detailReview} />}
   </article><CommentsSection targetType="music" slug={`${section}/${review.slug}`} /></main>;
 }

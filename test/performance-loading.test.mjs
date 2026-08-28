@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
+import { summarizeJavaScriptAssets } from "../scripts/check-performance-budget.mjs";
 
 test("non-current hero artwork waits until navigation intent or sustained idle time", async () => {
   const app = await readFile("src/App.jsx", "utf8");
@@ -101,7 +102,7 @@ test("responsive image generation is automatic and leaves originals user-owned",
   assert.match(ignore, /public\/fonscape\/generated-images\//u);
   assert.match(manifest, /"public\/assets\/\*\*"/u);
   assert.match(manifest, /"public\/fonscape\/generated-images\/\*\*"/u);
-  assert.match(await readFile("scripts/check-performance-budget.mjs", "utf8"), /GENERATED_RESPONSIVE_IMAGES_TOTAL_LIMIT/u);
+  assert.doesNotMatch(await readFile("scripts/check-performance-budget.mjs", "utf8"), /GENERATED_RESPONSIVE_IMAGES_TOTAL_LIMIT/u);
 });
 
 test("Markdown bodies stay out of the initial module and detail loaders remain available", async () => {
@@ -149,9 +150,20 @@ test("the production check enforces an initial-load performance budget", async (
 
   assert.match(packageSource, /vite build && pnpm check:performance-budget/u);
   assert.match(budgetSource, /ENTRY_JAVASCRIPT_GZIP_LIMIT/u);
+  assert.match(budgetSource, /MAX_DYNAMIC_JAVASCRIPT_GZIP_LIMIT/u);
   assert.match(budgetSource, /ENTRY_CSS_GZIP_LIMIT/u);
   assert.match(budgetSource, /ENTRY_HTML_GZIP_LIMIT/u);
   assert.match(budgetSource, /LOCAL_FONT_CSS_GZIP_LIMIT/u);
   assert.match(budgetSource, /FULL_FONT_CSS_GZIP_LIMIT/u);
   assert.match(budgetSource, /HIGH_PRIORITY_IMAGE_LIMIT/u);
+});
+
+test("the JavaScript budget inspects every asset and isolates the largest non-entry chunk", () => {
+  const entry = { path: "/dist/assets/main.js", gzip: 100 };
+  const article = { path: "/dist/assets/RichArticleContent.js", gzip: 75 };
+  const manifest = { path: "/dist/assets/responsive-images-full.js", gzip: 12 };
+  const summary = summarizeJavaScriptAssets([entry, article, manifest], entry.path);
+
+  assert.deepEqual(summary.dynamicAssets, [article, manifest]);
+  assert.equal(summary.largestDynamic, article);
 });

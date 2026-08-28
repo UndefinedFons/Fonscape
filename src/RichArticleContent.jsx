@@ -70,7 +70,7 @@ function CodeWindow({ children }) {
 }
 
 function RichImage({ src, alt = "", title }) {
-  return <ZoomableImage src={src} alt={alt} caption={title} triggerClassName="article-inline-image" />;
+  return <ZoomableImage src={src} alt={alt} caption={title} sizes="(max-width: 760px) calc(100vw - 68px), 790px" triggerClassName="article-inline-image" />;
 }
 
 const components = {
