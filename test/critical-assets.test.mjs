@@ -52,8 +52,9 @@ test("homepage and detail images use shared responsive candidates while retainin
   assert.match(responsive, /candidates\.at\(-1\)\?\.src \|\| source/u);
   assert.match(zoomable, /responsiveImageProps\(src, sizes\)/u);
   assert.match(zoomable, /<img src=\{src\} alt=\{alt\} \/>/u);
-  assert.match(richArticle, /sizes="\(max-width: 760px\) calc\(100vw - 68px\), 790px"/u);
-  assert.match(article, /sizes="\(max-width: 760px\) calc\(100vw - 68px\), 790px"/u);
+  assert.match(responsive, /detailImageSizes = "\(max-width: 760px\) calc\(100vw - 68px\), min\(calc\(100vw - 116px\), 790px\)"/u);
+  assert.match(richArticle, /sizes=\{detailImageSizes\}/u);
+  assert.match(article, /sizes=\{detailImageSizes\}/u);
   assert.match(music, /responsiveImageProps\(review\.image,/u);
   assert.match(generator, /detail: \[384, 576, 768, 960, 1280, 1600\]/u);
   assert.match(generator, /extractLocalRasterSources/u);
