@@ -5,6 +5,7 @@ import { Quotes } from "@phosphor-icons/react/Quotes";
 import { Highlight, themes } from "prism-react-renderer";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { detailImageSizes } from "./responsiveImages.ts";
 import { getPostMarkdown, getPostOutline } from "./richContent.js";
 import { ZoomableImage } from "./ZoomableImage.jsx";
 
@@ -70,7 +71,7 @@ function CodeWindow({ children }) {
 }
 
 function RichImage({ src, alt = "", title }) {
-  return <ZoomableImage src={src} alt={alt} caption={title} sizes="(max-width: 760px) calc(100vw - 68px), 790px" triggerClassName="article-inline-image" />;
+  return <ZoomableImage src={src} alt={alt} caption={title} sizes={detailImageSizes} triggerClassName="article-inline-image" />;
 }
 
 const components = {

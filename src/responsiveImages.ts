@@ -3,6 +3,8 @@ import { responsiveImages } from "../functions/_generated/responsive-images.js";
 type ResponsiveImageCandidate = { src: string; width: number };
 type ResponsiveImage = { width: number; height: number; candidates: ResponsiveImageCandidate[] };
 
+export const detailImageSizes = "(max-width: 760px) calc(100vw - 68px), min(calc(100vw - 116px), 790px)";
+
 const responsiveImageCatalog = responsiveImages as Record<string, ResponsiveImage>;
 let fullResponsiveImageCatalog: Record<string, ResponsiveImage> | null = null;
 let fullResponsiveImageCatalogPromise: Promise<void> | undefined;
