@@ -1,6 +1,6 @@
 {
   "name": "fonscape",
-  "version": "1.9.0",
+  "version": "1.10.0",
   "description": "Fonscape（风栖），一款清新、响应式、注重阅读体验的 React 个人博客主题模板。",
   "private": true,
   "license": "MIT",
@@ -41,17 +41,18 @@
     "preview": "vite preview",
     "pretest": "node scripts/generate-content-targets.mjs && node scripts/generate-font-css.mjs && node scripts/generate-responsive-images.mjs",
     "test": "node --test",
+    "lint": "eslint . --max-warnings 15",
     "typecheck": "tsc -p tsconfig.json",
     "db:migrate:cloudflare": "wrangler d1 migrations apply DB --remote",
     "deploy": "pnpm db:migrate:cloudflare && wrangler deploy",
     "migrate:turso": "node scripts/migrate-turso.mjs",
     "fonscape": "node scripts/fonscape-update.mjs",
-    "check": "pnpm test && pnpm typecheck && vite build && pnpm check:performance-budget"
+    "check": "pnpm test && pnpm typecheck && pnpm lint && vite build && pnpm check:performance-budget"
   },
   "dependencies": {
     "@libsql/client": "0.17.4",
-    "@vercel/functions": "3.9.1",
     "@phosphor-icons/react": "^2.1.10",
+    "@vercel/functions": "3.9.1",
     "@vitejs/plugin-react": "5.0.4",
     "prism-react-renderer": "^2.4.1",
     "react": "19.2.0",
@@ -61,6 +62,10 @@
     "vite": "6.4.3"
   },
   "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "eslint": "10.9.1",
+    "eslint-plugin-react-hooks": "7.1.1",
+    "globals": "17.11.0",
     "sharp": "0.35.2",
     "typescript": "^5.9.2",
     "wrangler": "4.120.0"

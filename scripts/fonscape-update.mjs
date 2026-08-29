@@ -218,7 +218,7 @@ function staticPatternRoot(pattern) {
   const segments = safeRelativePath(pattern).split("/");
   const literalSegments = [];
   for (const segment of segments) {
-    if (/[*?\[\]{}]/u.test(segment)) break;
+    if (/[*?[\]{}]/u.test(segment)) break;
     literalSegments.push(segment);
   }
   return literalSegments.join("/");

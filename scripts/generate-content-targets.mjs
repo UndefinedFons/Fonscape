@@ -118,7 +118,6 @@ function homeEntry(type, entry) {
     ...(entry.image ? { image: String(entry.image) } : {}),
     ...(entry.cardImage ? { cardImage: String(entry.cardImage) } : {}),
     ...(entry.cardPosition ? { cardPosition: String(entry.cardPosition) } : {}),
-    ...(entry.coverPosition ? { coverPosition: String(entry.coverPosition) } : {}),
   };
   if (type === "poem") return {
     ...common,

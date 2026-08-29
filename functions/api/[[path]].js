@@ -77,11 +77,12 @@ async function session(context) {
     db.prepare("SELECT COUNT(*) AS count FROM comments WHERE ? = 'admin' AND user_id != ? AND parent_id IS NULL AND status = 'published' AND created_at > ?")
       .bind(user.role, user.id, user.admin_comments_seen_at || user.created_at),
   ]);
-  return json({ user: publicUser({
+  const publicViewer = publicUser({
     ...user,
     unread_replies: unreadReplies.results?.[0]?.count || 0,
     unread_admin_comments: unreadAdminComments.results?.[0]?.count || 0,
-  }, context.env) });
+  });
+  return json({ user: publicViewer });
 }
 
 async function register(context) {
@@ -117,7 +118,7 @@ async function register(context) {
   }
   const auth = await createSession(db, id, context.request, limitFromEnv(context.env, "MAX_ACTIVE_SESSIONS"));
   const user = await userById(db, id);
-  return json({ user: publicUser(user, context.env) }, 201, { "Set-Cookie": auth.cookie });
+  return json({ user: publicUser(user) }, 201, { "Set-Cookie": auth.cookie });
 }
 
 async function adminSetupState(db) {
@@ -180,7 +181,7 @@ async function setupAdmin(context) {
   }
   const auth = await createSession(db, id, context.request, limitFromEnv(context.env, "MAX_ACTIVE_SESSIONS"));
   const user = await userById(db, id);
-  return json({ user: publicUser(user, context.env) }, 201, { "Set-Cookie": auth.cookie });
+  return json({ user: publicUser(user) }, 201, { "Set-Cookie": auth.cookie });
 }
 
 async function login(context) {
@@ -198,7 +199,7 @@ async function login(context) {
   if (!await constantTimeEqual(credentials.hash, user.password_hash)) throw new ApiError(401, "账户名或密码不正确。", "invalid_credentials");
   if (user.status !== "active") throw new ApiError(403, "该账户暂时无法登录。", "account_banned");
   const auth = await createSession(db, user.id, context.request, limitFromEnv(context.env, "MAX_ACTIVE_SESSIONS"));
-  return json({ user: publicUser(user, context.env) }, 200, { "Set-Cookie": auth.cookie });
+  return json({ user: publicUser(user) }, 200, { "Set-Cookie": auth.cookie });
 }
 
 async function logout(context) {
@@ -217,7 +218,7 @@ async function updateMe(context) {
   await db.prepare("UPDATE users SET nickname = ?, updated_at = ? WHERE id = ?").bind(nickname, now, user.id).run();
   const updated = await userById(db, user.id);
   context.data.currentUser = updated;
-  return json({ user: publicUser(updated, context.env) });
+  return json({ user: publicUser(updated) });
 }
 
 async function uploadAvatar(context) {
@@ -250,7 +251,7 @@ async function uploadAvatar(context) {
   }
   const updated = await userById(db, user.id);
   context.data.currentUser = updated;
-  return json({ user: publicUser(updated, context.env) });
+  return json({ user: publicUser(updated) });
 }
 
 function avatarBody(value) {
@@ -332,7 +333,7 @@ async function listComments(context, url) {
   const target = validateTarget(url.searchParams.get("type"), url.searchParams.get("slug"));
   await assertTargetExists(db, target);
   const viewer = await currentUser(context);
-  const viewerRole = viewer ? publicUser(viewer, context.env).role : null;
+  const viewerRole = viewer ? publicUser(viewer).role : null;
   const result = await db.prepare(`${commentSelect} WHERE c.content_type = ? AND c.content_slug = ? AND c.status = 'published'
     AND (c.parent_id IS NULL OR EXISTS (SELECT 1 FROM comments parent WHERE parent.id = c.parent_id AND parent.status = 'published'))
     ORDER BY c.created_at ASC LIMIT 200`)
@@ -372,7 +373,7 @@ async function createComment(context) {
     now,
   }, context.env);
   const row = await db.prepare(`${commentSelect} WHERE c.id = ?`).bind(id).first();
-  return json({ comment: commentRow(row, user.id, publicUser(user, context.env).role) }, 201);
+  return json({ comment: commentRow(row, user.id, publicUser(user).role) }, 201);
 }
 
 async function deleteComment(context, commentId) {
@@ -381,11 +382,11 @@ async function deleteComment(context, commentId) {
   const db = requireDatabase(context.env);
   const existing = await db.prepare("SELECT user_id, status FROM comments WHERE id = ? LIMIT 1").bind(commentId).first();
   if (!existing) throw new ApiError(404, "评论不存在。", "comment_not_found");
-  const viewer = publicUser(user, context.env);
+  const viewer = publicUser(user);
   if (existing.user_id !== user.id && viewer.role !== "admin") throw new ApiError(403, "不能删除其他人的评论。", "not_comment_owner");
   if (existing.status === "deleted") return json({ ok: true });
   const now = Date.now();
-  const result = await db.prepare("UPDATE comments SET body = '[已删除]', status = 'deleted', updated_at = ?, moderated_at = ?, moderated_by = ? WHERE id = ? AND status != 'deleted'")
+  await db.prepare("UPDATE comments SET body = '[已删除]', status = 'deleted', updated_at = ?, moderated_at = ?, moderated_by = ? WHERE id = ? AND status != 'deleted'")
     .bind(now, viewer.role === "admin" ? now : null, viewer.role === "admin" ? user.id : null, commentId).run();
   return json({ ok: true });
 }

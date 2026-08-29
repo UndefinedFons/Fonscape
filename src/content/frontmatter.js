@@ -14,7 +14,7 @@ function parseFrontmatterValue(rawValue, path, key) {
   if (value === "true") return true;
   if (value === "false") return false;
   if (/^-?\d+(?:\.\d+)?$/u.test(value)) return Number(value);
-  if (/^[\[{"']/u.test(value)) {
+  if (/^[[{"']/u.test(value)) {
     try {
       if (value.startsWith("'") && value.endsWith("'")) {
         return value.slice(1, -1).replace(/''/gu, "'");
@@ -84,7 +84,7 @@ function validateCommonEntry(entry, path) {
  */
 export function parsePost(path, source, options = {}) {
   const { data, filename, content } = parseMarkdownSource(path, source);
-  const { content: _frontmatterContent, ...frontmatter } = data;
+  const { content: _frontmatterContent, coverPosition: _coverPosition, ...frontmatter } = data;
   if (Object.hasOwn(data, "coverAlt")) throw new Error(`${path} 的文章封面无需配置 coverAlt，系统会自动生成替代文字。`);
   if (Object.hasOwn(data, "coverSide")) throw new Error(`${path} 的文章封面不支持 coverSide。`);
   if (Object.hasOwn(data, "coverMode") && !["wide", "none"].includes(data.coverMode)) {
@@ -139,12 +139,11 @@ export function parsePoem(path, source, options = {}) {
  */
 export function parseMusicReview(path, source, options = {}) {
   const { data, filename, content } = parseMarkdownSource(path, source);
-  const { content: _frontmatterContent, ...frontmatter } = data;
+  const { content: _frontmatterContent, reading: _reading, ...frontmatter } = data;
   const review = {
     ...frontmatter,
     slug: data.slug || filename,
     section: data.section || "songs",
-    reading: data.reading || `${Math.max(1, Math.ceil(content.length / 500))} 分钟`,
     firstParagraph: getFirstParagraph(content),
     wordCount: countWords(content),
     ...(options.includeContent === false ? {} : { content }),
@@ -200,11 +199,15 @@ export function parseGenericContentMetadata(path, source) {
 }
 
 /**
- * @param {import("../types.js").DatedEntry} left
- * @param {import("../types.js").DatedEntry} right
+ * @param {{date: string, slug?: string, key?: string}} left
+ * @param {{date: string, slug?: string, key?: string}} right
  */
 export function sortNewestFirst(left, right) {
-  return new Date(right.date).getTime() - new Date(left.date).getTime() || left.slug.localeCompare(right.slug);
+  const dateDifference = new Date(right.date).getTime() - new Date(left.date).getTime();
+  if (dateDifference) return dateDifference;
+  const leftKey = String(left.slug || left.key || "");
+  const rightKey = String(right.slug || right.key || "");
+  return leftKey.localeCompare(rightKey);
 }
 
 /**

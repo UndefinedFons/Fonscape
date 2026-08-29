@@ -84,7 +84,6 @@ export interface Post extends DatedEntry {
   cardImage?: string;
   cardPosition?: string;
   coverMode?: "wide" | "none";
-  coverPosition?: string;
   [key: string]: unknown;
 }
 
@@ -112,7 +111,6 @@ export interface MusicReview extends DatedEntry {
   title: string;
   kind: string;
   section: "songs" | "artists" | "albums";
-  reading: string;
   content: string;
   firstParagraph: string;
   wordCount: number;

@@ -26,6 +26,18 @@ test("homepage fonts are inlined while the complete catalog loads only on demand
   assert.ok(fontCss.length < fullFontCss.length / 2, "首屏字体声明应明显小于完整字符目录");
 });
 
+test("site metadata configuration is applied to the generated HTML", async () => {
+  const { applySiteMetadata } = await import("../vite.config.mjs");
+  const transformed = applySiteMetadata(await readFile("index.html", "utf8"), {
+    language: "en",
+    title: "Notes $& $1 & ideas",
+    description: 'A $& $1 <small> site "description"',
+  });
+  assert.match(transformed, /<html lang="en">/u);
+  assert.match(transformed, /<title>Notes \$&amp; \$1 &amp; ideas<\/title>/u);
+  assert.match(transformed, /content="A \$&amp; \$1 &lt;small> site &quot;description&quot;"/u);
+});
+
 test("homepage and detail images use shared responsive candidates while retaining original fallbacks", async () => {
   const [config, cards, home, responsive, zoomable, richArticle, article, music, generator, player] = await Promise.all([
     readFile("vite.config.mjs", "utf8"),
@@ -56,7 +68,7 @@ test("homepage and detail images use shared responsive candidates while retainin
   assert.match(richArticle, /sizes=\{detailImageSizes\}/u);
   assert.match(article, /sizes=\{detailImageSizes\}/u);
   assert.match(music, /responsiveImageProps\(review\.image,/u);
-  assert.match(generator, /detail: \[384, 576, 768, 960, 1280, 1600\]/u);
+  assert.match(generator, /detail: \[384, 640, 960, 1280, 1600\]/u);
   assert.match(generator, /extractLocalRasterSources/u);
   assert.match(generator, /addTarget\(targets, post\.image, "detail"\)/u);
   assert.match(generator, /post\.musicBlocks/iu);

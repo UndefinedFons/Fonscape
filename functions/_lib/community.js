@@ -239,7 +239,7 @@ function effectiveRole(user) {
   return user.role;
 }
 
-export function publicUser(user, env) {
+export function publicUser(user) {
   const role = effectiveRole(user);
   const avatarUpdatedAt = user.avatar_user_id === user.id && user.avatar_updated_at ? Number(user.avatar_updated_at) : null;
   return {

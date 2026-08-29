@@ -13,11 +13,12 @@ const manifestPath = join(root, "functions", "_generated", "responsive-images.js
 const fullManifestPath = join(root, "functions", "_generated", "responsive-images-full.js");
 const fullManifestChunkPattern = /^responsive-images-full-(\d+)\.js$/u;
 const fullManifestChunkSize = 100;
+export const MAX_RESPONSIVE_CANDIDATES_PER_SOURCE = 5;
 const supportedExtensions = new Set([".avif", ".jpeg", ".jpg", ".png", ".webp"]);
 const roleWidths = {
   avatar: [128, 256, 384],
-  card: [384, 576, 640, 768, 960, 1280],
-  detail: [384, 576, 768, 960, 1280, 1600],
+  card: [384, 640, 960, 1280],
+  detail: [384, 640, 960, 1280, 1600],
   hero: [768, 960, 1600],
   thumbnail: [128, 256, 384],
 };
@@ -52,6 +53,24 @@ function addTarget(targets, source, role) {
   if (!isLocalRasterSource(source)) return;
   if (!targets.has(source)) targets.set(source, new Set());
   targets.get(source).add(role);
+}
+
+export function selectResponsiveWidths(widths, { preferSmall = false, limit = MAX_RESPONSIVE_CANDIDATES_PER_SOURCE } = {}) {
+  const available = [...new Set(widths)].filter(Number.isFinite).sort((left, right) => left - right);
+  if (available.length <= limit) return available;
+  const selected = new Set([available[0], available.at(-1)]);
+  const priorities = preferSmall
+    ? [384, 640, 960, 256, 1280, 768, 1600, 128]
+    : [640, 960, 1280, 768, 384, 1600, 256, 128];
+  for (const width of priorities) {
+    if (selected.size >= limit) break;
+    if (available.includes(width)) selected.add(width);
+  }
+  for (const width of available) {
+    if (selected.size >= limit) break;
+    selected.add(width);
+  }
+  return [...selected].sort((left, right) => left - right);
 }
 
 function stripMarkdownCode(markdown) {
@@ -137,7 +156,7 @@ async function referencedLocalImages() {
       addMarkdownTargets(targets, content);
     } else if (sourcePath.startsWith("src/content/music/")) {
       const entry = parseMusicReviewMetadata(sourcePath, source);
-      addTarget(targets, entry.cardImage || entry.image, "card");
+      addTarget(targets, entry.cardImage || entry.image, "thumbnail");
       addTarget(targets, entry.image, "thumbnail");
       if (!entry.url) addTarget(targets, entry.image, "detail");
       addMarkdownTargets(targets, parseMarkdownSource(sourcePath, source).content);
@@ -318,9 +337,12 @@ export async function generateResponsiveImages({ check = false, manifestOnly = f
     if (!metadata.width || !metadata.height || metadata.pages > 1) continue;
     const digest = createHash("sha256").update(encoderFingerprint).update(sourceBuffer).digest("hex").slice(0, 12);
     const stem = basename(sourcePath, extension).replaceAll(/[^a-z0-9_-]+/giu, "-").replaceAll(/^-|-$/gu, "") || "image";
-    const widths = [...new Set([...targets.get(source)].flatMap((role) => roleWidths[role] || []))]
+    const roles = targets.get(source);
+    const widths = selectResponsiveWidths([...new Set([...roles].flatMap((role) => roleWidths[role] || []))]
       .sort((left, right) => left - right)
-      .filter((width) => width < metadata.width);
+      .filter((width) => width < metadata.width), {
+      preferSmall: roles.has("avatar") || roles.has("thumbnail"),
+    });
     const candidates = [];
     for (const width of widths) {
       const fileName = `${stem}-${digest}-w${width}${extension}`;

@@ -15,6 +15,7 @@
   "include": [
     "src/content/frontmatter.js",
     "src/heroImages.js",
+    "src/pages/homeContent.js",
     "src/routeState.js",
     "src/richContent.js",
     "src/responsiveImages.ts",
