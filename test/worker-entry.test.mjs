@@ -142,5 +142,5 @@ test("Worker runs database hygiene through its scheduled handler", async () => {
 
 test("Wrangler config schedules weekly runtime reconciliation", async () => {
   const config = JSON.parse(await readFile(new URL("../wrangler.jsonc", import.meta.url), "utf8"));
-  assert.deepEqual(config.triggers?.crons, ["17 3 * * 0"]);
+  assert.deepEqual(config.triggers?.crons, ["17 3 * * SUN"]);
 });
