@@ -93,6 +93,8 @@ pnpm check
 
 文章、小诗与音乐手记的字段、站点资料、资源路径和环境变量统一收录在 [使用指南](./GUIDE.md)。
 
+开发新板块、设置项或图片入口时，请同时遵守 [维护与功能扩展约束](./GUIDE.md#维护与功能扩展约束)，让功能接入统一内容分块、性能预算与共享组件体系，避免形成平行架构和重复逻辑。
+
 <details>
 <summary>常用命令</summary>
 
@@ -102,6 +104,7 @@ pnpm check
 | `pnpm build` | 生成生产构建 |
 | `pnpm preview` | 预览生产构建 |
 | `pnpm test` | 运行测试 |
+| `pnpm lint` | 检查 JavaScript、React 与 Hooks 的正确性规则 |
 | `pnpm typecheck` | 检查核心 JavaScript 数据边界的静态类型 |
 | `pnpm check` | 校验内容、运行测试与类型检查，并完成生产构建 |
 | `pnpm deploy` | 应用 D1 迁移并部署到 Cloudflare Workers |

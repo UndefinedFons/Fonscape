@@ -52,8 +52,9 @@ date: "2026-01-01"
 });
 
 test("metadata parsers keep listing data while omitting Markdown bodies", () => {
-  const post = parsePostMetadata("post.md", `---\ntitle: "文章"\ndate: "2026-01-01"\ncategory: "记录"\ncontent: "不应覆盖正文"\n---\n首段摘要。\n\n## 第一节\n\n正文。\n\n## 第二节\n\n更多正文。`);
+  const post = parsePostMetadata("post.md", `---\ntitle: "文章"\ndate: "2026-01-01"\ncategory: "记录"\ncontent: "不应覆盖正文"\ncoverPosition: "50% 30%"\n---\n首段摘要。\n\n## 第一节\n\n正文。\n\n## 第二节\n\n更多正文。`);
   assert.equal(Object.hasOwn(post, "content"), false);
+  assert.equal(Object.hasOwn(post, "coverPosition"), false);
   assert.equal(post.firstParagraph, "首段摘要。");
   assert.equal(post.wordCount, 16);
   assert.deepEqual(post.outline.map((item) => item.title), ["序章", "第一节", "第二节"]);
@@ -65,6 +66,7 @@ test("metadata parsers keep listing data while omitting Markdown bodies", () => 
 
   const music = parseMusicReviewMetadata("music.md", `---\ntitle: "音乐"\nkind: "歌曲"\ndate: "2026-01-01"\n---\n听见一首歌。`);
   assert.equal(Object.hasOwn(music, "content"), false);
+  assert.equal(Object.hasOwn(music, "reading"), false);
   assert.equal(music.firstParagraph, "听见一首歌。");
   assert.equal(music.wordCount, 5);
 });
@@ -86,4 +88,12 @@ test("mixed content can be ordered by time without grouping by type", () => {
     { slug: "music", kind: "music", date: "2026-08-24T10:00:00" },
   ];
   assert.deepEqual(items.sort(sortNewestFirst).map((item) => item.kind), ["music", "post", "poem"]);
+});
+
+test("same-date search entries use their generated keys as a stable tie-breaker", () => {
+  const items = [
+    { key: "poem-z", type: "poem", date: "2026-08-24" },
+    { key: "post-a", type: "post", date: "2026-08-24" },
+  ];
+  assert.deepEqual(items.sort(sortNewestFirst).map((item) => item.key), ["poem-z", "post-a"]);
 });

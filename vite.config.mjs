@@ -13,6 +13,17 @@ function escapeAttribute(value) {
   return String(value).replaceAll("&", "&amp;").replaceAll('"', "&quot;").replaceAll("<", "&lt;");
 }
 
+function escapeHtmlText(value) {
+  return String(value).replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
+}
+
+export function applySiteMetadata(html, config = siteConfig) {
+  return html
+    .replace(/(<html\b[^>]*\blang=")[^"]*(")/iu, (_match, before, after) => `${before}${escapeAttribute(config.language)}${after}`)
+    .replace(/(<meta\s+name="description"\s+content=")[^"]*("\s*\/?>)/iu, (_match, before, after) => `${before}${escapeAttribute(config.description)}${after}`)
+    .replace(/<title>[\s\S]*?<\/title>/iu, () => `<title>${escapeHtmlText(config.title)}</title>`);
+}
+
 export function localizeGoogleFontStylesheet(html) {
   const criticalFontCss = readFileSync(resolve(process.cwd(), "public/fonscape/google-fonts.css"), "utf8");
   return html
@@ -65,7 +76,7 @@ function heroPreloadPlugin() {
   return {
     name: "fonscape-hero-preload",
     transformIndexHtml(html) {
-      const optimizedHtml = localizeGoogleFontStylesheet(html);
+      const optimizedHtml = applySiteMetadata(localizeGoogleFontStylesheet(html));
       const homeHero = siteConfig.heroes?.home || {};
       const desktopImage = homeHero.image;
       const mobileImage = homeHero.mobileImage || desktopImage;

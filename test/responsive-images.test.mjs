@@ -11,6 +11,7 @@ import {
   renderResponsiveVariant,
   renderResponsiveVariantBuffer,
   safeLocalSourcePath,
+  selectResponsiveWidths,
   shouldKeepResponsiveVariant,
   sourceAssetPath,
 } from "../scripts/generate-responsive-images.mjs";
@@ -87,6 +88,12 @@ test("responsive variants are retained only when they reduce transfer size", () 
   assert.equal(shouldKeepResponsiveVariant(10_000, 9_999), true);
   assert.equal(shouldKeepResponsiveVariant(10_000, 10_000), false);
   assert.equal(shouldKeepResponsiveVariant(10_000, 10_001), false);
+});
+
+test("responsive width selection stays deterministic and caps each source at five generated files", () => {
+  assert.deepEqual(selectResponsiveWidths([128, 256, 384, 640, 960, 1280, 1600], { preferSmall: true }), [128, 384, 640, 960, 1600]);
+  assert.deepEqual(selectResponsiveWidths([384, 640, 768, 960, 1280, 1600]), [384, 640, 960, 1280, 1600]);
+  assert.deepEqual(selectResponsiveWidths([384, 640, 960]), [384, 640, 960]);
 });
 
 test("read-only checks can size a missing candidate without writing it", async () => {

@@ -28,8 +28,7 @@ function entryPath(type, key) {
 async function fetchJson(path, label) {
   const response = await fetch(path, { headers: { Accept: "application/json" } });
   if (!response.ok) {
-    const error = new Error(`${label}加载失败：${response.status}。`);
-    error.status = response.status;
+    const error = Object.assign(new Error(`${label}加载失败：${response.status}。`), { status: response.status });
     throw error;
   }
   return response.json();

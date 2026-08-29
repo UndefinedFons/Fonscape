@@ -83,7 +83,7 @@ test("responsive image generation is automatic and leaves originals user-owned",
   assert.equal(packageJson.scripts.precheck, undefined);
   assert.doesNotMatch(viteConfig, /buildStart/u);
   assert.match(generator, /avatar: \[128, 256, 384\]/u);
-  assert.match(generator, /card: \[384, 576, 640, 768, 960, 1280\]/u);
+  assert.match(generator, /card: \[384, 640, 960, 1280\]/u);
   assert.match(generator, /hero: \[768, 960, 1600\]/u);
   assert.match(generator, /post\.cardImage \|\| post\.image/u);
   assert.match(generator, /withoutEnlargement: true/u);
@@ -105,7 +105,7 @@ test("responsive image generation is automatic and leaves originals user-owned",
   assert.match(ignore, /public\/fonscape\/generated-images\//u);
   assert.match(manifest, /"public\/assets\/\*\*"/u);
   assert.match(manifest, /"public\/fonscape\/generated-images\/\*\*"/u);
-  assert.doesNotMatch(await readFile("scripts/check-performance-budget.mjs", "utf8"), /GENERATED_RESPONSIVE_IMAGES_TOTAL_LIMIT/u);
+  assert.match(generator, /MAX_RESPONSIVE_CANDIDATES_PER_SOURCE = 5/u);
 });
 
 test("Markdown bodies stay out of the initial module and load only with their detail metadata", async () => {

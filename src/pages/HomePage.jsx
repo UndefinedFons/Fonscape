@@ -108,7 +108,7 @@ export function HomePage({ stats, onStatsTargets }) {
       : { current: next, previous: current.current });
   };
   const renderFeaturedPost = (post, phase) => <a key={post.slug} className={`home-refresh-feature is-${phase}`} href={`#/post/${post.slug}`} aria-hidden={phase === "outgoing" ? "true" : undefined} tabIndex={phase === "outgoing" ? -1 : undefined}>
-    {post.image ? <img src={post.cardImage || post.image} {...responsiveImageProps(post.cardImage || post.image, "(max-width: 760px) calc(100vw - 24px), min(62vw, 760px)")} alt="" loading={phase === "current" ? "eager" : "lazy"} decoding="async" fetchPriority={phase === "current" ? "high" : "low"} onLoad={(event) => applyFeaturedTone(event.currentTarget)} style={{ objectPosition: post.cardPosition || post.coverPosition || "center" }} /> : <span className="home-refresh-feature-placeholder"><BookOpenText size={48} weight="duotone" /></span>}
+    {post.image ? <img src={post.cardImage || post.image} {...responsiveImageProps(post.cardImage || post.image, "(max-width: 760px) calc(100vw - 24px), min(62vw, 760px)")} alt="" loading={phase === "current" ? "eager" : "lazy"} decoding="async" fetchPriority={phase === "current" ? "high" : "low"} onLoad={(event) => applyFeaturedTone(event.currentTarget)} style={{ objectPosition: post.cardPosition || "center" }} /> : <span className="home-refresh-feature-placeholder"><BookOpenText size={48} weight="duotone" /></span>}
     <span className="home-refresh-feature-shade" />
     <span className="home-refresh-feature-copy">
       <small>置顶阅读 · {post.category}</small>
