@@ -7,6 +7,7 @@ export default [
     ignores: [
       "dist/**",
       "node_modules/**",
+      ".fonscape-update/**",
       "functions/_generated/**",
       "public/fonscape/**",
     ],
