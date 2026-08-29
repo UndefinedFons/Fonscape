@@ -133,15 +133,17 @@ test("Markdown bodies stay out of the initial module and load only with their de
 });
 
 test("the check command enforces static contracts across core JavaScript boundaries", async () => {
-  const [packageSource, tsconfigSource] = await Promise.all([
+  const [packageSource, tsconfigSource, eslintConfig] = await Promise.all([
     readFile("package.json", "utf8"),
     readFile("tsconfig.json", "utf8"),
+    readFile("eslint.config.js", "utf8"),
   ]);
   const packageJson = JSON.parse(packageSource);
   const tsconfig = JSON.parse(tsconfigSource);
 
   assert.equal(packageJson.scripts.typecheck, "tsc -p tsconfig.json");
   assert.match(packageJson.scripts.check, /pnpm typecheck/u);
+  assert.match(eslintConfig, /\.fonscape-update\/\*\*/u);
   assert.equal(tsconfig.compilerOptions.allowJs, true);
   assert.equal(tsconfig.compilerOptions.checkJs, true);
   assert.equal(tsconfig.compilerOptions.strict, true);
