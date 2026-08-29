@@ -16,6 +16,7 @@ import {
   protectProfileUpdate,
   protectRegistration,
   rateLimitSecret,
+  reconcileRuntimeCounters,
 } from "../functions/_lib/abuse.js";
 import { createTursoD1Database } from "../server/turso-d1.js";
 import {
@@ -90,12 +91,10 @@ test("specific abuse limits are consumed before shared global capacity", async (
   assert.deepEqual(await consumedLimits((context) => protectComment(
     context,
     { id: "member-1", role: "member" },
-    { type: "post", slug: "example" },
-  )), [8, 60, 20, 120, 500, 5000]);
+  )), [8, 60, 20, 500, 5000]);
   assert.deepEqual(await consumedLimits((context) => protectComment(
     context,
     { id: "admin-1", role: "admin" },
-    { type: "post", slug: "example" },
   )), []);
   assert.deepEqual(await consumedLimits((context) => protectAvatar(
     context,
@@ -113,10 +112,7 @@ test("specific abuse limits are consumed before shared global capacity", async (
     context,
     { id: "admin-1", role: "admin" },
   )), []);
-  assert.deepEqual(await consumedLimits((context) => protectContentView(
-    context,
-    { type: "post", slug: "example" },
-  )), [2000, 10000]);
+  assert.deepEqual(await consumedLimits(protectContentView), [10000]);
 });
 
 test("rate-limit secret is generated once in the database without an environment variable", async () => {
@@ -191,7 +187,7 @@ test("fixed-window decisions expose remaining quota and the exact reset time", a
   }
 });
 
-test("runtime maintenance cleans temporary rows and reconciles capacity counters", async () => {
+test("runtime maintenance keeps request cleanup separate from counter reconciliation", async () => {
   const client = createClient({ url: ":memory:" });
   try {
     await client.execute("CREATE TABLE sessions (id_hash TEXT PRIMARY KEY, expires_at INTEGER NOT NULL)");
@@ -212,10 +208,14 @@ test("runtime maintenance cleans temporary rows and reconciles capacity counters
       { sql: "INSERT INTO comments VALUES (?, ?, ?, ?, ?)", args: ["deleted", "member-1", "post", "example", "deleted"] },
       { sql: "INSERT INTO account_usage VALUES (?, ?, ?)", args: ["member-1", 99, 0] },
     ], "write");
-    const result = await cleanupRuntimeData(createTursoD1Database({ client }), 1_000);
-    assert.deepEqual(result, { expiredSessions: 1, staleRateLimits: 1, reconciledAccounts: 1 });
+    const db = createTursoD1Database({ client });
+    const cleanup = await cleanupRuntimeData(db, 1_000);
+    assert.deepEqual(cleanup, { expiredSessions: 1, staleRateLimits: 1 });
     assert.deepEqual((await client.execute("SELECT id_hash FROM sessions ORDER BY id_hash")).rows, [{ id_hash: "active" }]);
     assert.deepEqual((await client.execute("SELECT key FROM rate_limits ORDER BY key")).rows, [{ key: "fresh" }]);
+    assert.deepEqual((await client.execute("SELECT comments_created FROM account_usage")).rows, [{ comments_created: 99 }]);
+    const reconciliation = await reconcileRuntimeCounters(db, 1_000);
+    assert.deepEqual(reconciliation, { reconciledAccounts: 1 });
     assert.deepEqual((await client.execute("SELECT comments_created FROM account_usage")).rows, [{ comments_created: 1 }]);
     assert.deepEqual((await client.execute("SELECT content_type, content_slug, active_comments, published_comments FROM comment_target_usage")).rows, [{
       content_type: "post",

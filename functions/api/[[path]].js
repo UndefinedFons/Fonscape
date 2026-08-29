@@ -348,7 +348,7 @@ async function createComment(context) {
   const target = validateTarget(input.type, input.slug);
   const body = normalizeComment(input.body);
   await assertTargetExists(db, target);
-  await protectComment(context, user, target);
+  await protectComment(context, user);
   let parentId = null;
   let replyToUserId = null;
   let replyToCommentId = null;
@@ -608,15 +608,14 @@ async function siteRuntime(context) {
 async function incrementContentView(context, target) {
   const db = requireDatabase(context.env);
   await assertTargetExists(db, target);
-  await protectContentView(context, target);
+  await protectContentView(context);
   const now = Date.now();
-  await db.prepare(`INSERT INTO content_metrics (content_type, content_slug, views, updated_at)
+  const result = await db.prepare(`INSERT INTO content_metrics (content_type, content_slug, views, updated_at)
     VALUES (?, ?, 1, ?)
-    ON CONFLICT(content_type, content_slug) DO UPDATE SET views = views + 1, updated_at = excluded.updated_at`)
+    ON CONFLICT(content_type, content_slug) DO UPDATE SET views = views + 1, updated_at = excluded.updated_at
+    RETURNING views`)
     .bind(target.type, target.slug, now).run();
-  const row = await db.prepare("SELECT views FROM content_metrics WHERE content_type = ? AND content_slug = ? LIMIT 1")
-    .bind(target.type, target.slug).first();
-  return json({ type: target.type, slug: target.slug, views: Number(row?.views || 0) });
+  return json({ type: target.type, slug: target.slug, views: Number(result.results?.[0]?.views || 0) });
 }
 
 async function recordContentView(context) {

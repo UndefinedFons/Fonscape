@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
+import { buildSearchItems, enabledSearchTypes, filterSearchItems, searchScopeOptions, searchScopeStyle } from "../src/components/searchModel.js";
+import { loadFeedWithBestEffortReceipt } from "../src/community/messageFeeds.js";
 
 test("all account message feeds use the same two-line body preview", async () => {
   const [dialog, styles] = await Promise.all([
@@ -13,36 +15,38 @@ test("all account message feeds use the same two-line body preview", async () =>
 });
 
 test("read-receipt failures cannot replace an already loaded message feed", async () => {
-  const dialog = await readFile("src/community/AccountDialog.jsx", "utf8");
-
-  assert.match(dialog, /viewer\.unreadReplies > 0\) markRepliesRead\(\)\.catch/u);
-  assert.match(dialog, /viewer\.unreadAdminComments > 0\) markAdminCommentsRead\(\)\.catch/u);
-  assert.doesNotMatch(dialog, /loadMyReplies\([^)]*\)\.then\(async/u);
-  assert.doesNotMatch(dialog, /loadReceivedComments\([^)]*\)\.then\(async/u);
+  let receipts = 0;
+  const feed = await loadFeedWithBestEffortReceipt(
+    async () => [{ id: "message-1", body: "仍然可见" }],
+    async () => { receipts += 1; throw new Error("receipt failed"); },
+    1,
+  );
+  await Promise.resolve();
+  assert.deepEqual(feed, [{ id: "message-1", body: "仍然可见" }]);
+  assert.equal(receipts, 1);
 });
 
-test("the combined search feed applies the shared newest-first ordering", async () => {
-  const dialog = await readFile("src/components/Dialogs.jsx", "utf8");
-
-  assert.match(dialog, /indexedContent\.map\([\s\S]*?\)\.sort\(sortNewestFirst\)/u);
+test("the combined search feed applies newest-first ordering with stable ties", () => {
+  const items = buildSearchItems([
+    { type: "poem", key: "z-poem", title: "小诗", date: "2026-08-28" },
+    { type: "post", key: "b-post", title: "文章 B", category: "评谈", date: "2026-08-29" },
+    { type: "music", key: "songs/a-song", title: "音乐", kind: "歌曲", date: "2026-08-27" },
+    { type: "post", key: "a-post", title: "文章 A", category: "记录", date: "2026-08-29" },
+  ]);
+  assert.deepEqual(items.map((item) => item.id), ["post-a-post", "post-b-post", "poem-z-poem", "music-songs/a-song"]);
 });
 
-test("search scopes and results follow the optional section switches", async () => {
-  const dialog = await readFile("src/components/Dialogs.jsx", "utf8");
-  const styles = await readFile("src/styles.css", "utf8");
+test("search scopes, filtering and indicator geometry follow optional sections", () => {
+  assert.deepEqual(enabledSearchTypes({}), ["post"]);
+  assert.deepEqual(enabledSearchTypes({ showPoems: true, showMusic: true }), ["post", "poem", "music"]);
+  assert.deepEqual(searchScopeOptions({ showPoems: true }), [["all", "全部"], ["post", "文章"], ["poem", "小诗"]]);
+  assert.deepEqual(searchScopeStyle(3, 2), { "--search-scope-count": 3, "--search-scope-offset": "200%" });
 
-  assert.match(dialog, /const showPoems = siteConfig\.showPoems === true/u);
-  assert.match(dialog, /const showMusic = siteConfig\.showMusic === true/u);
-  assert.match(dialog, /\["post", showPoems && "poem", showMusic && "music"\]\.filter\(Boolean\)/u);
-  assert.match(dialog, /loadSearchIndex\(enabledTypes\)\.then/u);
-  assert.match(dialog, /正在加载搜索内容/u);
-  assert.match(dialog, /entry\.type === "poem"/u);
-  assert.match(dialog, /kind: "music"/u);
-  assert.match(dialog, /showPoems \? \[\["poem", "小诗"\]\] : \[\]/u);
-  assert.match(dialog, /showMusic \? \[\["music", "音乐"\]\] : \[\]/u);
-  assert.match(dialog, /"--search-scope-count": scopeOptions\.length/u);
-  assert.match(dialog, /"--search-scope-offset": `\$\{activeScopeIndex \* 100\}%`/u);
-  assert.match(styles, /grid-template-columns:repeat\(var\(--search-scope-count\),minmax\(0,1fr\)\)/u);
-  assert.match(styles, /width:calc\(\(100% - 6px\)\/var\(--search-scope-count\)\)/u);
-  assert.match(styles, /transform:translateX\(var\(--search-scope-offset\)\)/u);
+  const items = buildSearchItems([
+    { type: "post", key: "wind", title: "风中的文章", category: "评谈", date: "2026-08-29" },
+    { type: "poem", key: "rain", title: "雨", date: "2026-08-28" },
+    { type: "music", key: "songs/wind", title: "风之歌", kind: "歌曲", date: "2026-08-27" },
+  ]);
+  assert.deepEqual(filterSearchItems(items, "all", "风").map((item) => item.kind), ["post", "music"]);
+  assert.deepEqual(filterSearchItems(items, "music", "").map((item) => item.title), ["风之歌"]);
 });

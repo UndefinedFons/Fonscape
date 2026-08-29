@@ -16,6 +16,7 @@ import { AVATAR_MAX_BYTES, api, compressAvatar, contentHref, formatCommunityTime
 import { useCommunity } from "./CommunityProvider.jsx";
 import { loadSearchIndex } from "../content/index.js";
 import { lockPageScroll } from "../lockPageScroll.js";
+import { loadFeedWithBestEffortReceipt } from "./messageFeeds.js";
 
 const commentsCache = new Map();
 const commentsRequests = new Map();
@@ -194,10 +195,13 @@ function MyReplies() {
   const [state, setState] = useState({ loading: !cached, error: "", replies: cached || [] });
   useEffect(() => {
     let alive = true;
-    loadMyReplies(viewer.id, true).then((replies) => {
+    loadFeedWithBestEffortReceipt(
+      () => loadMyReplies(viewer.id, true),
+      markRepliesRead,
+      viewer.unreadReplies,
+    ).then((replies) => {
       if (alive) setState({ loading: false, error: "", replies });
     }).catch((error) => alive && setState({ loading: false, error: error.message, replies: [] }));
-    if (viewer.unreadReplies > 0) markRepliesRead().catch(() => {});
     return () => { alive = false; };
   }, [markRepliesRead, viewer.id, viewer.unreadReplies]);
   if (state.loading) return <div className="community-skeleton" aria-label="正在读取收到的回复"><i /><i /><i /></div>;
@@ -215,10 +219,13 @@ function ReceivedComments() {
   const [state, setState] = useState({ loading: !cached, error: "", comments: cached || [] });
   useEffect(() => {
     let alive = true;
-    loadReceivedComments(viewer.id, true).then((comments) => {
+    loadFeedWithBestEffortReceipt(
+      () => loadReceivedComments(viewer.id, true),
+      markAdminCommentsRead,
+      viewer.unreadAdminComments,
+    ).then((comments) => {
       if (alive) setState({ loading: false, error: "", comments });
     }).catch((error) => alive && setState({ loading: false, error: error.message, comments: [] }));
-    if (viewer.unreadAdminComments > 0) markAdminCommentsRead().catch(() => {});
     return () => { alive = false; };
   }, [markAdminCommentsRead, viewer.id, viewer.unreadAdminComments]);
   if (state.loading) return <div className="community-skeleton" aria-label="正在读取收到的评论"><i /><i /><i /></div>;

@@ -140,7 +140,7 @@ test("Worker runs database hygiene through its scheduled handler", async () => {
   assert.equal(queries[0].values[0], 123_456);
 });
 
-test("Wrangler config schedules daily runtime maintenance", async () => {
+test("Wrangler config schedules weekly runtime reconciliation", async () => {
   const config = JSON.parse(await readFile(new URL("../wrangler.jsonc", import.meta.url), "utf8"));
-  assert.deepEqual(config.triggers?.crons, ["17 3 * * *"]);
+  assert.deepEqual(config.triggers?.crons, ["17 3 * * 0"]);
 });

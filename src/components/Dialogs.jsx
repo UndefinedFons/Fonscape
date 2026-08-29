@@ -5,10 +5,10 @@ import { MusicNotes } from "@phosphor-icons/react/MusicNotes";
 import { X } from "@phosphor-icons/react/X";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { loadSearchIndex, siteConfig } from "../content/index.js";
-import { sortNewestFirst } from "../content/frontmatter.js";
 import { lockPageScroll } from "../lockPageScroll.js";
 import { go } from "../routeState.js";
 import { formatContentDate } from "../siteUtils.js";
+import { buildSearchItems, enabledSearchTypes, filterSearchItems, searchScopeOptions, searchScopeStyle } from "./searchModel.js";
 
 export function SearchDialog({ onClose }) {
   const [query, setQuery] = useState("");
@@ -36,7 +36,7 @@ export function SearchDialog({ onClose }) {
   useEffect(() => lockPageScroll(), []);
   const showPoems = siteConfig.showPoems === true;
   const showMusic = siteConfig.showMusic === true;
-  const enabledTypes = useMemo(() => ["post", showPoems && "poem", showMusic && "music"].filter(Boolean), [showMusic, showPoems]);
+  const enabledTypes = useMemo(() => enabledSearchTypes({ showPoems, showMusic }), [showMusic, showPoems]);
   const [searchIndex, setSearchIndex] = useState({ entries: [], loading: true, error: "" });
   useEffect(() => {
     let active = true;
@@ -48,25 +48,13 @@ export function SearchDialog({ onClose }) {
     return () => { active = false; };
   }, [enabledTypes]);
   const indexedContent = searchIndex.entries;
-  const searchItems = useMemo(() => indexedContent.map((entry) => {
-    if (entry.type === "post") return { id: `post-${entry.key}`, slug: entry.key, kind: "post", type: "文章", title: entry.title, meta: entry.category, date: entry.date, href: `#/post/${entry.key}`, icon: BookOpenText };
-    if (entry.type === "poem") return { id: `poem-${entry.key}`, slug: entry.key, kind: "poem", type: "小诗", title: entry.title, meta: "", date: entry.date, href: `#/poem/${entry.key}`, icon: Feather };
-    return { id: `music-${entry.key}`, slug: entry.key, kind: "music", type: "音乐", title: entry.title, meta: entry.kind, date: entry.date, href: `#/music/${entry.key}`, icon: MusicNotes };
-  }).sort(sortNewestFirst), [indexedContent]);
-  const normalizedQuery = query.trim().toLowerCase();
-  const results = useMemo(() => {
-    const scopedItems = scope === "all" ? searchItems : searchItems.filter((item) => item.kind === scope);
-    return normalizedQuery ? scopedItems.filter((item) => item.title.toLowerCase().includes(normalizedQuery)) : scopedItems;
-  }, [normalizedQuery, scope, searchItems]);
-  const scopeOptions = [
-    ["all", "全部"],
-    ["post", "文章"],
-    ...(showPoems ? [["poem", "小诗"]] : []),
-    ...(showMusic ? [["music", "音乐"]] : []),
-  ];
+  const searchItems = useMemo(() => buildSearchItems(indexedContent), [indexedContent]);
+  const results = useMemo(() => filterSearchItems(searchItems, scope, query), [query, scope, searchItems]);
+  const scopeOptions = searchScopeOptions({ showPoems, showMusic });
   const activeScopeIndex = Math.max(0, scopeOptions.findIndex(([value]) => value === scope));
   const searchableTypes = ["文章", showPoems && "小诗", showMusic && "音乐"].filter(Boolean).join("、");
-  return <div className={`dialog-backdrop search-backdrop${closing ? " is-closing" : ""}`} onMouseDown={(e) => e.target === e.currentTarget && requestClose()}><section className="search-dialog" role="dialog" aria-modal="true" aria-label="搜索博客内容"><div className="search-input-wrap"><MagnifyingGlass size={22} /><input autoFocus type="search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder={`搜索${searchableTypes}…`} aria-controls="search-results" /><span className="search-count-badge" aria-live="polite" aria-label={searchIndex.loading ? "正在加载搜索内容" : `${results.length} 条搜索结果`}>{searchIndex.loading ? "…" : results.length}</span><button onClick={requestClose} aria-label="关闭搜索"><X size={20} /></button></div><div className="search-toolbar"><div className="search-scopes" style={{ "--search-scope-count": scopeOptions.length, "--search-scope-offset": `${activeScopeIndex * 100}%` }} aria-label="搜索范围">{scopeOptions.map(([value, label]) => <button type="button" key={value} className={scope === value ? "active" : ""} aria-pressed={scope === value} onClick={() => setScope(value)}>{label}</button>)}</div></div><div className="search-results" id="search-results">{searchIndex.loading ? <div className="no-results">正在加载搜索内容…</div> : searchIndex.error ? <div className="no-results">{searchIndex.error}</div> : results.length ? results.map((item) => { const Icon = item.icon; return <a id={`search-result-${item.id}`} className="search-result" key={item.id} href={item.href} onClick={(event) => navigateToResult(event, item.href)}><span className={`search-result-icon search-result-icon--${item.kind}`}><Icon size={20} weight="duotone" /></span><span className="search-result-copy"><strong>{item.title}</strong><small>{[item.type, item.meta, formatContentDate(item.date)].filter(Boolean).join(" · ")}</small></span></a>; }) : <div className="no-results">没有找到相关内容，换个词试试。</div>}</div></section></div>;
+  const searchIcons = { post: BookOpenText, poem: Feather, music: MusicNotes };
+  return <div className={`dialog-backdrop search-backdrop${closing ? " is-closing" : ""}`} onMouseDown={(e) => e.target === e.currentTarget && requestClose()}><section className="search-dialog" role="dialog" aria-modal="true" aria-label="搜索博客内容"><div className="search-input-wrap"><MagnifyingGlass size={22} /><input autoFocus type="search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder={`搜索${searchableTypes}…`} aria-controls="search-results" /><span className="search-count-badge" aria-live="polite" aria-label={searchIndex.loading ? "正在加载搜索内容" : `${results.length} 条搜索结果`}>{searchIndex.loading ? "…" : results.length}</span><button onClick={requestClose} aria-label="关闭搜索"><X size={20} /></button></div><div className="search-toolbar"><div className="search-scopes" style={searchScopeStyle(scopeOptions.length, activeScopeIndex)} aria-label="搜索范围">{scopeOptions.map(([value, label]) => <button type="button" key={value} className={scope === value ? "active" : ""} aria-pressed={scope === value} onClick={() => setScope(value)}>{label}</button>)}</div></div><div className="search-results" id="search-results">{searchIndex.loading ? <div className="no-results">正在加载搜索内容…</div> : searchIndex.error ? <div className="no-results">{searchIndex.error}</div> : results.length ? results.map((item) => { const Icon = searchIcons[item.kind]; return <a id={`search-result-${item.id}`} className="search-result" key={item.id} href={item.href} onClick={(event) => navigateToResult(event, item.href)}><span className={`search-result-icon search-result-icon--${item.kind}`}><Icon size={20} weight="duotone" /></span><span className="search-result-copy"><strong>{item.title}</strong><small>{[item.type, item.meta, formatContentDate(item.date)].filter(Boolean).join(" · ")}</small></span></a>; }) : <div className="no-results">没有找到相关内容，换个词试试。</div>}</div></section></div>;
 }
 
 export function SettingsDialog({ glassEnabled, onGlassChange, onClose }) {

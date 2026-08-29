@@ -24,13 +24,11 @@ export const DEFAULT_ABUSE_LIMITS = Object.freeze({
   COMMENT_IP_10M: 20,
   COMMENT_USER_10M: 8,
   COMMENT_USER_DAILY: 60,
-  COMMENT_TARGET_HOURLY: 120,
   AVATAR_GLOBAL_DAILY: 500,
   AVATAR_IP_HOURLY: 30,
   AVATAR_USER_DAILY: 8,
   PROFILE_USER_HOURLY: 20,
   VIEW_GLOBAL_HOURLY: 10000,
-  VIEW_TARGET_HOURLY: 2000,
 });
 
 const RATE_LIMIT_SECRET_BYTES = 32;
@@ -210,14 +208,13 @@ export async function protectLogin(context, username) {
   ]);
 }
 
-export async function protectComment(context, user, target) {
+export async function protectComment(context, user) {
   if (user.role === "admin") return;
   const { address } = clientSubjects(context.request);
   await enforcePolicies(context, "comment", [
     { scope: "user-10m", subject: user.id, limitName: "COMMENT_USER_10M", limit: DEFAULT_ABUSE_LIMITS.COMMENT_USER_10M, windowMs: 10 * MINUTE },
     { scope: "user-day", subject: user.id, limitName: "COMMENT_USER_DAILY", limit: DEFAULT_ABUSE_LIMITS.COMMENT_USER_DAILY, windowMs: DAY },
     { scope: "ip-10m", subject: address, limitName: "COMMENT_IP_10M", limit: DEFAULT_ABUSE_LIMITS.COMMENT_IP_10M, windowMs: 10 * MINUTE },
-    { scope: "target-hour", subject: `${target.type}:${target.slug}`, limitName: "COMMENT_TARGET_HOURLY", limit: DEFAULT_ABUSE_LIMITS.COMMENT_TARGET_HOURLY, windowMs: HOUR },
     { scope: "global-hour", subject: "global", limitName: "COMMENT_GLOBAL_HOURLY", limit: DEFAULT_ABUSE_LIMITS.COMMENT_GLOBAL_HOURLY, windowMs: HOUR },
     { scope: "global-day", subject: "global", limitName: "COMMENT_GLOBAL_DAILY", limit: DEFAULT_ABUSE_LIMITS.COMMENT_GLOBAL_DAILY, windowMs: DAY },
   ]);
@@ -240,9 +237,8 @@ export async function protectProfileUpdate(context, user) {
   ]);
 }
 
-export async function protectContentView(context, target) {
+export async function protectContentView(context) {
   await enforcePolicies(context, "content-view", [
-    { scope: "target-hour", subject: `${target.type}:${target.slug}`, limitName: "VIEW_TARGET_HOURLY", limit: DEFAULT_ABUSE_LIMITS.VIEW_TARGET_HOURLY, windowMs: HOUR },
     { scope: "global-hour", subject: "global", limitName: "VIEW_GLOBAL_HOURLY", limit: DEFAULT_ABUSE_LIMITS.VIEW_GLOBAL_HOURLY, windowMs: HOUR },
   ]);
 }
@@ -357,9 +353,21 @@ export async function assertTargetExists(db, target) {
 }
 
 export async function cleanupRuntimeData(db, now = Date.now()) {
-  const [sessions, rateLimits, accountUsage] = await db.batch([
+  const [sessions, rateLimits] = await db.batch([
     db.prepare("DELETE FROM sessions WHERE expires_at <= ?").bind(now),
     db.prepare("DELETE FROM rate_limits WHERE updated_at < ?").bind(now - 8 * DAY),
+  ]);
+  return {
+    expiredSessions: Number(sessions.meta?.changes || 0),
+    staleRateLimits: Number(rateLimits.meta?.changes || 0),
+  };
+}
+
+// Trigger-maintained aggregates are authoritative during normal operation.
+// This full reconciliation is intentionally reserved for scheduled recovery;
+// it must never make an ordinary API write scan every runtime table.
+export async function reconcileRuntimeCounters(db, now = Date.now()) {
+  const [accountUsage] = await db.batch([
     db.prepare(`UPDATE account_usage
       SET comments_created = (
         SELECT COUNT(*) FROM comments
@@ -385,8 +393,6 @@ export async function cleanupRuntimeData(db, now = Date.now()) {
       ON CONFLICT(metric) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at`).bind(now),
   ]);
   return {
-    expiredSessions: Number(sessions.meta?.changes || 0),
-    staleRateLimits: Number(rateLimits.meta?.changes || 0),
     reconciledAccounts: Number(accountUsage.meta?.changes || 0),
   };
 }

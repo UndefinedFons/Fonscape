@@ -62,6 +62,9 @@ function createDb({ comment, profile, receivedComments = [], launchedAt = 1_700_
         if (query.includes("SET rate_limit_secret")) {
           return { meta: { changes: 1 }, results: [{ rate_limit_secret: "a".repeat(64) }] };
         }
+        if (query.startsWith("INSERT INTO content_metrics") && query.endsWith("RETURNING views")) {
+          return { meta: { changes: 1 }, results: [{ views: 7 }] };
+        }
         if (query.startsWith("UPDATE comments SET body = '[已删除]', status = 'deleted'")) {
           if (state.comment?.status === "deleted") return { meta: { changes: 0 } };
           state.comment = {
@@ -159,9 +162,12 @@ test("successful protected writes expose their remaining rate-limit quota", asyn
   await context.settle();
 
   assert.equal(response.status, 200);
-  assert.equal(response.headers.get("RateLimit-Limit"), "2000");
-  assert.equal(response.headers.get("RateLimit-Remaining"), "1999");
+  assert.deepEqual(await response.clone().json(), { type: "post", slug: "site-about", views: 7 });
+  assert.equal(response.headers.get("RateLimit-Limit"), "10000");
+  assert.equal(response.headers.get("RateLimit-Remaining"), "9999");
   assert.match(response.headers.get("RateLimit-Reset"), /^\d+$/u);
+  assert.equal(fake.operations.filter((operation) => operation.query.startsWith("INSERT INTO rate_limits") && operation.values.at(-1) === 10000).length, 1);
+  assert.equal(fake.operations.some((operation) => operation.query.startsWith("SELECT views FROM content_metrics")), false);
 });
 
 test("blocked protected writes report their retry window", async () => {
@@ -199,7 +205,7 @@ test("blocked protected writes report their retry window", async () => {
   const response = await onRequest(context);
 
   assert.equal(response.status, 429);
-  assert.equal(response.headers.get("RateLimit-Limit"), "2000");
+  assert.equal(response.headers.get("RateLimit-Limit"), "10000");
   assert.equal(response.headers.get("RateLimit-Remaining"), "0");
   assert.match(response.headers.get("RateLimit-Reset"), /^\d+$/u);
   assert.match(response.headers.get("Retry-After"), /^\d+$/u);

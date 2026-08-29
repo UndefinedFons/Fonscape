@@ -105,56 +105,23 @@ button,input { font:inherit; } a { color:inherit; text-decoration:none; } button
 .icon-swap { display:grid; place-items:center; animation:outline-icon-swap .32s cubic-bezier(.22,1,.36,1) both; }
 
 .hero { position:relative; isolation:isolate; min-height:460px; display:grid; place-items:center; overflow:hidden; background:var(--surface); }
-.hero-scrim { position:absolute; z-index:1; inset:0; background:var(--hero-scrim); }
 .hero-copy { position:relative; z-index:2; text-align:center; margin-top:45px; max-width:650px; padding:24px 38px 27px; border:0; background:transparent; box-shadow:none; backdrop-filter:none; animation:hero-copy-reveal .52s .12s cubic-bezier(.22,1,.36,1) both; }
 .eyebrow { display:block; margin-bottom:15px; font:600 11px/1 "Zen Maru Gothic",sans-serif; letter-spacing:.16em; color:var(--accent); }
 .hero-copy .eyebrow { color:#fff5fb; text-shadow:0 1px 2px rgba(43,20,57,.92),0 3px 14px rgba(43,20,57,.78); }
 .hero h1 { margin:0; color:#fff; font:700 clamp(40px,5vw,62px)/1.2 "Zen Maru Gothic",sans-serif; letter-spacing:.08em; -webkit-text-stroke:.7px rgba(59,25,78,.38); paint-order:stroke fill; text-shadow:0 2px 2px rgba(47,20,64,.82),0 7px 26px rgba(43,16,59,.76); }
 .hero h1::after { content:""; display:block; width:30px; height:3px; margin:18px auto; border-radius:3px; background:#ffd0e4; box-shadow:0 2px 10px rgba(58,27,78,.35); }
 .hero p { margin:0; color:#fff; font:600 15px/1.8 "Zen Maru Gothic",sans-serif; letter-spacing:.02em; text-shadow:0 1px 2px rgba(42,18,58,.94),0 4px 16px rgba(42,18,58,.8); }
-
-.home-grid { display:grid; grid-template-columns:285px 1fr; gap:40px; padding-block:34px 60px; }
-.profile-card { align-self:start; padding:26px 24px; text-align:center; background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow); }
 .profile-avatar { width:104px; height:104px; margin:0 auto 16px; object-fit:cover; border-radius:50%; border:5px solid var(--surface-soft); }
-.profile-card h2 { margin:0; font:600 22px "Zen Maru Gothic",sans-serif; }
-.accent-line { display:block; width:24px; height:3px; margin:14px auto; border-radius:3px; background:var(--accent); }
-.profile-card>p { margin:20px 0; color:var(--muted); font-size:14px; line-height:2; }
-.profile-stats { display:grid; grid-template-columns:repeat(3,1fr); margin:26px 0; }
-.profile-stats>div { display:grid; gap:4px; border-right:1px solid var(--line); }
-.profile-stats>div:last-child { border-right:0; }
-.profile-stats strong { font:600 18px "Zen Maru Gothic",sans-serif; }
-.profile-stats span { color:var(--muted); font-size:12px; }
 .outline-button { display:inline-flex; align-items:center; justify-content:center; gap:8px; min-height:44px; padding:0 24px; border:1px solid var(--accent); border-radius:999px; color:var(--accent); font-weight:500; }
 .outline-button:hover { background:var(--accent); color:#fff; }
-.profile-links { display:flex; justify-content:center; gap:18px; margin-top:28px; }
-.profile-links a { color:var(--muted); } .profile-links a:hover { color:var(--accent); }
-.home-feed { min-width:0; }
-.content-section { padding:0 0 26px; }
-.featured-post-list { display:grid; gap:20px; }
 .section-heading { display:flex; align-items:end; justify-content:space-between; margin-bottom:15px; }
 .section-heading h2 { margin:0; font:600 21px "Zen Maru Gothic",sans-serif; }
-.section-heading .accent-line { margin:10px 0 0; }
 .section-heading>a { display:inline-flex; align-items:center; gap:5px; color:var(--accent); font-size:13px; }
-.featured-post { display:grid; grid-template-columns:1fr; gap:28px; padding:16px; border:1px solid var(--line); border-radius:var(--radius); background:var(--surface); cursor:pointer; transition:transform .2s ease,box-shadow .2s ease; }
-.featured-post.has-image { grid-template-columns:minmax(280px,.9fr) 1.1fr; }
-.featured-post:hover,.featured-post:focus { transform:translateY(-3px); box-shadow:var(--shadow); outline:none; }
-.featured-post>img { display:block; width:auto; max-width:100%; height:auto; max-height:min(76vh,760px); margin:0 auto; align-self:start; justify-self:center; object-fit:contain; border-radius:13px; }
-.featured-copy { align-self:center; }
 .category { color:var(--accent); font-size:12px; font-weight:600; }
-.featured-copy h2 { margin:10px 0 12px; font:600 clamp(24px,3vw,32px)/1.4 "Zen Maru Gothic",sans-serif; }
-.featured-copy>p { color:var(--muted); font-size:14px; line-height:1.85; }
 .post-meta { display:flex; flex-wrap:wrap; gap:14px; margin:18px 0; color:var(--muted); font-size:12px; }
 .post-meta span { display:inline-flex; align-items:center; gap:5px; }
 .post-meta-tags { min-width:0; max-width:100%; }
 .post-meta-tags>span { display:inline; overflow-wrap:anywhere; }
-.text-link { display:inline-flex; align-items:center; gap:7px; padding:0; border:0; background:transparent; color:var(--accent); cursor:pointer; font-weight:500; }
-.recent-section { padding-top:8px; }
-.post-rows { border-top:1px solid var(--line); }
-.post-row { min-height:50px; display:grid; grid-template-columns:24px minmax(0,1fr) 96px 108px; align-items:center; gap:10px; border-bottom:1px solid var(--line); transition:transform .22s ease,background .22s ease,color .22s ease; }
-.post-row svg { color:var(--muted); }
-.post-row>span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:14px; }
-.post-row small,.post-row time { color:var(--muted); font-size:11px; text-align:right; }
-.post-row:hover { color:var(--accent); background:var(--accent-soft); transform:translateX(4px); }
 
 .inner-hero { position:relative; isolation:isolate; min-height:460px; display:flex; align-items:center; justify-content:center; padding-top:105px; padding-bottom:45px; color:#fff; border-bottom:0; }
 .inner-hero::before,.inner-hero::after { content:""; position:absolute; inset:0; }
@@ -173,11 +140,8 @@ button,input { font:inherit; } a { color:inherit; text-decoration:none; } button
 .inner-hero .eyebrow { color:#fff5fb; text-shadow:0 1px 2px rgba(43,20,57,.92),0 3px 14px rgba(43,20,57,.78); }
 .inner-hero h1 { margin:0 0 12px; color:#fff; font:700 clamp(38px,6vw,64px) "Zen Maru Gothic",sans-serif; -webkit-text-stroke:.6px rgba(59,25,78,.34); paint-order:stroke fill; text-shadow:0 2px 2px rgba(47,20,64,.78),0 7px 24px rgba(43,16,59,.7); }
 .inner-hero p { max-width:650px; margin:0 auto; color:#fff; font-weight:500; line-height:1.8; text-shadow:0 1px 2px rgba(42,18,58,.9),0 4px 14px rgba(42,18,58,.76); }
-.listing,.poem-grid,.archive-list,.tags-layout,.about-layout,.friend-grid { padding-block:0 70px; }
+.listing,.poem-grid,.about-layout,.friend-grid { padding-block:0 70px; }
 .listing > .poem-grid { padding-bottom:0; }
-.filter-bar { display:flex; flex-wrap:wrap; gap:10px; margin-bottom:28px; }
-.filter-bar button,.tag-cloud button { padding:9px 16px; border:1px solid var(--line); border-radius:999px; background:var(--surface); color:var(--muted); cursor:pointer; }
-.filter-bar button:hover,.filter-bar button.active,.tag-cloud button:hover,.tag-cloud button.active { border-color:var(--accent); background:var(--accent-soft); color:var(--accent); }
 .article-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:20px; }
 .paginated-view { scroll-margin-top:110px; opacity:1; transform:translateY(0); transition:opacity .15s ease,transform .15s ease; }
 .paginated-view.is-leaving { opacity:0; transform:translateY(8px); }
@@ -193,12 +157,11 @@ button,input { font:inherit; } a { color:inherit; text-decoration:none; } button
 .pagination button:focus-visible { outline:2px solid var(--blue); outline-offset:2px; }
 .article-card { container-type:inline-size; display:grid; grid-template-rows:auto 1fr; gap:0; min-height:0; padding:0; overflow:hidden; background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); transition:transform .24s ease,box-shadow .24s ease,border-color .24s ease,background-color .38s cubic-bezier(.22,1,.36,1); }
 .article-card-media { position:relative; isolation:isolate; width:100%; aspect-ratio:16/9; display:grid; place-items:center; overflow:hidden; background:var(--surface-soft); }
-.article-card-media-backdrop { position:absolute; z-index:0; inset:-2%; width:104%; height:104%; object-fit:cover; opacity:.14; transform:scale(1.02); }
 .article-card-media-image { position:absolute; z-index:1; inset:0; width:100%; height:100%; display:block; object-fit:contain; transition:transform .55s cubic-bezier(.16,1,.3,1); }
 .article-card-media--placeholder { align-content:center; gap:9px; background:radial-gradient(circle at 30% 20%,color-mix(in srgb,var(--accent) 18%,transparent),transparent 38%),linear-gradient(135deg,color-mix(in srgb,var(--blue) 12%,var(--surface-soft)),color-mix(in srgb,var(--accent) 10%,var(--surface))); color:var(--accent); }
 .article-card-media--placeholder small { font:600 12px "Zen Maru Gothic",sans-serif; letter-spacing:.12em; }
 .article-card-copy { min-width:0; min-height:235px; display:flex; flex-direction:column; align-items:center; padding:22px 24px 20px; text-align:center; }
-.article-card .category,.article-card .post-summary .article-excerpt>span,.article-card .post-summary .article-preview>span { text-align:center; }
+.article-card .category { text-align:center; }
 .article-card:hover { transform:translateY(-3px); box-shadow:var(--shadow); }
 .article-card:hover .article-card-media-image { transform:scale(1.018); }
 .article-grid .article-card { animation:content-rise .5s cubic-bezier(.22,1,.36,1) both; }
@@ -206,17 +169,10 @@ button,input { font:inherit; } a { color:inherit; text-decoration:none; } button
 .article-grid .article-card:nth-child(3n) { animation-delay:.1s; }
 .article-card h2 { width:100%; margin:8px 0; font:600 19px/1.5 "Zen Maru Gothic",sans-serif; }
 .article-card p { margin:0; color:var(--muted); font-size:13px; line-height:1.7; }
-.post-summary { display:grid; gap:10px; }
-.post-summary .article-excerpt,.post-summary .article-preview { min-width:0; margin:0; }
-.post-summary .article-excerpt>span,.post-summary .article-preview>span { display:block; margin-bottom:3px; color:var(--accent); font-size:10px; font-weight:700; letter-spacing:.08em; }
-.post-summary p { margin:0; color:var(--muted); font-size:13px; line-height:1.7; }
-.post-summary .article-preview p { display:-webkit-box; color:color-mix(in srgb,var(--muted) 88%,var(--text)); -webkit-box-orient:vertical; -webkit-line-clamp:2; overflow:hidden; }
-.article-card .post-summary { width:100%; }
 .article-card .post-meta { width:100%; justify-content:center; margin:auto 0 0; padding-top:18px; }
 @container (max-width:420px) {
   .article-card-copy { min-height:0; padding:clamp(17px,5cqw,22px); }
   .article-card h2 { font-size:clamp(18px,5.2cqw,21px); }
-  .article-card .post-summary .article-preview p { -webkit-line-clamp:2; }
   .article-card .post-meta { padding-top:14px; }
 }
 .poem-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:20px; }
@@ -281,12 +237,6 @@ button,input { font:inherit; } a { color:inherit; text-decoration:none; } button
 .music-source-card--lead { grid-template-columns:104px minmax(0,1fr) auto; gap:20px; margin:32px 0 40px; padding:16px 19px 16px 16px; border-radius:24px; }
 .music-source-card--lead>img { width:104px; height:104px; border-radius:17px; box-shadow:0 9px 25px color-mix(in srgb,var(--shadow-color) 46%,transparent); }
 .music-source-card--lead strong { font-size:21px; line-height:1.4; }
-.archive-group { display:grid; grid-template-columns:140px 1fr; gap:30px; margin-bottom:36px; }
-.archive-group h2 { margin:12px 0; color:var(--accent); font:600 18px "Zen Maru Gothic",sans-serif; }
-.tags-layout { display:grid; grid-template-columns:260px 1fr; gap:50px; }
-.tag-cloud { display:flex; flex-wrap:wrap; align-content:flex-start; gap:10px; }
-.tag-results h2 { margin-top:0; font:600 24px "Zen Maru Gothic",sans-serif; }
-.tag-results .post-row { padding-left:8px; padding-right:16px; }
 .about-layout { display:grid; grid-template-columns:280px minmax(0,600px); justify-content:center; gap:70px; align-items:center; }
 .about-portrait { display:grid; justify-items:center; gap:18px; }
 .about-portrait>img { width:260px; height:260px; object-fit:cover; border-radius:32px; box-shadow:var(--shadow); }
@@ -341,7 +291,6 @@ button,input { font:inherit; } a { color:inherit; text-decoration:none; } button
 .article-cover { display:block; width:auto; max-width:100%; height:auto; max-height:min(76vh,760px); margin:auto; object-fit:contain; border-radius:var(--radius); box-shadow:0 14px 38px color-mix(in srgb,var(--shadow-color) 76%,transparent); }
 .article-detail>.article-music-player,.article-detail>.rich-article { width:min(790px,100%); margin-inline:auto; }
 .article-prologue-anchor { display:block; height:0; scroll-margin-top:110px; }
-.article-content-loading { width:min(790px,100%); height:80px; margin:30px auto 0; border-radius:16px; background:linear-gradient(90deg,var(--surface-soft),color-mix(in srgb,var(--blue) 10%,var(--surface)),var(--surface-soft)); background-size:220% 100%; animation:content-loading 1.4s ease infinite; }
 .article-body { font-size:17px; line-height:2.15; }
 .article-body p { margin:1.6em 0; }
 .rich-article em { margin-right:.06em; }
@@ -424,8 +373,6 @@ button,input { font:inherit; } a { color:inherit; text-decoration:none; } button
 .article-prose>p:has(>.article-inline-image) { margin:2.5em 0; }
 .zoomable-image-trigger { position:relative; display:grid; justify-items:center; gap:10px; padding:0; border:0; background:transparent; color:inherit; font:inherit; text-align:inherit; cursor:zoom-in; }
 .zoomable-image-trigger:focus-visible { outline:2px solid var(--accent); outline-offset:5px; border-radius:var(--radius); }
-.zoomable-image-hint { position:absolute; right:12px; bottom:12px; width:34px; height:34px; display:grid; place-items:center; border:1px solid rgba(255,255,255,.55); border-radius:50%; background:rgba(27,18,38,.66); color:white; box-shadow:0 6px 18px rgba(26,16,35,.2); opacity:0; transform:scale(.86); backdrop-filter:blur(8px); transition:opacity .22s ease,transform .28s cubic-bezier(.22,1,.36,1); }
-.zoomable-image-trigger:hover .zoomable-image-hint,.zoomable-image-trigger:focus-visible .zoomable-image-hint { opacity:1; transform:scale(1); }
 .article-inline-image { width:100%; }
 .article-inline-image img { width:auto; max-width:100%; max-height:min(78vh,820px); border-radius:18px; box-shadow:0 15px 42px color-mix(in srgb,var(--shadow-color) 78%,transparent); }
 .article-inline-image.is-broken { width:100%; min-height:96px; display:grid; place-items:center; padding:18px; border:1px dashed color-mix(in srgb,#c14b70 46%,var(--line)); border-radius:14px; background:color-mix(in srgb,#c14b70 6%,var(--surface)); cursor:default; }
@@ -541,9 +488,9 @@ footer::before { content:""; position:absolute; top:0; left:50%; width:min(1180p
 .route-view:not(.route-view--detail)>main>.article-index:not(.hero):not(.inner-hero):not(.about-layout) { animation-duration:1.25s; }
 .route-view:not(.route-view--detail)>main>.about-layout { animation:about-content-reveal .67s .1s ease-out both; }
 
-.profile-card,.featured-post,.article-card,.poem-card,.music-tabs,.tags-layout { animation:content-rise .56s .08s cubic-bezier(.22,1,.36,1) both; }
-.main-nav a,.icon-button,.outline-button,.section-heading>a,.profile-links a,.text-link { transition:color .22s ease,background .22s ease,border-color .22s ease,transform .22s ease,box-shadow .22s ease; }
-.main-nav a:hover,.icon-button:hover,.section-heading>a:hover,.profile-links a:hover,.text-link:hover { transform:translateY(-1px); }
+.article-card,.poem-card,.music-tabs { animation:content-rise .56s .08s cubic-bezier(.22,1,.36,1) both; }
+.main-nav a,.icon-button,.outline-button,.section-heading>a { transition:color .22s ease,background .22s ease,border-color .22s ease,transform .22s ease,box-shadow .22s ease; }
+.main-nav a:hover,.icon-button:hover,.section-heading>a:hover { transform:translateY(-1px); }
 .outline-button:hover { transform:translateY(-2px); box-shadow:0 8px 22px color-mix(in srgb,var(--accent) 22%,transparent); }
 @keyframes hero-copy-reveal { from { opacity:.08; clip-path:inset(0 0 100% 0); } 58% { opacity:.88; } to { opacity:1; clip-path:inset(0); } }
 @keyframes primary-content-enter { from { opacity:0; transform:translate3d(0,8px,0); } to { opacity:1; transform:translate3d(0,0,0); } }
@@ -571,7 +518,6 @@ footer::before { content:""; position:absolute; top:0; left:50%; width:min(1180p
 
 @media (max-width:1040px) {
   .header-center { gap:8px; padding-left:17px; } .main-nav { gap:15px; }
-  .home-grid { grid-template-columns:240px 1fr; gap:24px; } .featured-post.has-image { grid-template-columns:1fr; }
   .article-grid { grid-template-columns:1fr; }
 }
 @media (max-width:760px) {
@@ -584,24 +530,15 @@ footer::before { content:""; position:absolute; top:0; left:50%; width:min(1180p
   .main-nav { position:absolute; top:68px; left:50%; width:min(330px,calc(100vw - 20px)); height:auto; display:grid; padding:12px; grid-template-columns:repeat(2,1fr); gap:5px; border:1px solid var(--line); border-radius:17px; background:var(--surface); box-shadow:var(--shadow); opacity:0; visibility:hidden; pointer-events:none; transform:translate(-50%,-10px) scale(.97); transform-origin:top center; transition:opacity .24s ease,transform .32s cubic-bezier(.22,1,.36,1),visibility 0s linear .32s; }
   .main-nav.is-open { opacity:1; visibility:visible; pointer-events:auto; transform:translate(-50%,0) scale(1); transition-delay:0s; } .main-nav a,.main-nav a:last-child { display:flex; min-height:45px; padding:0 14px; border-radius:11px; }
   .nav-active-indicator { display:none; } .main-nav a.active { background:var(--accent-soft); }
-  .hero { min-height:380px; } .hero-scrim { background:var(--hero-scrim-mobile); }
+  .hero { min-height:380px; }
   .route-hero-art-layer { background-image:var(--hero-art-image-mobile,var(--hero-art-image)); background-position:var(--hero-art-position-mobile,var(--hero-art-position)); }
   .hero-copy { margin:72px 16px 0; padding:22px 18px; background:transparent; backdrop-filter:none; }
   .hero h1 { font-size:38px; } .hero p { font-size:14px; }
-  .home-grid { grid-template-columns:1fr; padding-top:20px; }
-  .profile-card { display:grid; grid-template-columns:82px 1fr; text-align:left; gap:0 18px; }
-  .profile-avatar { grid-row:1/4; width:82px; height:82px; margin:0; } .profile-card h2 { align-self:end; }
-  .profile-card>.accent-line { margin:8px 0; } .profile-card>p { grid-column:2; margin:0; line-height:1.7; }
-  .profile-stats,.profile-card>.outline-button,.profile-links { grid-column:1/-1; } .profile-stats>div { justify-items:center; padding-inline:10px; text-align:center; } .profile-links { justify-content:center; }
-  .featured-post { gap:18px; padding:12px; }
-  .post-row { grid-template-columns:24px minmax(0,1fr) 80px; } .post-row small { display:none; }
+  .profile-avatar { grid-row:1/4; width:82px; height:82px; margin:0; }
   .inner-hero { min-height:380px; padding-top:82px; padding-bottom:30px; } .inner-hero::before { background-position:var(--section-hero-position-mobile,var(--section-hero-position,center)); } .inner-hero::after { background:var(--inner-scrim-mobile); }
   .article-card-copy { min-height:210px; padding:20px; }
-  .article-card-media--portrait { aspect-ratio:3/4; }
-  .article-card-media--portrait .article-card-media-backdrop { display:none; }
-  .article-card-media--portrait .article-card-media-image { object-fit:cover; }
   .article-card-copy { min-height:0; }
-  .poem-grid { grid-template-columns:1fr; } .friend-grid { grid-template-columns:1fr; gap:18px; } .archive-group,.tags-layout,.about-layout { grid-template-columns:1fr; gap:22px; }
+  .poem-grid { grid-template-columns:1fr; } .friend-grid { grid-template-columns:1fr; gap:18px; } .about-layout { grid-template-columns:1fr; gap:22px; }
   .friend-grid { grid-auto-rows:132px; }
   .friend-card { min-height:132px; height:132px; }
   .friend-card-layout { --friend-avatar-size:clamp(76px,24cqw,94px); width:100%; height:100%; grid-template-columns:var(--friend-avatar-size) minmax(0,1fr); grid-template-rows:none; gap:clamp(10px,2.6cqw,14px); padding:calc((132px - var(--friend-avatar-size))/2 - 1px); }
@@ -615,8 +552,7 @@ footer::before { content:""; position:absolute; top:0; left:50%; width:min(1180p
   .friend-card-owner>svg { width:16px; height:16px; }
   .friend-card-owner b { font-size:8px; }
   .friend-card-owner small { font-size:7px; }
-  .friend-card-meta { gap:5px; margin-top:4px; padding-top:4px; font-size:7px; }
-  .archive-group h2 { margin-bottom:0; } .about-portrait>img { width:180px; height:180px; } .article-page,.poem-page,.music-detail-page { padding-top:76px; }
+  .friend-card-meta { gap:5px; margin-top:4px; padding-top:4px; font-size:7px; } .about-portrait>img { width:180px; height:180px; } .article-page,.poem-page,.music-detail-page { padding-top:76px; }
   .poem-page>article { padding:38px 24px; }
   .article-music-player { grid-template-columns:72px minmax(0,1fr); gap:14px; padding:14px 15px 14px 14px; }
   .article-music-art { width:72px; height:72px; }
@@ -635,10 +571,8 @@ footer::before { content:""; position:absolute; top:0; left:50%; width:min(1180p
 @media (max-width:480px) {
   .site-header { --mobile-icon-size:38px; }
   .header-actions { gap:0; } .icon-button { width:38px; }
-  .hero,.inner-hero { min-height:350px; } .hero-copy .eyebrow { margin-bottom:12px; font-size:9px; line-height:1.4; letter-spacing:.11em; white-space:nowrap; } .hero h1 { font-size:32px; } .home-grid { width:calc(100% - 20px); }
-  .featured-copy h2 { font-size:23px; }
-  .pagination { gap:7px; margin-top:24px; } .pagination-pages { gap:5px; } .pagination button { width:35px; height:35px; border-radius:11px; }
-  .post-row { grid-template-columns:22px minmax(0,1fr) 72px; } .post-row time { font-size:10px; } .poem-card { min-height:0; }
+  .hero,.inner-hero { min-height:350px; } .hero-copy .eyebrow { margin-bottom:12px; font-size:9px; line-height:1.4; letter-spacing:.11em; white-space:nowrap; } .hero h1 { font-size:32px; }
+  .pagination { gap:7px; margin-top:24px; } .pagination-pages { gap:5px; } .pagination button { width:35px; height:35px; border-radius:11px; } .poem-card { min-height:0; }
   .music-tabs { --tab-gap:5px; --tab-pad:5px; } .music-tabs button { min-height:58px; gap:6px; padding:8px 5px; } .music-tabs button>svg { width:19px; } .music-tabs strong { font-size:14px; }
   .music-panel { min-height:0; } .music-empty { min-height:300px; padding:30px 20px; }
   .music-source-card { grid-template-columns:72px minmax(0,1fr); gap:12px; padding:14px; } .music-source-card>img { width:72px; height:72px; } .music-source-card b { grid-column:2; justify-self:start; margin-top:1px; }
@@ -724,7 +658,6 @@ footer::before { content:""; position:absolute; top:0; left:50%; width:min(1180p
 .community-form-error,.community-inline-error { margin:0; color:#b23662; font-size:12px; line-height:1.6; }
 :root[data-theme="dark"] .community-form-error,:root[data-theme="dark"] .community-inline-error { color:#ff9dbe; }
 .community-form-message { margin:0; color:var(--accent); font-size:12px; }
-.account-privacy-note { margin:16px 2px 0; color:var(--muted); font-size:11px; line-height:1.7; }
 .account-profile-header { display:grid; grid-template-columns:84px minmax(0,1fr); align-items:center; gap:18px; padding-right:40px; }
 .account-profile-header p { margin:5px 0 0; color:var(--muted); font-size:12px; overflow-wrap:anywhere; }
 .account-avatar-control { position:relative; }
@@ -922,10 +855,6 @@ footer::before { content:""; position:absolute; top:0; left:50%; width:min(1180p
 .article-type-tabs button:focus-visible { outline:2px solid var(--accent); outline-offset:-2px; }
 .article-index-actions { align-self:stretch; }
 .article-index-actions button { min-height:58px; border-radius:16px; padding-inline:16px; }
-.archive-mode-title { min-height:58px; display:flex; align-items:center; gap:11px; padding:0 4px; border-bottom:1px solid var(--line); background:transparent; color:var(--accent); }
-.archive-mode-title span { display:grid; gap:2px; }
-.archive-mode-title small { color:var(--muted); font-size:8px; letter-spacing:.12em; }
-.archive-mode-title strong { color:var(--text); font:600 13px "Zen Maru Gothic",sans-serif; }
 .active-filter-summary { margin:-4px 0 21px; padding:6px 2px 6px 12px; border:0; border-left:2px solid var(--accent); border-radius:0; background:transparent; }
 .active-filter-summary>span { color:var(--accent); }
 .active-filter-summary button { border:1px solid var(--line); }
@@ -947,7 +876,6 @@ footer::before { content:""; position:absolute; top:0; left:50%; width:min(1180p
 @media (max-width:960px) {
   .article-index-toolbar { grid-template-columns:1fr; }
   .article-index-actions { justify-self:stretch; }
-  .article-index-toolbar--archive { grid-template-columns:minmax(0,1fr) auto; }
 }
 
 @media (max-width:760px) {
@@ -956,14 +884,12 @@ footer::before { content:""; position:absolute; top:0; left:50%; width:min(1180p
   .article-type-tabs button { min-height:44px; padding:0 1px; font-size:10px; }
   .article-type-indicator { border-radius:10px; }
   .article-index-actions button { min-height:48px; border-radius:14px; }
-  .article-index-toolbar--archive { grid-template-columns:1fr; }
-  .archive-mode-title { min-height:54px; border-radius:15px; }
   .article-filter-dialog { padding:19px 17px 16px; }
   .article-filter-dialog>header { align-items:flex-start; }
   .article-filter-section { min-height:180px; }
 }
 
-/* Article index and home editorial layout */
+/* Article index, community and content cards */
 .account-dialog { overflow-x:hidden; padding-bottom:22px; }
 .account-center-actions { margin-top:12px; padding:12px 0 0; }
 .account-center-actions::before { display:none; }
@@ -976,42 +902,10 @@ footer::before { content:""; position:absolute; top:0; left:50%; width:min(1180p
 .account-nav-button .account-notification-dot { z-index:2; }
 
 .home-page { overflow:hidden; }
-.home-editorial { position:relative; display:grid; gap:26px; padding-block:34px 42px; }
-.home-editorial::before { content:""; position:absolute; z-index:-1; width:430px; height:430px; top:4%; right:-22%; border-radius:50%; background:radial-gradient(circle,color-mix(in srgb,var(--accent) 11%,transparent),transparent 70%); pointer-events:none; }
-.home-lead-grid { display:grid; grid-template-columns:minmax(230px,285px) minmax(0,1fr); gap:32px; align-items:start; }
-.home-featured-stage { min-width:0; padding:25px; border:1px solid var(--line); border-radius:calc(var(--radius) + 4px); background:linear-gradient(145deg,color-mix(in srgb,var(--surface) 94%,var(--accent-soft)),var(--surface)); box-shadow:var(--shadow); }
-.home-featured-stage .section-heading { margin-bottom:18px; }
-.home-featured-stage .article-card.is-featured { grid-template-columns:minmax(220px,46%) minmax(0,1fr); grid-template-rows:1fr; min-height:300px; }
-.home-featured-stage .article-card.is-featured .article-card-media { height:100%; aspect-ratio:auto; }
-.home-featured-stage .article-card.is-featured .article-card-copy { justify-content:center; }
-.home-recent-section,.home-salon { padding:25px 27px; border:1px solid var(--line); border-radius:var(--radius); background:var(--surface); box-shadow:0 14px 38px color-mix(in srgb,var(--text) 6%,transparent); }
-.home-discovery-grid { display:grid; gap:24px; }
-.home-salon { padding:22px 0 0; border:0; border-top:1px solid var(--line); border-radius:0; background:transparent; box-shadow:none; }
-.home-salon .section-heading { margin-bottom:16px; }
-.home-poem-list { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; }
-.home-music-list { display:grid; }
-.home-poem-list>a { min-height:104px; display:grid; grid-template-columns:28px minmax(0,1fr); align-items:start; gap:10px; padding:16px; border:1px solid var(--line); border-radius:14px; background:var(--surface); }
-.home-poem-list>a>svg { color:var(--accent); }
-.home-poem-list strong { font:600 14px "Zen Maru Gothic",sans-serif; }
-.home-poem-list p { margin:4px 0 0; overflow:hidden; color:var(--muted); font-size:11px; text-overflow:ellipsis; white-space:nowrap; }
-.home-poem-list time { grid-column:2; color:var(--muted); font-size:9px; }
-.home-poem-list>a:hover,.home-music-list>a:hover { color:var(--accent); }
-.home-music-list>a { min-height:64px; display:grid; grid-template-columns:34px minmax(0,1fr) auto; align-items:center; gap:12px; padding:9px 12px; border:1px solid transparent; border-radius:12px; }
-.home-music-list>a:hover { border-color:var(--line); background:var(--accent-soft); }
-.home-music-list>a>svg:first-child { color:var(--accent); }
-.home-music-list strong,.home-music-list small { display:block; }
-.home-music-list strong { font-size:13px; }
-.home-music-list small { margin-top:2px; color:var(--muted); font-size:10px; }
-.home-music-empty { min-height:72px; display:flex; align-items:center; justify-content:flex-start; gap:14px; padding:13px 4px; border-block:1px solid var(--line); color:var(--accent); }
-.home-music-empty span { flex:1; }
-.home-music-empty strong,.home-music-empty small { display:block; }
-.home-music-empty strong { font:600 15px "Zen Maru Gothic",sans-serif; }
-.home-music-empty small { margin-top:6px; color:var(--muted); font-size:11px; line-height:1.6; }
 
 .article-index { position:relative; isolation:isolate; padding-block:0 76px; }
 .article-index--archive { padding-inline:18px; }
 .article-index-toolbar { display:flex; align-items:flex-start; justify-content:space-between; gap:20px; margin-bottom:22px; }
-.article-index-toolbar .filter-bar { margin:0; }
 .article-index-actions { flex:none; display:flex; gap:8px; }
 .article-index-actions button { min-height:39px; display:inline-flex; align-items:center; gap:7px; padding:0 13px; border:1px solid var(--line); border-radius:11px; background:var(--surface); color:var(--muted); cursor:pointer; font-size:12px; }
 .article-index-actions button:hover,.article-index-actions button.active { border-color:var(--accent); background:var(--accent-soft); color:var(--accent); }
@@ -1024,7 +918,6 @@ footer::before { content:""; position:absolute; top:0; left:50%; width:min(1180p
 
 .article-card { grid-template-rows:auto 1fr; }
 .article-card-media-image { object-fit:cover; }
-.article-card-media-backdrop { display:none; }
 .article-card-copy { min-height:208px; align-items:center; padding:21px 22px 17px; text-align:center; }
 .article-card-kickers { width:100%; display:flex; align-items:center; justify-content:center; gap:10px; }
 .article-card .category { display:inline-flex; align-items:center; color:var(--accent); font-size:10px; font-weight:700; letter-spacing:.08em; text-align:center; }
@@ -1165,11 +1058,6 @@ footer::before { content:""; position:absolute; top:0; left:50%; width:min(1180p
   .music-review-card .post-meta span { min-width:0; justify-content:flex-start; gap:3px; font-size:clamp(7px,2.2cqw,8px); white-space:nowrap; }
   .music-review-card .post-meta svg { width:12px; height:12px; }
 }
-
-.post-row { grid-template-columns:58px minmax(0,1fr) 52px 52px 108px; }
-.post-row-type { padding-left:8px; color:var(--accent); font-size:10px !important; font-weight:650; }
-.post-row small { display:flex; align-items:center; justify-content:flex-end; gap:4px; }
-.post-row small svg { flex:none; }
 
 .article-filter-backdrop { z-index:80; }
 .article-filter-dialog { width:min(590px,calc(100% - 24px)); max-height:min(720px,calc(100vh - 56px)); overflow:auto; padding:26px; border:1px solid var(--line); border-radius:24px; background:var(--surface); box-shadow:0 25px 80px rgba(43,23,52,.25); animation:dialog-panel-in .34s cubic-bezier(.22,1,.36,1) both; }
@@ -1312,9 +1200,6 @@ footer::before { content:""; position:absolute; top:0; left:50%; width:min(1180p
 .series-navigation .is-disabled { color:var(--muted); opacity:.55; }
 
 @media (max-width:960px) {
-  .home-lead-grid { grid-template-columns:230px minmax(0,1fr); gap:22px; }
-  .home-featured-stage .article-card.is-featured { grid-template-columns:1fr; grid-template-rows:auto 1fr; }
-  .home-featured-stage .article-card.is-featured .article-card-media { height:auto; aspect-ratio:16/9; }
   .article-index-toolbar { display:grid; }
   .article-index-actions { justify-self:end; }
 }
@@ -1324,22 +1209,10 @@ footer::before { content:""; position:absolute; top:0; left:50%; width:min(1180p
   .account-dialog { max-height:calc(100dvh - 24px); padding:20px 17px 22px; }
   .account-backdrop { padding:12px 8px; }
   .account-center-actions { padding-bottom:0; }
-  .home-editorial { width:calc(100% - 22px); gap:20px; padding-block:22px 54px; }
-  .home-lead-grid,.home-discovery-grid { grid-template-columns:1fr; gap:20px; }
-  .home-featured-stage,.home-recent-section { padding:18px; }
-  .home-salon { padding:18px 0 0; }
-  .home-featured-stage .article-card.is-featured { min-height:0; }
   .article-index { width:calc(100% - 22px); padding-block:0 58px; }
   .article-index-toolbar { gap:14px; }
-  .article-index-toolbar .filter-bar { flex-wrap:nowrap; margin-inline:-11px; padding:0 11px 4px; overflow-x:auto; scrollbar-width:none; }
-  .article-index-toolbar .filter-bar::-webkit-scrollbar { display:none; }
-  .article-index-toolbar .filter-bar button { flex:none; }
   .article-index-actions { width:100%; justify-self:stretch; }
   .article-index-actions button { flex:1; justify-content:center; }
-  .post-row { grid-template-columns:48px minmax(0,1fr) 36px 36px; min-height:56px; }
-  .post-row time { display:none; }
-  .post-row small { font-size:9px; }
-  .post-row-type { padding-left:4px; }
   .article-card-copy { min-height:160px; padding:16px; }
   .article-card .post-meta span:nth-child(2) { margin-left:0; }
   .music-review-card .post-meta span:nth-child(2) { width:auto; justify-content:flex-start; }
@@ -1368,13 +1241,7 @@ footer::before { content:""; position:absolute; top:0; left:50%; width:min(1180p
 }
 
 @media (max-width:420px) {
-  .home-page .profile-card { grid-template-columns:68px minmax(0,1fr); padding:18px; }
   .home-page .profile-avatar { width:68px; height:68px; }
-  .home-poem-list { grid-template-columns:1fr; gap:0; }
-  .home-poem-list>a { min-height:70px; grid-template-columns:26px minmax(0,1fr); padding:12px 4px; border:0; border-top:1px solid var(--line); border-radius:0; background:transparent; }
-  .home-poem-list>a:last-child { border-bottom:1px solid var(--line); }
-  .home-poem-list time { display:none; }
-  .home-music-empty { min-height:64px; padding:10px 2px; }
   .article-filter-dialog>footer button { flex:1; }
   .archive-controls { padding:14px; }
   .archive-controls span { width:100%; }
@@ -1385,139 +1252,7 @@ footer::before { content:""; position:absolute; top:0; left:50%; width:min(1180p
   .music-review-card .article-card-excerpt>span { font-size:7px; }
 }
 
-/* Homepage canvas and responsive article controls */
-.home-canvas {
-  position:relative;
-  padding-block:38px 64px;
-}
-.home-canvas::before {
-  content:"";
-  position:absolute;
-  z-index:-1;
-  top:12%;
-  right:-18%;
-  width:520px;
-  aspect-ratio:1;
-  border-radius:50%;
-  background:radial-gradient(circle,color-mix(in srgb,var(--accent) 10%,transparent),transparent 70%);
-  pointer-events:none;
-}
-.home-orbit {
-  display:grid;
-  grid-template-columns:minmax(310px,.82fr) minmax(0,1.58fr);
-  grid-template-rows:auto auto;
-  align-items:stretch;
-  overflow:hidden;
-  border-block:1px solid var(--line);
-}
-.home-story-slot {
-  position:relative;
-  grid-column:2;
-  grid-row:1;
-  width:100%;
-  aspect-ratio:16/9;
-  overflow:hidden;
-  border-left:1px solid var(--line);
-  background:var(--surface-soft);
-}
-.home-story {
-  position:relative;
-  display:block;
-  width:100%;
-  height:100%;
-  min-height:0;
-  aspect-ratio:auto;
-  overflow:hidden;
-  background:var(--surface-soft);
-  color:white;
-  animation:home-featured-swap .46s cubic-bezier(.22,1,.36,1) both;
-}
-@keyframes home-featured-swap { from { opacity:.28; transform:translateX(12px); } to { opacity:1; transform:translateX(0); } }
-.home-story::after {
-  content:"";
-  position:absolute;
-  z-index:2;
-  inset:0;
-  border:2px solid color-mix(in srgb,var(--accent) 84%,white);
-  box-shadow:inset 0 0 0 1px rgba(255,255,255,.26),inset 0 -80px 120px color-mix(in srgb,var(--accent) 11%,transparent);
-  opacity:0;
-  pointer-events:none;
-  transition:opacity .42s cubic-bezier(.22,1,.36,1);
-}
-.home-story:hover::after,.home-story:focus-visible::after { opacity:1; }
-.home-story>img {
-  position:absolute;
-  inset:0;
-  width:100%;
-  height:100%;
-  object-fit:cover;
-  transform:scale(1.002);
-  transition:transform .8s cubic-bezier(.22,1,.36,1),filter .8s ease;
-}
-.home-story:hover>img { transform:scale(1.035); filter:saturate(1.06); }
-.home-story-placeholder { position:absolute; inset:0; display:grid; place-items:center; color:var(--accent); }
-.home-story-shade {
-  position:absolute;
-  inset:0;
-  background:linear-gradient(180deg,rgba(27,17,35,.04) 18%,rgba(27,17,35,.22) 48%,rgba(27,17,35,.88) 100%);
-}
-.home-story-copy { position:absolute; z-index:1; right:0; bottom:0; left:0; padding:46px; }
-.home-story-copy .eyebrow { color:rgba(255,255,255,.82); }
-.home-story-copy h2 { max-width:680px; margin:10px 0 12px; font:700 clamp(27px,3vw,42px)/1.28 "Zen Maru Gothic",sans-serif; }
-.home-story-copy>p { max-width:620px; margin:0; color:rgba(255,255,255,.78); font-size:13px; line-height:1.75; }
-.home-story-copy>div { display:flex; align-items:center; flex-wrap:wrap; gap:14px; margin-top:24px; padding-top:17px; border-top:1px solid rgba(255,255,255,.27); }
-.home-story-copy>div span,.home-story-copy>div strong { display:inline-flex; align-items:center; gap:5px; font-size:10px; }
-.home-story-copy>div span { color:rgba(255,255,255,.72); }
-.home-story-copy>div strong { margin-left:auto; color:white; letter-spacing:.04em; }
-.home-story-copy>div strong svg { transition:transform .34s cubic-bezier(.22,1,.36,1); }
-.home-story:hover .home-story-copy>div strong svg,.home-story:focus-visible .home-story-copy>div strong svg { transform:translateX(5px); }
-.home-story-switch { position:absolute; z-index:4; top:18px; right:18px; width:42px; height:42px; display:grid; place-items:center; padding:0; border:1px solid rgba(255,255,255,.58); border-radius:50%; background:rgba(31,19,42,.56); color:white; -webkit-backdrop-filter:blur(12px); backdrop-filter:blur(12px); cursor:pointer; box-shadow:0 8px 22px rgba(25,12,34,.18); transition:background-color .25s ease,border-color .25s ease,transform .35s cubic-bezier(.22,1,.36,1); }
-.home-story-switch:hover,.home-story-switch:focus-visible { border-color:white; background:color-mix(in srgb,var(--accent) 72%,rgba(31,19,42,.64)); transform:translateX(3px); outline:none; }
-.home-identity { grid-column:1; grid-row:1; display:flex; flex-direction:column; justify-content:center; padding:32px 30px; background:linear-gradient(145deg,color-mix(in srgb,var(--surface) 94%,var(--accent-soft)),var(--surface)); }
-.home-identity-heading { display:grid; grid-template-columns:88px minmax(0,1fr); align-items:center; gap:18px; }
-.home-identity-heading>img { width:88px; height:88px; object-fit:cover; border:4px solid var(--surface); border-radius:50%; box-shadow:0 12px 30px color-mix(in srgb,var(--text) 16%,transparent); }
-.home-identity-heading>span { min-width:0; display:grid; gap:2px; }
-.home-identity-heading small,.home-latest header small,.home-crossroads header small { color:var(--accent); font-size:9px; font-weight:700; letter-spacing:.15em; }
-.home-identity-heading strong { font:700 25px "Zen Maru Gothic",sans-serif; }
-.home-identity>p { margin:24px 0 20px; color:var(--muted); font-size:12px; line-height:1.85; }
-.home-identity-stats { display:grid; grid-template-columns:repeat(3,1fr); padding-top:18px; border-top:1px solid var(--line); }
-.home-identity-stats span { display:grid; gap:4px; color:var(--muted); font-size:10px; text-align:center; }
-.home-identity-stats span+span { border-left:1px solid var(--line); }
-.home-identity-stats strong { color:var(--text); font:700 20px "Zen Maru Gothic",sans-serif; }
-.home-latest { grid-column:1/-1; grid-row:2; min-width:0; padding:25px 29px 28px; border-top:1px solid var(--line); background:color-mix(in srgb,var(--surface) 88%,transparent); }
-.home-latest header,.home-crossroads header { display:flex; align-items:end; justify-content:space-between; gap:16px; margin-bottom:14px; }
-.home-latest header>span,.home-crossroads header>span { display:grid; gap:3px; }
-.home-latest header strong,.home-crossroads header strong { font:700 20px "Zen Maru Gothic",sans-serif; }
-.home-latest header>a,.home-crossroads header>a { display:inline-flex; align-items:center; gap:5px; color:var(--accent); font-size:10px; white-space:nowrap; }
-.home-latest>div { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); border-block:1px solid var(--line); }
-.home-latest>div>a { min-height:74px; display:grid; grid-template-columns:28px minmax(0,1fr) 16px; align-items:center; gap:11px; padding:0 16px; transition:background .34s ease,color .34s ease,transform .34s cubic-bezier(.22,1,.36,1); }
-.home-latest>div>a+a { border-left:1px solid var(--line); }
-.home-latest>div i,.home-crossroads i { color:var(--accent); font:600 9px/1 monospace; font-style:normal; }
-.home-latest>div span { min-width:0; display:grid; gap:3px; }
-.home-latest>div small { color:var(--muted); font-size:8px; }
-.home-latest>div strong { overflow:hidden; font-size:11px; text-overflow:ellipsis; white-space:nowrap; }
-.home-latest>div>a>svg { color:var(--muted); transition:transform .22s ease,color .22s ease; }
-.home-latest>div>a:hover,.home-latest>div>a:focus-visible { background:linear-gradient(90deg,color-mix(in srgb,var(--accent) 10%,transparent),transparent); color:var(--accent); transform:translateX(4px); }
-.home-latest>div>a:hover>svg,.home-latest>div>a:focus-visible>svg { transform:translateX(3px); color:var(--accent); }
-.home-crossroads { display:grid; grid-template-columns:minmax(0,1.22fr) minmax(0,.78fr); border-bottom:1px solid var(--line); }
-.home-poetry-stream,.home-listening-stream { min-width:0; padding:31px 29px 32px; }
-.home-listening-stream { border-left:1px solid var(--line); }
-.home-poetry-stream>div>a { min-height:78px; display:grid; grid-template-columns:28px minmax(0,1fr) 24px; align-items:center; gap:13px; margin-inline:-10px; padding-inline:10px; border-top:1px solid var(--line); transition:background .34s ease,color .34s ease,transform .34s cubic-bezier(.22,1,.36,1); }
-.home-poetry-stream>div>a:last-child { border-bottom:1px solid var(--line); }
-.home-poetry-stream>div span { min-width:0; display:grid; gap:5px; }
-.home-poetry-stream>div strong { font:600 14px "Zen Maru Gothic",sans-serif; }
-.home-poetry-stream>div small { overflow:hidden; color:var(--muted); font-size:10px; text-overflow:ellipsis; white-space:nowrap; }
-.home-poetry-stream>div>a>svg { justify-self:end; color:var(--accent); }
-.home-poetry-stream>div>a:hover,.home-poetry-stream>div>a:focus-visible { background:linear-gradient(90deg,color-mix(in srgb,var(--accent) 10%,transparent),transparent); color:var(--accent); transform:translateX(5px); }
-.home-listening-stream>div>a,.home-listening-pending { min-height:68px; display:grid; grid-template-columns:30px minmax(0,1fr) 18px; align-items:center; gap:12px; margin-inline:-10px; padding-inline:10px; border-top:1px solid var(--line); transition:background .34s ease,color .34s ease,transform .34s cubic-bezier(.22,1,.36,1); }
-.home-listening-stream>div>a:last-child,.home-listening-pending { border-bottom:1px solid var(--line); }
-.home-listening-stream>div>a>svg:first-child,.home-listening-pending>svg:first-child { color:var(--accent); }
-.home-listening-stream>div span,.home-listening-pending span { min-width:0; display:grid; gap:4px; }
-.home-listening-stream>div strong,.home-listening-pending strong { font:600 13px "Zen Maru Gothic",sans-serif; }
-.home-listening-stream>div small,.home-listening-pending small { color:var(--muted); font-size:9px; }
-.home-listening-stream>div>a>svg:last-child,.home-listening-pending>svg:last-child { color:var(--muted); transition:transform .22s ease,color .22s ease; }
-.home-listening-stream>div>a:hover,.home-listening-stream>div>a:focus-visible,.home-listening-pending:hover,.home-listening-pending:focus-visible { background:linear-gradient(90deg,color-mix(in srgb,var(--accent) 10%,transparent),transparent); color:var(--accent); transform:translateX(5px); }
-.home-listening-stream>div>a:hover>svg:last-child,.home-listening-stream>div>a:focus-visible>svg:last-child,.home-listening-pending:hover>svg:last-child,.home-listening-pending:focus-visible>svg:last-child { transform:translateX(3px); color:var(--accent); }
+/* Responsive article controls */
 
 .article-index-toolbar {
   display:grid;
@@ -1579,23 +1314,7 @@ footer::before { content:""; position:absolute; top:0; left:50%; width:min(1180p
 :root[data-glass="on"] .article-index:has(~ .article-filter-backdrop.is-closing) .article-index-actions button.active {
   background:var(--glass-soft);
 }
-.article-index-toolbar--archive { grid-template-columns:minmax(0,1fr) auto; }
-.archive-mode-title { min-height:70px; }
 @media (min-width:961px) {
-  .article-index-toolbar--archive { grid-template-columns:auto auto; justify-content:start; align-items:center; gap:20px; padding-bottom:13px; border-bottom:1px solid var(--line); }
-  .article-index-toolbar--archive .archive-mode-title { min-height:44px; padding:0; border-bottom:0; }
-  .article-index-toolbar--archive .article-index-actions { width:auto; align-self:center; justify-self:start; }
-  .article-index-toolbar--archive .article-index-actions button,
-  .article-index-toolbar--archive .article-index-actions button.active {
-    min-height:42px;
-    padding:0 8px;
-    border:0;
-    border-radius:0;
-    background:transparent;
-    box-shadow:none;
-  }
-  .article-index-toolbar--archive .article-index-actions button::before { display:none; }
-  .article-index-toolbar--archive .article-index-actions button:hover { transform:translateX(-4px); }
 }
 .active-filter-summary { min-height:58px; max-height:80px; display:flex; align-items:center; justify-content:space-between; gap:18px; margin:-3px 0 26px; padding:10px 4px 12px; overflow:hidden; border:0; border-bottom:1px solid var(--line); border-radius:0; background:transparent; opacity:1; transform:translateY(0); transition:min-height .26s cubic-bezier(.4,0,.2,1),max-height .26s cubic-bezier(.4,0,.2,1),margin .26s cubic-bezier(.4,0,.2,1),padding .26s cubic-bezier(.4,0,.2,1),border-color .18s ease,opacity .18s ease,transform .26s cubic-bezier(.4,0,.2,1); }
 .active-filter-summary.is-leaving { min-height:0; max-height:0; margin-top:0; margin-bottom:0; padding-top:0; padding-bottom:0; border-color:transparent; opacity:0; transform:translateY(-8px) scale(.985); pointer-events:none; }
@@ -1617,67 +1336,22 @@ footer::before { content:""; position:absolute; top:0; left:50%; width:min(1180p
 .article-filter-section { min-height:166px; padding:17px 2px 3px; border-top:0; }
 
 @media (max-width:960px) {
-  .home-orbit { grid-template-columns:1fr 1fr; grid-template-rows:auto auto; }
-  .home-story-slot { grid-column:1/-1; grid-row:1; border-bottom:1px solid var(--line); border-left:0; }
-  .home-story { height:100%; min-height:0; aspect-ratio:auto; }
-  .home-story-copy { padding:34px; }
-  .home-identity { grid-column:1; grid-row:2; border-bottom:0; }
-  .home-latest { grid-column:2; grid-row:2; border-top:0; border-left:1px solid var(--line); }
-  .home-identity,.home-latest { padding-inline:22px; }
-  .home-latest>div { display:block; border-bottom:0; }
-  .home-latest>div>a { min-height:58px; padding-inline:10px; border-top:1px solid var(--line); }
-  .home-latest>div>a+a { border-left:0; }
-  .home-latest>div>a:last-child { border-bottom:1px solid var(--line); }
   .article-index-toolbar { grid-template-columns:1fr; }
   .article-index-actions { width:100%; justify-self:stretch; }
   .article-index-actions button { flex:1; }
-  .article-index-toolbar--archive { grid-template-columns:minmax(0,1fr) auto; }
-  .article-index-toolbar--archive .article-index-actions { width:auto; }
 }
 
 @media (max-width:760px) {
-  .home-canvas { width:calc(100% - 22px); padding-block:24px 54px; }
-  .home-canvas::before { display:none; }
-  .home-orbit { grid-template-columns:1fr; grid-template-rows:auto; }
-  .home-story-slot { grid-column:auto; grid-row:auto; height:auto; aspect-ratio:16/9; border-bottom:1px solid var(--line); border-left:0; }
-  .home-story { height:100%; min-height:0; aspect-ratio:auto; }
-  .home-story-copy { padding:20px 21px 18px; }
-  .home-story-copy h2 { margin-block:6px 8px; font-size:23px; }
-  .home-story-copy>p { display:none; }
-  .home-story-copy>div { gap:9px; margin-top:11px; padding-top:11px; }
-  .home-story-switch { top:12px; right:12px; width:38px; height:38px; }
-  .home-identity { grid-column:auto; grid-row:auto; padding:32px 25px 30px; }
-  .home-identity-heading { grid-template-columns:82px minmax(0,1fr); gap:16px; }
-  .home-identity-heading>img { width:82px; height:82px; }
-  .home-identity>p { margin:22px 0 18px; font-size:12px; }
-  .home-latest { grid-column:auto; grid-row:auto; padding:29px 25px 32px; border-top:1px solid var(--line); border-left:0; }
-  .home-latest>div>a { min-height:64px; }
-  .home-crossroads { grid-template-columns:1fr; }
-  .home-poetry-stream,.home-listening-stream { padding:27px 21px 28px; }
-  .home-listening-stream { border-top:1px solid var(--line); border-left:0; }
   .article-index-toolbar { grid-template-columns:1fr; gap:10px; }
   .article-type-tabs { --type-gap:3px; --type-pad:4px; min-height:54px; border-radius:16px; }
   .article-type-tabs button { min-height:44px; padding-inline:1px; font-size:10px; }
   .article-type-indicator { border-radius:11px; }
   .article-index-actions button { min-height:49px; padding-inline:12px; border-radius:14px; font-size:12px; }
-  .article-index-toolbar--archive { grid-template-columns:1fr; }
-  .article-index-toolbar--archive .article-index-actions { width:100%; }
-  .archive-mode-title { min-height:56px; }
   .article-filter-dialog { padding:19px 17px 16px; }
   .article-filter-section { min-height:180px; }
 }
 
 @media (max-width:420px) {
-  .home-story-slot { min-height:0; aspect-ratio:16/9; }
-  .home-story { min-height:0; aspect-ratio:auto; }
-  .home-story-copy { padding:15px 17px 13px; }
-  .home-story-copy .eyebrow { font-size:7px; }
-  .home-story-copy h2 { margin-block:5px 6px; font-size:21px; }
-  .home-story-copy>div { margin-top:8px; padding-top:8px; }
-  .home-story-copy>div span:nth-child(2),.home-story-copy>div span:nth-child(3) { display:none; }
-  .home-identity-heading { grid-template-columns:76px minmax(0,1fr); }
-  .home-identity-heading>img { width:76px; height:76px; }
-  .home-poetry-stream>div>a { grid-template-columns:23px minmax(0,1fr) 20px; }
 }
 
 /* About editorial profile */
@@ -1772,182 +1446,6 @@ footer::before { content:""; position:absolute; top:0; left:50%; width:min(1180p
   .about-comments { width:calc(100% - 32px); padding-bottom:66px; }
   .about-comments .comments-section { margin-top:22px; }
   .about-comments .comment-login-prompt { padding-top:10px; }
-}
-
-/* Homepage composition */
-.home-canvas {
-  position:relative;
-  display:grid;
-  gap:34px;
-  padding:34px;
-  overflow:hidden;
-  border-radius:32px;
-  background:
-    radial-gradient(circle at 8% 6%,color-mix(in srgb,var(--accent) 9%,transparent),transparent 34%),
-    radial-gradient(circle at 92% 88%,color-mix(in srgb,var(--blue) 8%,transparent),transparent 32%),
-    color-mix(in srgb,var(--surface) 96%,var(--bg));
-  box-shadow:0 20px 60px color-mix(in srgb,var(--text) 8%,transparent);
-}
-.home-canvas::before { display:none; }
-.home-orbit {
-  display:grid;
-  grid-template-columns:minmax(280px,.72fr) minmax(0,1.28fr);
-  grid-template-rows:auto auto;
-  gap:30px;
-  overflow:visible;
-  border:0;
-}
-.home-story-slot {
-  grid-column:2;
-  grid-row:1;
-  overflow:hidden;
-  border:0;
-  border-radius:26px;
-  box-shadow:0 16px 42px color-mix(in srgb,var(--text) 12%,transparent);
-}
-.home-story { border-radius:inherit; }
-.home-story::after { display:none; }
-.home-identity,
-.home-latest,
-.home-poetry-stream,
-.home-listening-stream {
-  border:0;
-  border-radius:0;
-  background:transparent;
-  box-shadow:none;
-}
-.home-identity {
-  grid-column:1;
-  grid-row:1;
-  justify-content:flex-start;
-  padding:10px 4px 8px;
-}
-.home-identity-heading {
-  grid-template-columns:132px minmax(0,1fr);
-  gap:22px;
-  border-radius:22px;
-}
-.home-identity-heading>img {
-  width:132px;
-  height:132px;
-  border:0;
-  border-radius:22px;
-  box-shadow:0 14px 32px color-mix(in srgb,var(--text) 14%,transparent);
-  transition:transform .4s cubic-bezier(.22,1,.36,1),box-shadow .4s ease;
-}
-.home-identity-heading:hover>img,
-.home-identity-heading:focus-visible>img {
-  transform:translateY(-3px);
-  box-shadow:0 18px 38px color-mix(in srgb,var(--accent) 18%,transparent);
-}
-.home-identity-heading:focus-visible { outline:2px solid var(--accent); outline-offset:5px; }
-.home-identity-heading small { color:var(--accent); }
-.home-identity>p { margin:24px 0 20px; }
-.home-identity-stats {
-  min-height:76px;
-  align-items:center;
-  margin-top:auto;
-  padding:14px 8px;
-  border:0;
-  border-radius:16px;
-  background:color-mix(in srgb,var(--accent-soft) 46%,transparent);
-}
-.home-identity-stats span { align-content:center; min-height:48px; }
-.home-identity-stats span+span { border-left:0; }
-.home-latest {
-  grid-column:1/-1;
-  grid-row:2;
-  padding:12px 0 0;
-  border:0;
-}
-.home-latest header,
-.home-crossroads header { align-items:center; margin-bottom:18px; }
-.home-latest header>span,
-.home-crossroads header>span { gap:5px; }
-.home-latest header small,
-.home-crossroads header small {
-  color:var(--muted);
-  font-size:10px;
-  font-weight:500;
-  letter-spacing:.02em;
-}
-.home-latest>div {
-  display:grid;
-  grid-template-columns:repeat(3,minmax(0,1fr));
-  gap:12px;
-  border:0;
-}
-.home-latest>div>a,
-.home-poetry-stream>div>a,
-.home-listening-stream>div>a,
-.home-listening-pending {
-  position:relative;
-  overflow:hidden;
-  border:0!important;
-  border-radius:15px;
-  background:color-mix(in srgb,var(--surface-soft) 58%,transparent);
-  box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--line) 45%,transparent);
-}
-.home-latest>div>a {
-  min-width:0;
-  min-height:78px;
-  grid-template-columns:minmax(0,1fr) 18px;
-  gap:10px;
-  padding:14px 16px 14px 19px;
-}
-.home-latest>div>a::before,
-.home-poetry-stream>div>a::before,
-.home-listening-stream>div>a::before,
-.home-listening-pending::before {
-  content:"";
-  position:absolute;
-  top:50%;
-  left:0;
-  width:3px;
-  height:24px;
-  border-radius:0 3px 3px 0;
-  background:var(--accent);
-  opacity:.62;
-  transform:translateY(-50%);
-}
-.home-latest>div>a:hover,
-.home-latest>div>a:focus-visible,
-.home-poetry-stream>div>a:hover,
-.home-poetry-stream>div>a:focus-visible,
-.home-listening-stream>div>a:hover,
-.home-listening-stream>div>a:focus-visible,
-.home-listening-pending:hover,
-.home-listening-pending:focus-visible {
-  background:var(--accent-soft);
-  box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--accent) 24%,transparent);
-  transform:translateY(-2px);
-  outline:none;
-}
-.home-latest>div strong { font-size:12px; line-height:1.55; white-space:normal; }
-.home-crossroads {
-  display:grid;
-  grid-template-columns:minmax(0,1.15fr) minmax(0,.85fr);
-  gap:44px;
-  border:0;
-}
-.home-poetry-stream,
-.home-listening-stream { padding:4px 0 8px; }
-.home-listening-stream { border:0; }
-.home-poetry-stream>div,
-.home-listening-stream>div { display:grid; gap:8px; }
-.home-poetry-stream>div>a {
-  min-width:0;
-  min-height:72px;
-  grid-template-columns:minmax(0,1fr) 24px;
-  gap:12px;
-  margin:0;
-  padding:13px 15px 13px 18px;
-}
-.home-listening-stream>div>a,
-.home-listening-pending {
-  min-width:0;
-  margin:0;
-  padding:13px 15px 13px 18px;
 }
 
 /* Article filter closes by reversing the exact opening animation */
@@ -2060,422 +1558,13 @@ footer::before { content:""; position:absolute; top:0; left:50%; width:min(1180p
 .account-dialog { background-color:var(--surface); background-image:none; }
 
 @media (max-width:960px) {
-  .home-canvas { padding:28px; }
-  .home-orbit { grid-template-columns:minmax(235px,.8fr) minmax(0,1.2fr); gap:24px; }
-  .home-story-slot { grid-column:2; grid-row:1; border:0; }
-  .home-identity { grid-column:1; grid-row:1; padding:8px 2px; }
-  .home-identity-heading { grid-template-columns:104px minmax(0,1fr); gap:17px; }
-  .home-identity-heading>img { width:104px; height:104px; border-radius:19px; }
-  .home-latest { grid-column:1/-1; grid-row:2; padding:8px 0 0; }
 }
 
 @media (max-width:760px) {
-  .home-canvas {
-    width:calc(100% - 20px);
-    gap:28px;
-    padding:16px;
-    border-radius:24px;
-  }
-  .home-orbit { grid-template-columns:1fr; grid-template-rows:auto; gap:24px; }
-  .home-story-slot { grid-column:1; grid-row:1; aspect-ratio:16/9; border:0; border-radius:21px; }
-  .home-identity { grid-column:1; grid-row:2; padding:4px; }
-  .home-identity-heading { grid-template-columns:112px minmax(0,1fr); gap:18px; }
-  .home-identity-heading>img { width:112px; height:112px; border-radius:20px; }
-  .home-identity>p { margin:20px 0 16px; }
-  .home-identity-stats { min-height:70px; padding:11px 6px; }
-  .home-latest { grid-column:1; grid-row:3; padding:4px; }
-  .home-latest>div { grid-template-columns:1fr; gap:6px; border:0; }
-  .home-latest>div>a { min-height:64px; padding:11px 12px 11px 17px; }
-  .home-crossroads { grid-template-columns:1fr; gap:30px; border:0; }
-  .home-poetry-stream,
-  .home-listening-stream { padding:4px; border:0; }
 }
 
 @media (max-width:420px) {
-  .home-identity-heading { grid-template-columns:102px minmax(0,1fr); }
-  .home-identity-heading>img { width:102px; height:102px; }
-  .home-poetry-stream>div>a { grid-template-columns:minmax(0,1fr) 22px; }
 }
-
-/* Homepage editorial journey */
-.home-journal {
-  display:grid;
-  gap:clamp(62px,7vw,94px);
-  margin-block:42px 86px;
-}
-.home-stage {
-  position:relative;
-  isolation:isolate;
-  min-height:560px;
-  overflow:hidden;
-  border-radius:32px;
-  background:var(--surface-soft);
-  box-shadow:0 24px 70px color-mix(in srgb,var(--text) 11%,transparent);
-}
-.home-stage-feature {
-  position:absolute;
-  inset:0;
-  display:block;
-  overflow:hidden;
-  color:white;
-}
-.home-stage-feature>img {
-  position:absolute;
-  inset:0;
-  width:100%;
-  height:100%;
-  object-fit:cover;
-  transition:transform .8s cubic-bezier(.22,1,.36,1),filter .45s ease;
-}
-.home-stage-feature:hover>img,
-.home-stage-feature:focus-visible>img {
-  transform:scale(1.018);
-  filter:saturate(1.04);
-}
-.home-stage-feature:focus-visible { outline:3px solid var(--accent); outline-offset:-3px; }
-.home-stage-placeholder {
-  position:absolute;
-  inset:0;
-  display:grid;
-  place-items:center;
-  color:var(--accent);
-  background:var(--surface-soft);
-}
-.home-stage-shade {
-  position:absolute;
-  inset:0;
-  background:
-    linear-gradient(90deg,rgba(24,13,31,.52) 0%,rgba(24,13,31,.13) 47%,rgba(24,13,31,.28) 100%),
-    linear-gradient(0deg,rgba(18,10,24,.88) 0%,rgba(18,10,24,.08) 70%);
-}
-.home-stage-copy {
-  position:absolute;
-  z-index:1;
-  right:44px;
-  bottom:40px;
-  left:44%;
-  display:flex;
-  flex-direction:column;
-  align-items:flex-start;
-}
-.home-stage-copy .eyebrow { color:#f0b4d0; }
-.home-stage-copy h2 {
-  max-width:680px;
-  margin:10px 0 11px;
-  color:white;
-  font:700 clamp(32px,4.2vw,54px)/1.22 "Zen Maru Gothic",sans-serif;
-  letter-spacing:-.035em;
-  text-wrap:balance;
-}
-.home-stage-copy>p {
-  max-width:650px;
-  margin:0;
-  color:rgba(255,255,255,.78);
-  font-size:13px;
-  line-height:1.8;
-  text-wrap:pretty;
-}
-.home-stage-meta {
-  display:flex;
-  flex-wrap:wrap;
-  gap:14px;
-  margin-top:20px;
-  color:rgba(255,255,255,.72);
-  font-size:10px;
-}
-.home-stage-meta span { display:inline-flex; align-items:center; gap:5px; }
-.home-link-cue {
-  display:inline-flex;
-  align-items:center;
-  gap:8px;
-  margin-top:20px;
-  padding-bottom:3px;
-  border-bottom:1px solid currentColor;
-  color:inherit;
-  font-size:11px;
-  font-weight:700;
-  letter-spacing:.04em;
-}
-.home-link-cue i {
-  display:grid;
-  place-items:center;
-  font-style:normal;
-  transition:transform .28s cubic-bezier(.22,1,.36,1);
-}
-.home-stage-feature:hover .home-link-cue i,
-.home-stage-feature:focus-visible .home-link-cue i { transform:translateX(4px); }
-.home-stage-profile {
-  position:absolute;
-  z-index:2;
-  top:32px;
-  bottom:32px;
-  left:32px;
-  width:min(350px,35%);
-  display:grid;
-  grid-template-rows:auto minmax(0,1fr) auto;
-  align-items:start;
-  gap:19px;
-  padding:24px;
-  overflow:hidden;
-  border-radius:25px;
-  background:color-mix(in srgb,var(--surface) 88%,transparent);
-  color:var(--text);
-  box-shadow:0 18px 48px rgba(24,13,31,.22);
-  -webkit-backdrop-filter:blur(18px) saturate(1.08);
-  backdrop-filter:blur(18px) saturate(1.08);
-  transition:background-color .35s ease,transform .42s cubic-bezier(.22,1,.36,1);
-}
-.home-stage-profile:hover,
-.home-stage-profile:focus-visible {
-  background:color-mix(in srgb,var(--surface) 94%,transparent);
-  transform:translateY(-4px);
-  outline:none;
-}
-.home-stage-profile:focus-visible { box-shadow:0 0 0 3px var(--accent),0 18px 48px rgba(24,13,31,.22); }
-.home-stage-profile>img {
-  width:142px;
-  height:142px;
-  display:block;
-  object-fit:cover;
-  border-radius:22px;
-  box-shadow:0 13px 32px color-mix(in srgb,var(--text) 16%,transparent);
-}
-.home-stage-profile-copy {
-  min-width:0;
-  display:flex;
-  flex-direction:column;
-  align-items:flex-start;
-}
-.home-stage-profile-copy>small {
-  color:var(--accent);
-  font-size:8px;
-  font-weight:800;
-  letter-spacing:.18em;
-}
-.home-stage-profile-copy>strong {
-  margin-top:4px;
-  font:700 30px/1.25 "Zen Maru Gothic",sans-serif;
-}
-.home-stage-profile-copy>span:not(.home-link-cue) {
-  margin-top:6px;
-  color:var(--muted);
-  font-size:11px;
-}
-.home-stage-profile-copy>p {
-  margin:10px 0 0;
-  color:var(--muted);
-  font-size:11px;
-  line-height:1.75;
-}
-.home-stage-profile-copy .home-link-cue {
-  margin-top:14px;
-  color:var(--accent);
-}
-.home-stage-stats {
-  display:flex;
-  align-items:center;
-  gap:20px;
-  min-height:38px;
-  color:var(--muted);
-  font-size:9px;
-}
-.home-stage-stats>span { display:inline-flex; align-items:baseline; gap:4px; }
-.home-stage-stats strong {
-  color:var(--text);
-  font:700 17px "Zen Maru Gothic",sans-serif;
-}
-.home-stage-switch {
-  position:absolute;
-  z-index:3;
-  top:24px;
-  right:24px;
-  width:42px;
-  height:42px;
-  display:grid;
-  place-items:center;
-  border:1px solid rgba(255,255,255,.38);
-  border-radius:50%;
-  background:rgba(25,14,32,.42);
-  color:white;
-  cursor:pointer;
-  -webkit-backdrop-filter:blur(10px);
-  backdrop-filter:blur(10px);
-  transition:background-color .25s ease,transform .3s cubic-bezier(.22,1,.36,1);
-}
-.home-stage-switch:hover,
-.home-stage-switch:focus-visible {
-  background:var(--accent);
-  transform:rotate(-10deg);
-  outline:none;
-}
-.home-writing {
-  display:grid;
-  grid-template-columns:minmax(200px,260px) minmax(0,1fr);
-  align-items:start;
-  gap:clamp(36px,6vw,82px);
-  padding-inline:14px;
-}
-.home-section-intro { display:flex; flex-direction:column; align-items:flex-start; }
-.home-section-intro>span,
-.home-afterglow header small {
-  color:var(--accent);
-  font-size:8px;
-  font-weight:800;
-  letter-spacing:.18em;
-}
-.home-section-intro h2,
-.home-afterglow header h2 {
-  margin:7px 0 8px;
-  font:700 clamp(27px,3vw,38px)/1.3 "Zen Maru Gothic",sans-serif;
-  letter-spacing:-.025em;
-}
-.home-section-intro p,
-.home-afterglow>header>p {
-  margin:0;
-  color:var(--muted);
-  font-size:11px;
-  line-height:1.75;
-}
-.home-section-intro>a,
-.home-afterglow-nav>a {
-  margin-top:24px;
-  padding-bottom:3px;
-  border-bottom:1px solid color-mix(in srgb,var(--accent) 56%,transparent);
-  color:var(--accent);
-  font-size:10px;
-  font-weight:700;
-  transition:border-color .25s ease,color .25s ease;
-}
-.home-section-intro>a:hover,
-.home-section-intro>a:focus-visible,
-.home-afterglow-nav>a:hover,
-.home-afterglow-nav>a:focus-visible {
-  border-color:currentColor;
-  color:color-mix(in srgb,var(--accent) 74%,var(--text));
-  outline:none;
-}
-.home-writing-list { min-width:0; display:grid; gap:8px; }
-.home-writing-list>a {
-  min-width:0;
-  min-height:82px;
-  display:grid;
-  grid-template-columns:100px minmax(0,1fr) 40px;
-  align-items:center;
-  gap:18px;
-  padding:12px 15px 12px 18px;
-  border-radius:16px;
-  color:var(--text);
-  transition:background-color .3s ease,transform .36s cubic-bezier(.22,1,.36,1);
-}
-.home-writing-list>a:nth-child(odd) { background:color-mix(in srgb,var(--surface-soft) 48%,transparent); }
-.home-writing-list>a:hover,
-.home-writing-list>a:focus-visible {
-  background:var(--accent-soft);
-  transform:translateX(5px);
-  outline:none;
-}
-.home-writing-list time {
-  color:var(--muted);
-  font-size:9px;
-  font-variant-numeric:tabular-nums;
-}
-.home-writing-list>a>span:not(.home-entry-cue) { min-width:0; display:grid; gap:5px; }
-.home-writing-list small {
-  color:var(--accent);
-  font-size:8px;
-  font-weight:700;
-  letter-spacing:.08em;
-}
-.home-writing-list strong {
-  overflow:hidden;
-  font:650 14px/1.5 "Zen Maru Gothic",sans-serif;
-  text-overflow:ellipsis;
-  white-space:nowrap;
-}
-.home-entry-cue {
-  justify-self:end;
-  padding-bottom:2px;
-  border-bottom:1px solid color-mix(in srgb,var(--muted) 55%,transparent);
-  color:var(--muted);
-  font-size:9px;
-  transition:border-color .25s ease,color .25s ease;
-}
-.home-writing-list>a:hover .home-entry-cue,
-.home-writing-list>a:focus-visible .home-entry-cue {
-  border-color:var(--accent);
-  color:var(--accent);
-}
-.home-afterglow {
-  padding:36px 38px 32px;
-  border-radius:30px;
-  background:
-    radial-gradient(circle at 12% 0,color-mix(in srgb,var(--accent) 8%,transparent),transparent 38%),
-    color-mix(in srgb,var(--surface-soft) 72%,transparent);
-}
-.home-afterglow>header {
-  display:flex;
-  align-items:end;
-  justify-content:space-between;
-  gap:24px;
-  margin-bottom:25px;
-}
-.home-afterglow>header>span { display:grid; }
-.home-afterglow header h2 { margin-bottom:0; }
-.home-afterglow-flow {
-  display:grid;
-  grid-template-columns:repeat(4,minmax(0,1fr));
-  gap:7px;
-  padding:7px;
-  border-radius:22px;
-  background:color-mix(in srgb,var(--surface) 56%,transparent);
-}
-.home-afterglow-link {
-  min-width:0;
-  min-height:132px;
-  display:grid;
-  grid-template-columns:30px minmax(0,1fr);
-  align-content:center;
-  gap:12px;
-  padding:17px;
-  border-radius:16px;
-  color:var(--text);
-  transition:background-color .3s ease,transform .36s cubic-bezier(.22,1,.36,1);
-}
-.home-afterglow-link:hover,
-.home-afterglow-link:focus-visible {
-  background:var(--surface);
-  transform:translateY(-3px);
-  outline:none;
-}
-.home-afterglow-link>svg { color:var(--accent); }
-.home-afterglow-link--music>svg { color:var(--blue); }
-.home-afterglow-link>span { min-width:0; display:grid; gap:4px; }
-.home-afterglow-link small {
-  color:var(--muted);
-  font-size:8px;
-  letter-spacing:.08em;
-}
-.home-afterglow-link strong {
-  overflow:hidden;
-  font:650 13px/1.5 "Zen Maru Gothic",sans-serif;
-  text-overflow:ellipsis;
-  white-space:nowrap;
-}
-.home-afterglow-link p {
-  overflow:hidden;
-  margin:0;
-  color:var(--muted);
-  font-size:9px;
-  line-height:1.6;
-  text-overflow:ellipsis;
-  white-space:nowrap;
-}
-.home-afterglow-nav {
-  display:flex;
-  justify-content:flex-end;
-  gap:25px;
-}
-.home-afterglow-nav>a { margin-top:19px; }
 
 /* Search stays inside the viewport; result count is intentionally quiet */
 .dialog-backdrop {
@@ -2572,677 +1661,17 @@ footer::before { content:""; position:absolute; top:0; left:50%; width:min(1180p
 }
 
 @media (max-width:960px) {
-  .home-stage { min-height:520px; }
-  .home-stage-profile { width:min(310px,38%); }
-  .home-stage-profile>img { width:118px; height:118px; border-radius:19px; }
-  .home-stage-copy { left:43%; }
-  .home-afterglow-flow { grid-template-columns:repeat(2,minmax(0,1fr)); }
 }
 
 @media (max-width:760px) {
-  .home-journal {
-    width:calc(100% - 20px);
-    gap:54px;
-    margin-block:20px 66px;
-  }
-  .home-stage {
-    min-height:0;
-    display:grid;
-    overflow:hidden;
-    border-radius:24px;
-  }
-  .home-stage-feature {
-    position:relative;
-    min-height:390px;
-    grid-row:1;
-  }
-  .home-stage-shade {
-    background:
-      linear-gradient(0deg,rgba(18,10,24,.88) 0%,rgba(18,10,24,.12) 74%),
-      linear-gradient(90deg,rgba(24,13,31,.15),rgba(24,13,31,.08));
-  }
-  .home-stage-copy {
-    right:20px;
-    bottom:22px;
-    left:20px;
-  }
-  .home-stage-copy h2 { margin-block:7px 8px; font-size:30px; }
-  .home-stage-copy>p {
-    display:-webkit-box;
-    overflow:hidden;
-    font-size:11px;
-    -webkit-box-orient:vertical;
-    -webkit-line-clamp:2;
-  }
-  .home-stage-meta { margin-top:13px; }
-  .home-stage-copy>.home-link-cue { margin-top:14px; }
-  .home-stage-profile {
-    position:relative;
-    inset:auto;
-    width:auto;
-    grid-row:2;
-    grid-template-columns:104px minmax(0,1fr);
-    grid-template-rows:auto auto;
-    align-items:center;
-    gap:18px;
-    padding:22px;
-    border-radius:0;
-    background:var(--surface);
-    box-shadow:none;
-    -webkit-backdrop-filter:none;
-    backdrop-filter:none;
-  }
-  .home-stage-profile:hover,
-  .home-stage-profile:focus-visible { transform:none; }
-  .home-stage-profile>img {
-    width:104px;
-    height:104px;
-    grid-column:1;
-    grid-row:1;
-    border-radius:19px;
-  }
-  .home-stage-profile-copy { grid-column:2; grid-row:1; }
-  .home-stage-profile-copy>strong { font-size:26px; }
-  .home-stage-profile-copy>p { display:none; }
-  .home-stage-profile-copy .home-link-cue { margin-top:10px; }
-  .home-stage-stats {
-    grid-column:1/-1;
-    grid-row:2;
-    justify-content:space-around;
-    min-height:50px;
-    margin-top:1px;
-    padding-top:13px;
-    border-top:1px solid var(--line);
-  }
-  .home-stage-switch { top:14px; right:14px; }
-  .home-writing {
-    grid-template-columns:1fr;
-    gap:24px;
-    padding-inline:4px;
-  }
-  .home-section-intro>a { margin-top:15px; }
-  .home-writing-list>a {
-    grid-template-columns:70px minmax(0,1fr) 34px;
-    gap:11px;
-    min-height:74px;
-    padding-inline:11px;
-  }
-  .home-writing-list strong { font-size:12px; white-space:normal; }
-  .home-afterglow {
-    padding:27px 17px 22px;
-    border-radius:24px;
-  }
-  .home-afterglow>header {
-    display:grid;
-    align-items:start;
-    gap:8px;
-    margin-bottom:20px;
-  }
-  .home-afterglow-flow { grid-template-columns:1fr; }
-  .home-afterglow-link {
-    min-height:90px;
-    padding:14px;
-  }
-  .home-afterglow-nav { justify-content:flex-start; }
 }
 
 @media (max-width:420px) {
-  .home-stage-feature { min-height:360px; }
-  .home-stage-meta span:nth-child(2),
-  .home-stage-meta span:nth-child(3) { display:none; }
-  .home-stage-profile { grid-template-columns:94px minmax(0,1fr); padding:18px; }
-  .home-stage-profile>img { width:94px; height:94px; }
-  .home-writing-list>a { grid-template-columns:61px minmax(0,1fr) 30px; }
 }
 
 @media (prefers-reduced-motion:reduce) {
   .article-filter-backdrop,
   .article-filter-backdrop .article-filter-dialog { transition:none; }
-}
-
-/* Homepage dashboard */
-.home-dashboard-page {
-  position:relative;
-  isolation:isolate;
-  min-height:100vh;
-  overflow:hidden;
-  background:transparent;
-}
-.home-dashboard-hero { min-height:460px; }
-.home-dashboard-body {
-  position:relative;
-  isolation:isolate;
-  padding:52px 0 92px;
-  overflow:hidden;
-  background:
-    radial-gradient(circle at 14% 4%,color-mix(in srgb,var(--accent) 5%,transparent),transparent 31%),
-    radial-gradient(circle at 90% 92%,color-mix(in srgb,var(--blue) 5%,transparent),transparent 28%);
-}
-.home-dashboard-background {
-  display:none;
-}
-.home-dashboard-background .route-hero-art {
-  inset:0;
-  filter:blur(11px) saturate(.82);
-  transform:scale(1.07);
-}
-.home-dashboard-background>span {
-  position:absolute;
-  z-index:2;
-  inset:0;
-  background:
-    linear-gradient(180deg,rgba(34,20,43,.42),rgba(48,31,57,.58)),
-    radial-gradient(circle at 50% 20%,rgba(255,221,238,.16),transparent 42%);
-}
-.home-dashboard {
-  position:relative;
-  z-index:1;
-}
-.home-dashboard-grid {
-  display:grid;
-  grid-template-columns:minmax(300px,.72fr) minmax(0,1.55fr);
-  grid-template-rows:340px auto auto auto;
-  grid-template-areas:
-    "profile feature"
-    "recent recent"
-    "poems poems"
-    "music music";
-  gap:24px;
-  padding:0;
-  border:0;
-  border-radius:0;
-  background:transparent;
-  box-shadow:none;
-}
-.home-dash-panel {
-  position:relative;
-  min-width:0;
-  overflow:hidden;
-  border:1px solid color-mix(in srgb,var(--line) 78%,transparent);
-  border-radius:22px;
-  background:var(--surface);
-  color:var(--text);
-  box-shadow:0 16px 44px color-mix(in srgb,var(--shadow-color) 48%,transparent);
-  -webkit-backdrop-filter:none;
-  backdrop-filter:none;
-}
-a.home-dash-panel {
-  transition:background-color .26s ease,box-shadow .26s ease;
-}
-a.home-dash-panel:hover,
-a.home-dash-panel:focus-visible {
-  outline:none;
-}
-.home-dash-profile {
-  grid-area:profile;
-  display:grid;
-  grid-template-columns:1fr;
-  grid-template-rows:minmax(0,1fr) auto;
-  align-items:start;
-  gap:22px;
-  padding:26px;
-  background:var(--surface);
-}
-.home-dash-profile-heading {
-  min-width:0;
-  display:grid;
-  grid-template-columns:104px minmax(0,1fr);
-  grid-column:1;
-  grid-row:1;
-  align-items:center;
-  gap:18px;
-}
-.home-dash-avatar-link {
-  display:block;
-  width:104px;
-  height:104px;
-  overflow:hidden;
-  border:2px solid color-mix(in srgb,var(--accent) 65%,white);
-  border-radius:20px;
-  box-shadow:0 12px 30px color-mix(in srgb,var(--text) 15%,transparent);
-  transition:border-color .25s ease,box-shadow .25s ease;
-}
-.home-dash-avatar-link:hover,
-.home-dash-avatar-link:focus-visible {
-  border-color:var(--accent);
-  box-shadow:0 16px 34px color-mix(in srgb,var(--accent) 18%,transparent);
-  outline:none;
-}
-.home-dash-avatar-link>img {
-  width:100%;
-  height:100%;
-  object-fit:cover;
-}
-.home-dash-profile-heading>span {
-  min-width:0;
-  display:grid;
-  gap:4px;
-}
-.home-dash-profile-heading small,
-.home-dash-recent header small,
-.home-dash-poems header small,
-.home-dash-music small {
-  color:var(--accent);
-  font-size:8px;
-  font-weight:800;
-  letter-spacing:.16em;
-}
-.home-dash-profile-heading strong {
-  font:700 28px/1.2 "Zen Maru Gothic",sans-serif;
-}
-.home-dash-profile-heading p {
-  margin:2px 0 0;
-  color:var(--muted);
-  font-size:11px;
-}
-.home-dash-profile-note {
-  margin:5px 0 0!important;
-  color:var(--muted);
-  font-size:10px!important;
-  line-height:1.75;
-}
-.home-dash-stats {
-  width:100%;
-  min-width:0;
-  display:grid;
-  grid-template-columns:repeat(3,1fr);
-  grid-column:1;
-  grid-row:2;
-  align-self:center;
-  align-items:center;
-  gap:12px;
-  padding:0;
-  border:0;
-  border-radius:0;
-  background:transparent;
-}
-.home-dash-stats>span {
-  min-width:0;
-  display:grid;
-  gap:5px;
-  text-align:center;
-}
-.home-dash-stats strong {
-  color:var(--text);
-  font:700 22px/1 "Zen Maru Gothic",sans-serif;
-}
-.home-dash-stats small { color:var(--muted); font-size:8px; }
-.home-dash-feature {
-  grid-area:feature;
-  display:block;
-  color:white;
-  border-radius:22px;
-  box-shadow:0 15px 38px color-mix(in srgb,var(--shadow-color) 72%,transparent);
-}
-.home-dash-feature>img {
-  position:absolute;
-  inset:0;
-  width:100%;
-  height:100%;
-  object-fit:cover;
-  transition:filter .28s ease;
-}
-.home-dash-feature:hover>img,
-.home-dash-feature:focus-visible>img {
-  filter:saturate(1.06);
-}
-.home-dash-feature-placeholder {
-  position:absolute;
-  inset:0;
-  display:grid;
-  place-items:center;
-  color:var(--accent);
-  background:var(--surface-soft);
-}
-.home-dash-feature-shade {
-  position:absolute;
-  inset:0;
-  background:linear-gradient(0deg,rgba(19,10,25,.9),rgba(19,10,25,.08) 80%);
-}
-.home-dash-feature-copy {
-  position:absolute;
-  z-index:1;
-  right:28px;
-  bottom:24px;
-  left:28px;
-  display:grid;
-  justify-items:start;
-}
-.home-dash-feature-copy>small { color:#f4bad3; font-size:8px; font-weight:800; letter-spacing:.12em; }
-.home-dash-feature-copy>strong {
-  max-width:680px;
-  margin-top:7px;
-  color:white;
-  font:700 clamp(24px,3vw,37px)/1.28 "Zen Maru Gothic",sans-serif;
-  text-wrap:balance;
-}
-.home-dash-feature-copy>p {
-  max-width:620px;
-  margin:7px 0 0;
-  color:rgba(255,255,255,.75);
-  font-size:10px;
-  line-height:1.7;
-}
-.home-dash-feature-meta {
-  display:flex;
-  gap:12px;
-  margin-top:13px;
-  color:rgba(255,255,255,.7);
-  font-size:9px;
-}
-.home-dash-feature-meta>span { display:inline-flex; align-items:center; gap:4px; }
-.home-dash-action {
-  display:inline-block;
-  margin-top:13px;
-  padding-bottom:2px;
-  border-bottom:1px solid currentColor;
-  color:inherit;
-  font-size:9px;
-  font-weight:750;
-}
-.home-dash-feature-switch {
-  position:relative;
-  z-index:4;
-  grid-area:feature;
-  align-self:start;
-  justify-self:end;
-  margin:16px;
-  width:39px;
-  height:39px;
-  display:grid;
-  place-items:center;
-  border:1px solid rgba(255,255,255,.42);
-  border-radius:50%;
-  background:rgba(29,16,37,.42);
-  color:white;
-  cursor:pointer;
-  -webkit-backdrop-filter:blur(10px);
-  backdrop-filter:blur(10px);
-}
-.home-dash-feature-switch:hover,
-.home-dash-feature-switch:focus-visible { background:var(--accent); outline:none; }
-.home-dash-recent {
-  grid-area:recent;
-  display:flex;
-  flex-direction:column;
-  padding:24px;
-}
-.home-dash-recent header,
-.home-dash-poems header {
-  display:flex;
-  align-items:end;
-  justify-content:space-between;
-  gap:15px;
-}
-.home-dash-recent header>span,
-.home-dash-poems header>span { display:grid; gap:4px; }
-.home-dash-recent h2,
-.home-dash-poems h2 {
-  margin:0;
-  font:700 22px/1.3 "Zen Maru Gothic",sans-serif;
-}
-.home-dash-recent header>a,
-.home-dash-poems header>a {
-  padding-bottom:2px;
-  border-bottom:1px solid color-mix(in srgb,var(--accent) 55%,transparent);
-  color:var(--accent);
-  font-size:9px;
-  font-weight:700;
-}
-.home-dash-recent nav {
-  display:grid;
-  grid-template-columns:repeat(3,minmax(0,1fr));
-  gap:8px;
-  margin-top:16px;
-}
-.home-dash-recent nav>a {
-  position:relative;
-  min-width:0;
-  display:grid;
-  gap:7px;
-  padding:11px 49px 11px 6px;
-  border-radius:14px;
-  background:transparent;
-  box-shadow:none;
-  transition:background-color .25s ease,box-shadow .25s ease,transform .28s cubic-bezier(.22,1,.36,1);
-}
-.home-dash-recent nav>a::after {
-  content:"阅读";
-  position:absolute;
-  top:50%;
-  right:10px;
-  color:var(--accent);
-  font-size:8px;
-  font-weight:700;
-  transform:translateY(-50%);
-}
-.home-dash-recent nav>a:hover,
-.home-dash-recent nav>a:focus-visible {
-  background:linear-gradient(135deg,color-mix(in srgb,var(--accent-soft) 82%,transparent),color-mix(in srgb,var(--surface) 65%,transparent));
-  box-shadow:0 10px 26px color-mix(in srgb,var(--accent) 13%,transparent);
-  transform:translateY(-2px);
-  outline:none;
-}
-.home-dash-recent time { color:var(--muted); font-size:8px; font-variant-numeric:tabular-nums; }
-.home-dash-recent nav>a>span { min-width:0; display:grid; gap:4px; }
-.home-dash-recent nav small { color:var(--accent); font-size:8px; }
-.home-dash-recent nav strong {
-  overflow:hidden;
-  font:650 12px/1.55 "Zen Maru Gothic",sans-serif;
-  text-overflow:ellipsis;
-  white-space:nowrap;
-}
-.home-dash-poems {
-  grid-area:poems;
-  padding:24px;
-}
-.home-dash-poems>div {
-  display:grid;
-  grid-template-columns:repeat(3,minmax(0,1fr));
-  gap:8px;
-  margin-top:16px;
-}
-.home-dash-poems>div>a {
-  min-width:0;
-  min-height:118px;
-  display:grid;
-  grid-template-columns:25px minmax(0,1fr);
-  align-content:center;
-  gap:10px;
-  padding:14px;
-  border-radius:14px;
-  background:transparent;
-  transition:background-color .25s ease;
-}
-.home-dash-poems>div>a:hover,
-.home-dash-poems>div>a:focus-visible {
-  background:var(--accent-soft);
-  outline:none;
-}
-.home-dash-poems>div>a>svg { color:var(--accent); }
-.home-dash-poems>div>a>span { min-width:0; display:grid; gap:5px; }
-.home-dash-poems strong { font:650 12px "Zen Maru Gothic",sans-serif; }
-.home-dash-poems>div small {
-  overflow:hidden;
-  color:var(--muted);
-  font-size:8px;
-  text-overflow:ellipsis;
-  white-space:nowrap;
-}
-.home-dash-music {
-  grid-area:music;
-  min-height:0;
-  padding:24px;
-  background:var(--surface);
-}
-.home-dash-music>header {
-  display:flex;
-  align-items:end;
-  justify-content:space-between;
-  gap:15px;
-}
-.home-dash-music>header>span { display:grid; gap:4px; }
-.home-dash-music h2 { margin:0; font:700 22px/1.3 "Zen Maru Gothic",sans-serif; }
-.home-dash-music>header>a {
-  padding-bottom:2px;
-  border-bottom:1px solid color-mix(in srgb,var(--accent) 55%,transparent);
-  color:var(--accent);
-  font-size:9px;
-  font-weight:700;
-}
-.home-dash-music-list {
-  display:grid;
-  grid-template-columns:repeat(3,minmax(0,1fr));
-  gap:10px;
-  margin-top:16px;
-}
-.home-dash-music-list>a {
-  min-width:0;
-  min-height:92px;
-  display:grid;
-  grid-template-columns:30px minmax(0,1fr) auto;
-  align-items:center;
-  gap:10px;
-  padding:13px;
-  border-radius:14px;
-  background:transparent;
-  transition:background-color .25s ease,box-shadow .25s ease,transform .28s cubic-bezier(.22,1,.36,1);
-}
-.home-dash-music-list>a:hover,
-.home-dash-music-list>a:focus-visible {
-  background:var(--accent-soft);
-  box-shadow:0 10px 26px color-mix(in srgb,var(--blue) 13%,transparent);
-  transform:translateY(-2px);
-  outline:none;
-}
-.home-dash-music-list svg { color:var(--blue); }
-.home-dash-music-list>a>span { min-width:0; display:grid; gap:4px; }
-.home-dash-music-list strong {
-  overflow:hidden;
-  font:650 12px/1.45 "Zen Maru Gothic",sans-serif;
-  text-overflow:ellipsis;
-  white-space:nowrap;
-}
-.home-dash-music-list small,
-.home-dash-music-list p {
-  margin:0;
-  overflow:hidden;
-  color:var(--muted);
-  font-size:8px;
-  line-height:1.6;
-  text-overflow:ellipsis;
-  white-space:nowrap;
-}
-.home-dash-music-list em {
-  color:var(--accent);
-  font-size:8px;
-  font-style:normal;
-  font-weight:700;
-}
-.app-shell:has(.home-dashboard-page)>footer {
-  position:relative;
-  z-index:2;
-  border-top:1px solid var(--line);
-  background:var(--bg);
-  color:var(--muted);
-}
-
-@media (max-width:960px) {
-  .home-dashboard-grid {
-    grid-template-columns:1fr 1fr;
-    grid-template-rows:auto 330px auto auto auto;
-    grid-template-areas:
-      "profile profile"
-      "feature feature"
-      "recent recent"
-      "poems poems"
-      "music music";
-    padding:0;
-  }
-  .home-dash-recent nav { grid-template-columns:1fr; }
-  .home-dash-poems>div { grid-template-columns:1fr; }
-  .home-dash-poems>div>a { min-height:86px; }
-}
-
-@media (max-width:760px) {
-  .home-dashboard-hero { min-height:510px; }
-  .home-dashboard-body { padding:26px 0 64px; }
-  .home-dashboard-background { inset:-18px; }
-  .home-dashboard-background .route-hero-art {
-    filter:blur(8px) saturate(.86);
-    transform:scale(1.09);
-  }
-  .home-dashboard {
-    width:calc(100% - 24px);
-  }
-  .home-dashboard-grid {
-    grid-template-columns:1fr;
-    grid-template-rows:auto;
-    grid-template-areas:
-      "profile"
-      "feature"
-      "recent"
-      "poems"
-      "music";
-    gap:13px;
-    padding:0;
-    border-radius:0;
-  }
-  .home-dash-panel { border-radius:20px; }
-  .home-dash-profile {
-    grid-template-columns:1fr;
-    grid-template-rows:auto auto;
-    gap:15px;
-    padding:21px;
-  }
-  .home-dash-profile-heading {
-    grid-template-columns:104px minmax(0,1fr);
-    grid-column:1;
-    grid-row:1;
-    gap:17px;
-  }
-  .home-dash-avatar-link { width:104px; height:104px; border-radius:18px; }
-  .home-dash-profile-heading strong { font-size:27px; }
-  .home-dash-profile-note {
-    margin:0;
-    font-size:10px;
-  }
-  .home-dash-stats {
-    min-width:0;
-    grid-column:1;
-    grid-row:2;
-    align-self:auto;
-    min-height:58px;
-    padding:11px 0 0;
-    border:0;
-  }
-  .home-dash-feature { min-height:365px; }
-  .home-dash-feature-copy { right:21px; bottom:20px; left:21px; }
-  .home-dash-feature-copy>strong { font-size:29px; }
-  .home-dash-feature-copy>p {
-    display:-webkit-box;
-    overflow:hidden;
-    -webkit-box-orient:vertical;
-    -webkit-line-clamp:2;
-  }
-  .home-dash-feature-switch { margin:13px; }
-  .home-dash-recent,
-  .home-dash-poems { padding:21px; }
-  .home-dash-recent nav>a:hover,
-  .home-dash-recent nav>a:focus-visible { transform:none; }
-  .home-dash-recent nav strong { white-space:normal; }
-  .home-dash-poems>div { grid-template-columns:1fr; }
-  .home-dash-poems>div>a { min-height:82px; }
-  .home-dash-poems>div>a:hover,
-  .home-dash-poems>div>a:focus-visible { transform:none; }
-  .home-dash-music { min-height:160px; padding:22px; }
-  .home-dash-music-list { grid-template-columns:1fr; }
-}
-
-@media (max-width:420px) {
-  .home-dash-feature { min-height:340px; }
-  .home-dash-feature-meta>span:nth-child(2),
-  .home-dash-feature-meta>span:nth-child(3) { display:none; }
 }
 
 /* Global glass: one fixed, pre-softened image layer; surfaces only change opacity. */
@@ -3316,9 +1745,6 @@ a.home-dash-panel:focus-visible {
 :root[data-glass="on"] .header-center,
 :root[data-glass="on"] .home-refresh-profile,
 :root[data-glass="on"] .home-refresh-section,
-:root[data-glass="on"] .home-dash-panel,
-:root[data-glass="on"] .profile-card,
-:root[data-glass="on"] .featured-post,
 :root[data-glass="on"] .article-card,
 :root[data-glass="on"] .poem-card,
 :root[data-glass="on"] .poem-page>article,
@@ -3346,8 +1772,6 @@ a.home-dash-panel:focus-visible {
 }
 :root[data-glass="on"] .home-refresh-news-card,
 :root[data-glass="on"] .home-refresh-list>a,
-:root[data-glass="on"] .filter-bar button,
-:root[data-glass="on"] .tag-cloud button,
 :root[data-glass="on"] .pagination button,
 :root[data-glass="on"] .article-index-actions button,
 :root[data-glass="on"] .comment-composer--reply,
@@ -3419,8 +1843,7 @@ a.home-dash-panel:focus-visible {
 :root[data-glass="on"] .article-filter-dialog {
   background:var(--surface);
 }
-:root[data-glass="on"] footer,
-:root[data-glass="on"] .app-shell:has(.home-dashboard-page)>footer {
+:root[data-glass="on"] footer {
   border-top:0;
   background:transparent;
   color:var(--text);
@@ -3707,12 +2130,7 @@ a.home-dash-panel:focus-visible {
 
 /* Keep panel depth without real-time backdrop sampling. */
 .inner-icon,
-.zoomable-image-hint,
-.image-lightbox-close,
-.home-story-switch,
-.home-stage-profile,
-.home-stage-switch,
-.home-dash-feature-switch {
+.image-lightbox-close {
   -webkit-backdrop-filter:none;
   backdrop-filter:none;
 }
