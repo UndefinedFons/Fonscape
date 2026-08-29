@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { createClient } from "@libsql/client";
-import { cleanupRuntimeData, insertCommentAtomically } from "../functions/_lib/abuse.js";
+import { insertCommentAtomically, reconcileRuntimeCounters } from "../functions/_lib/abuse.js";
 import { onRequest } from "../functions/api/[[path]].js";
 import { migrateTurso } from "../scripts/migrate-turso.mjs";
 import { createTursoD1Database } from "../server/turso-d1.js";
@@ -143,7 +143,7 @@ test("maintenance reconciliation remains consistent with concurrent writes", asy
       body: `maintenance-${index}`,
       now: now + index,
     }, { MAX_COMMENTS_PER_USER: "100", MAX_COMMENTS_PER_TARGET: "100", MAX_TOTAL_COMMENTS: "100" }));
-    await Promise.all([...writes, cleanupRuntimeData(db, now + 1000)]);
+    await Promise.all([...writes, reconcileRuntimeCounters(db, now + 1000)]);
     const counts = (await client.execute(`SELECT
       (SELECT COUNT(*) FROM comments WHERE status != 'deleted') AS comments,
       (SELECT value FROM storage_counters WHERE metric = 'comments_created') AS stored_comments,

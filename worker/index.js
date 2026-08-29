@@ -1,6 +1,6 @@
 import { onRequest as handleApiRequest } from "../functions/api/[[path]].js";
 import { onRequest as handleAudioRequest } from "../functions/audio/[[path]].js";
-import { cleanupRuntimeData } from "../functions/_lib/abuse.js";
+import { cleanupRuntimeData, reconcileRuntimeCounters } from "../functions/_lib/abuse.js";
 import { audioAssetSizes } from "../functions/_generated/content-targets.js";
 
 export { audioAssetSizes };
@@ -81,7 +81,9 @@ export default {
     return env.ASSETS.fetch(request);
   },
   async scheduled(controller, env) {
-    const result = await cleanupRuntimeData(env.DB, controller.scheduledTime || Date.now());
-    console.log({ event: "runtime_maintenance_completed", ...result });
+    const now = controller.scheduledTime || Date.now();
+    const cleanup = await cleanupRuntimeData(env.DB, now);
+    const reconciliation = await reconcileRuntimeCounters(env.DB, now);
+    console.log({ event: "runtime_maintenance_completed", ...cleanup, ...reconciliation });
   },
 };

@@ -22,13 +22,30 @@ test("global glass keeps expensive backdrop properties stable while opacity tran
   assert.match(styles, /:root\[data-glass-transition\][^{]+\{\s*will-change:opacity;/u);
 });
 
-test("home backgrounds remain transparent overlays during glass transitions", async () => {
+test("the current home background remains an overlay during glass transitions", async () => {
   const styles = await readFile(new URL("../src/styles.css", import.meta.url), "utf8");
   const refreshRule = styles.match(/\.home-refresh-page\s*\{(?<body>[^}]+)\}/u)?.groups?.body || "";
-  const dashboardRule = styles.match(/\.home-dashboard-page\s*\{(?<body>[^}]+)\}/u)?.groups?.body || "";
-  const dashboardBodyRule = styles.match(/\.home-dashboard-body\s*\{(?<body>[^}]+)\}/u)?.groups?.body || "";
 
+  assert.notEqual(refreshRule, "");
   assert.doesNotMatch(refreshRule, /var\(--bg\)/u);
-  assert.match(dashboardRule, /background:transparent/u);
-  assert.doesNotMatch(dashboardBodyRule, /var\(--bg\)/u);
+});
+
+test("the stylesheet keeps only the active home layout generation", async () => {
+  const styles = await readFile(new URL("../src/styles.css", import.meta.url), "utf8");
+
+  for (const activeSelector of [".home-refresh-page", ".home-refresh-feature", ".home-refresh-section"]) {
+    assert.match(styles, new RegExp(`\\${activeSelector}\\b`, "u"));
+  }
+
+  for (const retiredSelector of [
+    ".home-dashboard",
+    ".home-stage",
+    ".home-canvas",
+    ".home-editorial",
+    ".home-grid",
+    ".post-row",
+    ".tags-layout",
+  ]) {
+    assert.doesNotMatch(styles, new RegExp(`\\${retiredSelector}\\b`, "u"));
+  }
 });
