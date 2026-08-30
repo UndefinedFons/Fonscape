@@ -11,6 +11,9 @@ const publicRoot = join(root, "public");
 const generatedRoot = join(publicRoot, "fonscape", "generated-images");
 const manifestPath = join(root, "functions", "_generated", "responsive-images.js");
 const fullManifestPath = join(root, "functions", "_generated", "responsive-images-full.js");
+export const RESPONSIVE_IMAGE_CACHE_VERSION = 1;
+export const RESPONSIVE_IMAGE_CACHE_ROOT = join(root, ".fonscape-cache", "responsive-images");
+const responsiveImageCacheManifestName = "manifest.json";
 const fullManifestChunkPattern = /^responsive-images-full-(\d+)\.js$/u;
 const fullManifestChunkSize = 100;
 export const MAX_RESPONSIVE_CANDIDATES_PER_SOURCE = 5;
@@ -178,6 +181,222 @@ export function sourceAssetPath(source) {
   return path;
 }
 
+const responsiveImageCacheFilePattern = /^[a-z0-9_-]+-[0-9a-f]{12}-w\d+\.(?:avif|jpe?g|png|webp)$/iu;
+const responsiveImageCacheDigestPattern = /^[0-9a-f]{64}$/u;
+
+function isPlainObject(value) {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+
+function isSafeResponsiveCacheFileName(value) {
+  return typeof value === "string"
+    && value.length <= 255
+    && basename(value) === value
+    && responsiveImageCacheFilePattern.test(value);
+}
+
+function responsiveImageCacheEntryKey({ source, sourceHash, width, extension, fileName }) {
+  return JSON.stringify([source, sourceHash, width, extension, fileName]);
+}
+
+function responsiveImageCacheEntryMatches({ entry, source, sourceHash, sourceBytes, width, extension, fileName }) {
+  return entry?.source === source
+    && entry.sourceHash === sourceHash
+    && entry.sourceBytes === sourceBytes
+    && entry.width === width
+    && entry.extension === extension
+    && entry.fileName === fileName;
+}
+
+function emptyResponsiveImageCache(cacheDirectory, encoderFingerprint) {
+  return {
+    available: false,
+    cacheDirectory,
+    encoderFingerprint,
+    entries: new Map(),
+  };
+}
+
+function resolveResponsiveImageCacheDirectory(cacheDirectory) {
+  if (typeof cacheDirectory !== "string" || !cacheDirectory) return null;
+  const path = resolve(cacheDirectory);
+  const relativePath = relative(root, path);
+  if (path === root || relativePath === ".." || relativePath.startsWith(`..${process.platform === "win32" ? "\\" : "/"}`)) return null;
+  return path;
+}
+
+/**
+ * Check/create a cache directory without following symlinks. The cache is a
+ * disposable acceleration aid, so an unsafe or malformed cache is ignored.
+ */
+async function ensureSafeResponsiveCacheDirectory(cacheDirectory, { create = false } = {}) {
+  const path = resolveResponsiveImageCacheDirectory(cacheDirectory);
+  if (!path) return false;
+  const pathParts = relative(root, path).split(/[\\/]/u).filter(Boolean);
+  let currentPath = root;
+  for (const part of pathParts) {
+    currentPath = join(currentPath, part);
+    let info = await lstat(currentPath).catch((error) => {
+      if (error.code === "ENOENT") return null;
+      return null;
+    });
+    if (!info) {
+      if (!create) return false;
+      try {
+        await mkdir(currentPath);
+      } catch (error) {
+        if (error.code !== "EEXIST") return false;
+      }
+      info = await lstat(currentPath).catch(() => null);
+    }
+    if (!info || info.isSymbolicLink() || !info.isDirectory()) return false;
+  }
+  return true;
+}
+
+function responsiveImageCacheEntryIsValid(entry, encoderFingerprint) {
+  if (!isPlainObject(entry)
+    || !isLocalRasterSource(entry.source)
+    || typeof entry.sourceHash !== "string"
+    || !responsiveImageCacheDigestPattern.test(entry.sourceHash)
+    || !Number.isSafeInteger(entry.sourceBytes)
+    || entry.sourceBytes < 1
+    || !Number.isSafeInteger(entry.width)
+    || entry.width < 1
+    || entry.width > 100_000
+    || typeof entry.extension !== "string"
+    || !supportedExtensions.has(entry.extension)
+    || !isSafeResponsiveCacheFileName(entry.fileName)
+    || extname(entry.fileName).toLowerCase() !== entry.extension
+    || (entry.outcome !== "accepted" && entry.outcome !== "rejected")
+    || !Number.isSafeInteger(entry.variantBytes)
+    || entry.variantBytes < 1
+    || (entry.outcome === "accepted" && entry.variantBytes >= entry.sourceBytes)
+    || (entry.outcome === "rejected" && entry.variantBytes < entry.sourceBytes)
+    || (entry.outcome === "accepted"
+      && (typeof entry.variantHash !== "string" || !responsiveImageCacheDigestPattern.test(entry.variantHash)))
+    || (entry.outcome === "rejected" && entry.variantHash !== undefined && entry.variantHash !== null)
+    || typeof encoderFingerprint !== "string") return false;
+  return true;
+}
+
+/**
+ * Read the versioned responsive-image cache. Invalid, stale, or unsafe cache
+ * data is treated as a miss so a disposable cache can never change output.
+ *
+ * @param {{ cacheDirectory?: string, encoderFingerprint: string }} options
+ */
+export async function loadResponsiveImageCache({
+  cacheDirectory = RESPONSIVE_IMAGE_CACHE_ROOT,
+  encoderFingerprint,
+} = {}) {
+  const path = resolveResponsiveImageCacheDirectory(cacheDirectory);
+  const empty = emptyResponsiveImageCache(path || cacheDirectory, encoderFingerprint);
+  if (!path || !(await ensureSafeResponsiveCacheDirectory(path))) return empty;
+  const manifestPath = join(path, responsiveImageCacheManifestName);
+  const manifestInfo = await lstat(manifestPath).catch(() => null);
+  if (!manifestInfo || manifestInfo.isSymbolicLink() || !manifestInfo.isFile()) return empty;
+  const manifest = await readFile(manifestPath, "utf8").then((source) => {
+    try {
+      return JSON.parse(source);
+    } catch {
+      return null;
+    }
+  }).catch(() => null);
+  if (!isPlainObject(manifest)
+    || manifest.version !== RESPONSIVE_IMAGE_CACHE_VERSION
+    || manifest.encoderFingerprint !== encoderFingerprint
+    || !Array.isArray(manifest.entries)) return empty;
+
+  const entries = new Map();
+  for (const entry of manifest.entries) {
+    if (!responsiveImageCacheEntryIsValid(entry, encoderFingerprint)) return empty;
+    const key = responsiveImageCacheEntryKey(entry);
+    if (entries.has(key)) return empty;
+    entries.set(key, entry);
+  }
+  return {
+    available: true,
+    cacheDirectory: path,
+    encoderFingerprint,
+    entries,
+  };
+}
+
+function makeResponsiveImageCacheEntry({
+  source,
+  sourceHash,
+  sourceBytes,
+  width,
+  extension,
+  fileName,
+  outcome,
+  variantBytes,
+  variantHash,
+}) {
+  const entry = {
+    source,
+    sourceHash,
+    sourceBytes,
+    width,
+    extension,
+    fileName,
+    outcome,
+    variantBytes,
+  };
+  if (outcome === "accepted") entry.variantHash = variantHash;
+  return entry;
+}
+
+async function sha256File(path) {
+  return createHash("sha256").update(await readFile(path)).digest("hex");
+}
+
+async function writeResponsiveImageCacheManifest(cacheDirectory, manifest) {
+  const manifestPath = join(cacheDirectory, responsiveImageCacheManifestName);
+  const temporaryPath = join(cacheDirectory, `.${responsiveImageCacheManifestName}.${process.pid}.${randomUUID()}.tmp`);
+  try {
+    await writeFile(temporaryPath, `${JSON.stringify(manifest, null, 2)}\n`);
+    await rename(temporaryPath, manifestPath);
+  } catch (error) {
+    await unlink(temporaryPath).catch(() => {});
+    throw error;
+  }
+}
+
+/**
+ * Persist generation outcomes and accepted-output metadata for the next run.
+ * Cache failures are intentionally swallowed: generated output remains the
+ * source of truth and the cache is never required for a successful build.
+ *
+ * @param {{ cacheDirectory?: string, encoderFingerprint: string, entries: Map }} options
+ */
+export async function saveResponsiveImageCache({
+  cacheDirectory = RESPONSIVE_IMAGE_CACHE_ROOT,
+  encoderFingerprint,
+  entries,
+} = {}) {
+  try {
+    const path = resolveResponsiveImageCacheDirectory(cacheDirectory);
+    if (!path || !(await ensureSafeResponsiveCacheDirectory(path, { create: true }))) return false;
+    const serializableEntries = [];
+    const sortedEntries = [...(entries instanceof Map ? entries.values() : [])]
+      .sort((left, right) => responsiveImageCacheEntryKey(left).localeCompare(responsiveImageCacheEntryKey(right)));
+    for (const entry of sortedEntries) {
+      if (!responsiveImageCacheEntryIsValid(entry, encoderFingerprint)) continue;
+      serializableEntries.push(entry);
+    }
+    await writeResponsiveImageCacheManifest(path, {
+      version: RESPONSIVE_IMAGE_CACHE_VERSION,
+      encoderFingerprint,
+      entries: serializableEntries,
+    });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export async function safeLocalSourcePath(source) {
   const sourcePath = sourceAssetPath(source);
   const pathParts = relative(publicRoot, sourcePath).split(/[\\/]/u);
@@ -198,8 +417,13 @@ export async function safeLocalSourcePath(source) {
   return sourcePath;
 }
 
-async function ensureSafeGeneratedRoot() {
-  const pathParts = relative(publicRoot, generatedRoot).split(/[\\/]/u);
+async function ensureSafeGeneratedRoot({ create = true } = {}, outputDirectory = generatedRoot) {
+  const path = resolve(outputDirectory);
+  const relativeDirectory = relative(publicRoot, path);
+  if (path === publicRoot || relativeDirectory === ".." || relativeDirectory.startsWith(`..${process.platform === "win32" ? "\\" : "/"}`)) {
+    throw new Error(`响应式图片生成目录必须位于 public 目录内：${relative(root, path)}`);
+  }
+  const pathParts = relativeDirectory.split(/[\\/]/u).filter(Boolean);
   let currentPath = publicRoot;
   for (const part of pathParts) {
     currentPath = join(currentPath, part);
@@ -208,6 +432,7 @@ async function ensureSafeGeneratedRoot() {
       throw error;
     });
     if (!info) {
+      if (!create) return false;
       await mkdir(currentPath);
       info = await lstat(currentPath);
     }
@@ -215,6 +440,7 @@ async function ensureSafeGeneratedRoot() {
       throw new Error(`响应式图片生成目录必须是普通目录：${relative(root, currentPath)}`);
     }
   }
+  return true;
 }
 
 async function createResponsiveVariantPipeline(sourceBuffer, outputPath, width, sharpLibrary) {
@@ -270,15 +496,19 @@ function renderFullManifestIndex(chunkCount) {
     + "export { responsiveImageChunkLoaders };\n";
 }
 
-async function existingFullManifestChunks() {
-  const names = await readdir(dirname(fullManifestPath)).catch((error) => {
+async function existingFullManifestChunks(manifestDirectory = dirname(fullManifestPath)) {
+  const names = await readdir(manifestDirectory).catch((error) => {
     if (error.code === "ENOENT") return [];
     throw error;
   });
   return names.filter((name) => fullManifestChunkPattern.test(name)).sort((left, right) => left.localeCompare(right));
 }
 
-async function writeFullManifest(entries, { check = false } = {}) {
+async function writeFullManifest(entries, {
+  check = false,
+  manifestDirectory = dirname(fullManifestPath),
+} = {}) {
+  const outputPath = join(manifestDirectory, "responsive-images-full.js");
   const chunks = chunkResponsiveEntries(entries);
   const renderedIndex = renderFullManifestIndex(chunks.length);
   const renderedChunks = chunks.map((chunk, index) => ({
@@ -286,21 +516,21 @@ async function writeFullManifest(entries, { check = false } = {}) {
     source: renderManifest(chunk, "responsiveImageChunk"),
   }));
   const expectedNames = new Set(renderedChunks.map(({ name }) => name));
-  const currentNames = await existingFullManifestChunks();
+  const currentNames = await existingFullManifestChunks(manifestDirectory);
   const staleNames = currentNames.filter((name) => !expectedNames.has(name));
   if (check) {
-    const currentIndex = await readFile(fullManifestPath, "utf8").catch(() => "");
+    const currentIndex = await readFile(outputPath, "utf8").catch(() => "");
     if (currentIndex !== renderedIndex || staleNames.length > 0) return false;
     const matches = await Promise.all(renderedChunks.map(async ({ name, source }) => (
-      await readFile(join(dirname(fullManifestPath), name), "utf8").catch(() => "") === source
+      await readFile(join(manifestDirectory, name), "utf8").catch(() => "") === source
     )));
     return matches.every(Boolean);
   }
-  await mkdir(dirname(fullManifestPath), { recursive: true });
+  await mkdir(manifestDirectory, { recursive: true });
   await Promise.all([
-    writeFile(fullManifestPath, renderedIndex),
-    ...renderedChunks.map(({ name, source }) => writeFile(join(dirname(fullManifestPath), name), source)),
-    ...staleNames.map((name) => unlink(join(dirname(fullManifestPath), name))),
+    writeFile(outputPath, renderedIndex),
+    ...renderedChunks.map(({ name, source }) => writeFile(join(manifestDirectory, name), source)),
+    ...staleNames.map((name) => unlink(join(manifestDirectory, name))),
   ]);
   return true;
 }
@@ -310,23 +540,43 @@ async function writeFullManifest(entries, { check = false } = {}) {
  * by site configuration or repository content. Site authors keep one original;
  * generated files are disposable build artifacts and never replace it.
  *
- * @param {{ check?: boolean, manifestOnly?: boolean }} [options]
+ * @param {{
+ *   check?: boolean,
+ *   manifestOnly?: boolean,
+ *   cacheDirectory?: string,
+ *   generatedDirectory?: string,
+ *   manifestDirectory?: string,
+ *   sourceTargets?: { criticalSources: Set<string>, targets: Map<string, Set<string>> },
+ *   sharpLibrary?: Function,
+ * }} [options]
  */
-export async function generateResponsiveImages({ check = false, manifestOnly = false } = {}) {
+export async function generateResponsiveImages({
+  check = false,
+  manifestOnly = false,
+  cacheDirectory = RESPONSIVE_IMAGE_CACHE_ROOT,
+  generatedDirectory = generatedRoot,
+  manifestDirectory = dirname(manifestPath),
+  sourceTargets = null,
+  sharpLibrary = null,
+} = {}) {
+  if (check && manifestOnly) throw new Error("响应式图片生成不能同时使用 --check 和 --manifest-only。");
+  const outputManifestPath = join(manifestDirectory, "responsive-images.js");
   if (manifestOnly) {
-    await mkdir(dirname(manifestPath), { recursive: true });
-    await Promise.all([writeFile(manifestPath, renderManifest({})), writeFullManifest({})]);
+    await mkdir(manifestDirectory, { recursive: true });
+    await Promise.all([writeFile(outputManifestPath, renderManifest({})), writeFullManifest({}, { manifestDirectory })]);
     return { sourceCount: 0, variantCount: 0 };
   }
 
-  const sharp = (await import("sharp")).default;
+  const sharp = sharpLibrary || (await import("sharp")).default;
   const encoderFingerprint = `${encoderVersion}-sharp-${sharp.versions.sharp}-vips-${sharp.versions.vips}`;
-  const { criticalSources, targets } = await referencedLocalImages();
+  const cache = await loadResponsiveImageCache({ cacheDirectory, encoderFingerprint });
+  const { criticalSources, targets } = sourceTargets || await referencedLocalImages();
   const sources = [...targets.keys()].sort();
   const entries = {};
   const expectedFiles = new Set();
+  const cacheEntries = new Map();
   let variantCount = 0;
-  await ensureSafeGeneratedRoot();
+  await ensureSafeGeneratedRoot({ create: !check }, generatedDirectory);
 
   for (const source of sources) {
     const sourcePath = await safeLocalSourcePath(source);
@@ -335,6 +585,7 @@ export async function generateResponsiveImages({ check = false, manifestOnly = f
     const sourceBuffer = await readFile(sourcePath);
     const metadata = await sharp(sourceBuffer).metadata();
     if (!metadata.width || !metadata.height || metadata.pages > 1) continue;
+    const sourceHash = createHash("sha256").update(sourceBuffer).digest("hex");
     const digest = createHash("sha256").update(encoderFingerprint).update(sourceBuffer).digest("hex").slice(0, 12);
     const stem = basename(sourcePath, extension).replaceAll(/[^a-z0-9_-]+/giu, "-").replaceAll(/^-|-$/gu, "") || "image";
     const roles = targets.get(source);
@@ -346,22 +597,40 @@ export async function generateResponsiveImages({ check = false, manifestOnly = f
     const candidates = [];
     for (const width of widths) {
       const fileName = `${stem}-${digest}-w${width}${extension}`;
-      const outputPath = join(generatedRoot, fileName);
-      const outputInfo = await lstat(outputPath).catch((error) => {
+      const outputPath = join(generatedDirectory, fileName);
+      const cacheKey = responsiveImageCacheEntryKey({ source, sourceHash, width, extension, fileName });
+      const cached = cache.entries.get(cacheKey);
+      const usableCache = responsiveImageCacheEntryMatches({
+        entry: cached,
+        source,
+        sourceHash,
+        sourceBytes: sourceBuffer.byteLength,
+        width,
+        extension,
+        fileName,
+      }) ? cached : null;
+      let outputInfo = await lstat(outputPath).catch((error) => {
         if (error.code === "ENOENT") return null;
         throw error;
       });
       if (outputInfo?.isSymbolicLink() || (outputInfo && !outputInfo.isFile())) {
         throw new Error(`响应式图片候选必须是普通文件：${relative(root, outputPath)}`);
       }
-      const outputExists = Boolean(outputInfo);
-      if (!outputExists) {
+      if (!outputInfo && usableCache?.outcome === "rejected") {
+        if (!check) cacheEntries.set(cacheKey, usableCache);
+        continue;
+      }
+      let outputWasFreshlyRendered = false;
+      if (!outputInfo) {
         if (check) {
+          if (usableCache?.outcome === "accepted") {
+            throw new Error(`缺少响应式图片候选：${relative(root, outputPath)}`);
+          }
           const outputBuffer = await renderResponsiveVariantBuffer(sourceBuffer, outputPath, width, sharp);
           if (!shouldKeepResponsiveVariant(sourceBuffer.byteLength, outputBuffer.byteLength)) continue;
           throw new Error(`缺少响应式图片候选：${relative(root, outputPath)}`);
         }
-        const temporaryPath = join(generatedRoot, `.${fileName}.${process.pid}.${randomUUID()}.tmp${extension}`);
+        const temporaryPath = join(generatedDirectory, `.${fileName}.${process.pid}.${randomUUID()}.tmp${extension}`);
         try {
           await renderResponsiveVariant(sourceBuffer, temporaryPath, width, sharp);
           await rename(temporaryPath, outputPath);
@@ -369,25 +638,92 @@ export async function generateResponsiveImages({ check = false, manifestOnly = f
           await unlink(temporaryPath).catch(() => {});
           throw error;
         }
+        outputInfo = await lstat(outputPath);
+        outputWasFreshlyRendered = true;
       }
-      const outputBytes = (await lstat(outputPath)).size;
+      let cachedOutputValid = false;
+      if (usableCache?.outcome === "accepted" && !outputWasFreshlyRendered) {
+        const outputHash = outputInfo.size === usableCache.variantBytes
+          ? await sha256File(outputPath).catch(() => "")
+          : "";
+        cachedOutputValid = outputInfo.size === usableCache.variantBytes && outputHash === usableCache.variantHash;
+        if (!cachedOutputValid) {
+          if (check) throw new Error(`响应式图片候选已损坏：${relative(root, outputPath)}`);
+          const temporaryPath = join(generatedDirectory, `.${fileName}.${process.pid}.${randomUUID()}.tmp${extension}`);
+          try {
+            await renderResponsiveVariant(sourceBuffer, temporaryPath, width, sharp);
+            await rename(temporaryPath, outputPath);
+          } catch (error) {
+            await unlink(temporaryPath).catch(() => {});
+            throw error;
+          }
+          outputInfo = await lstat(outputPath);
+          outputWasFreshlyRendered = true;
+        }
+      }
+      if (outputInfo && !outputWasFreshlyRendered && usableCache?.outcome !== "accepted") {
+        if (check) {
+          const expectedOutput = await renderResponsiveVariantBuffer(sourceBuffer, outputPath, width, sharp);
+          if (!shouldKeepResponsiveVariant(sourceBuffer.byteLength, expectedOutput.byteLength)) continue;
+          const actualOutput = await readFile(outputPath);
+          if (!actualOutput.equals(expectedOutput)) {
+            throw new Error(`响应式图片候选已损坏：${relative(root, outputPath)}`);
+          }
+        } else {
+          const temporaryPath = join(generatedDirectory, `.${fileName}.${process.pid}.${randomUUID()}.tmp${extension}`);
+          try {
+            await renderResponsiveVariant(sourceBuffer, temporaryPath, width, sharp);
+            await rename(temporaryPath, outputPath);
+          } catch (error) {
+            await unlink(temporaryPath).catch(() => {});
+            throw error;
+          }
+          outputInfo = await lstat(outputPath);
+        }
+      }
+      const outputBytes = outputInfo.size;
       if (!shouldKeepResponsiveVariant(sourceBuffer.byteLength, outputBytes)) {
         if (!check) await unlink(outputPath);
+        if (!check) {
+          cacheEntries.set(cacheKey, makeResponsiveImageCacheEntry({
+            source,
+            sourceHash,
+            sourceBytes: sourceBuffer.byteLength,
+            width,
+            extension,
+            fileName,
+            outcome: "rejected",
+            variantBytes: outputBytes,
+          }));
+        }
         continue;
       }
       expectedFiles.add(fileName);
       candidates.push({ src: `/fonscape/generated-images/${fileName}`, width });
       variantCount += 1;
+      if (!check) {
+        cacheEntries.set(cacheKey, makeResponsiveImageCacheEntry({
+          source,
+          sourceHash,
+          sourceBytes: sourceBuffer.byteLength,
+          width,
+          extension,
+          fileName,
+          outcome: "accepted",
+          variantBytes: outputBytes,
+          variantHash: cachedOutputValid ? usableCache.variantHash : await sha256File(outputPath),
+        }));
+      }
     }
     candidates.push({ src: source, width: metadata.width });
     entries[source] = { width: metadata.width, height: metadata.height, candidates };
   }
 
-  const staleFiles = await readdir(generatedRoot).catch(() => []);
+  const staleFiles = await readdir(generatedDirectory).catch(() => []);
   const staleNames = staleFiles.filter((name) => !expectedFiles.has(name));
   if (check && staleNames.length > 0) throw new Error(`响应式图片生成目录包含 ${staleNames.length} 个过期文件。`);
   await Promise.all(staleNames.map(async (name) => {
-    const path = join(generatedRoot, name);
+    const path = join(generatedDirectory, name);
     const info = await lstat(path);
     if (info.isSymbolicLink() || !info.isFile()) throw new Error(`响应式图片生成目录包含异常条目：${relative(root, path)}`);
     await unlink(path);
@@ -396,14 +732,15 @@ export async function generateResponsiveImages({ check = false, manifestOnly = f
   const rendered = renderManifest(criticalEntries);
   if (check) {
     const [current, fullManifestMatches] = await Promise.all([
-      readFile(manifestPath, "utf8").catch(() => ""),
-      writeFullManifest(entries, { check: true }),
+      readFile(outputManifestPath, "utf8").catch(() => ""),
+      writeFullManifest(entries, { check: true, manifestDirectory }),
     ]);
     if (current !== rendered || !fullManifestMatches) throw new Error("响应式图片清单不存在或已过期；pnpm dev/build/test/check 会自动重建。");
     return { sourceCount: Object.keys(entries).length, variantCount };
   }
-  await mkdir(dirname(manifestPath), { recursive: true });
-  await Promise.all([writeFile(manifestPath, rendered), writeFullManifest(entries)]);
+  await mkdir(manifestDirectory, { recursive: true });
+  await Promise.all([writeFile(outputManifestPath, rendered), writeFullManifest(entries, { manifestDirectory })]);
+  await saveResponsiveImageCache({ cacheDirectory, encoderFingerprint, entries: cacheEntries });
   return { sourceCount: Object.keys(entries).length, variantCount };
 }
 
