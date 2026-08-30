@@ -11,6 +11,7 @@ work/
 outputs/
 .wrangler/
 .fonscape-update/
+.fonscape-cache/
 functions/_generated/
 public/fonscape/google-fonts.css
 public/fonscape/google-fonts-full.css

@@ -1,5 +1,6 @@
+import { createHash } from "node:crypto";
 import assert from "node:assert/strict";
-import { mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
+import { mkdtemp, readFile, readdir, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import test from "node:test";
@@ -8,8 +9,11 @@ import {
   extractLocalRasterSources,
   generateResponsiveImages,
   isLocalRasterSource,
+  loadResponsiveImageCache,
   renderResponsiveVariant,
   renderResponsiveVariantBuffer,
+  RESPONSIVE_IMAGE_CACHE_VERSION,
+  saveResponsiveImageCache,
   safeLocalSourcePath,
   selectResponsiveWidths,
   shouldKeepResponsiveVariant,
@@ -111,6 +115,217 @@ test("responsive manifests are deterministic and missing entries retain the orig
   assert.equal(second, first);
   assert.deepEqual(responsiveImageProps("/assets/not-generated.png", "100vw"), {});
   assert.equal(responsiveImageUrl("/assets/not-generated.png", 640), "/assets/not-generated.png");
+});
+
+test("responsive outcome cache is deterministic and ignores corrupt or stale records", async () => {
+  const cacheDirectory = await mkdtemp(join(resolve("."), ".responsive-image-cache-fixture-"));
+  const sourceBuffer = Buffer.from("fixture source bytes");
+  const sourceHash = createHash("sha256").update(sourceBuffer).digest("hex");
+  const acceptedBuffer = Buffer.from("small");
+  const acceptedEntry = {
+    source: "/assets/cache-fixture.png",
+    sourceHash,
+    sourceBytes: sourceBuffer.byteLength,
+    width: 64,
+    extension: ".png",
+    fileName: "cache-fixture-0123456789ab-w64.png",
+    outcome: "accepted",
+    variantBytes: acceptedBuffer.byteLength,
+    variantHash: createHash("sha256").update(acceptedBuffer).digest("hex"),
+  };
+  const rejectedEntry = {
+    ...acceptedEntry,
+    width: 128,
+    fileName: "cache-fixture-0123456789ab-w128.png",
+    outcome: "rejected",
+    variantBytes: sourceBuffer.byteLength,
+    variantHash: null,
+  };
+  const encoderFingerprint = "fixture-encoder-v1";
+  try {
+    assert.equal(await saveResponsiveImageCache({
+      cacheDirectory,
+      encoderFingerprint,
+      entries: new Map([[
+        "accepted",
+        acceptedEntry,
+      ], [
+        "rejected",
+        rejectedEntry,
+      ]]),
+    }), true);
+    const firstManifest = await readFile(join(cacheDirectory, "manifest.json"), "utf8");
+    const loaded = await loadResponsiveImageCache({ cacheDirectory, encoderFingerprint });
+    assert.equal(loaded.available, true);
+    assert.deepEqual([...loaded.entries.values()].sort((left, right) => left.width - right.width), [acceptedEntry, rejectedEntry]);
+    assert.equal(await saveResponsiveImageCache({
+      cacheDirectory,
+      encoderFingerprint,
+      entries: loaded.entries,
+    }), true);
+    assert.equal(await readFile(join(cacheDirectory, "manifest.json"), "utf8"), firstManifest);
+    assert.equal((await loadResponsiveImageCache({
+      cacheDirectory,
+      encoderFingerprint: "different-encoder",
+    })).available, false);
+
+    await writeFile(join(cacheDirectory, "manifest.json"), "{broken cache");
+    assert.equal((await loadResponsiveImageCache({ cacheDirectory, encoderFingerprint })).available, false);
+    await writeFile(join(cacheDirectory, "manifest.json"), firstManifest);
+    const changedSourceHash = createHash("sha256").update("changed source").digest("hex");
+    const restored = await loadResponsiveImageCache({ cacheDirectory, encoderFingerprint });
+    assert.equal([...restored.entries.values()].some((entry) => entry.sourceHash === changedSourceHash), false);
+  } finally {
+    await rm(cacheDirectory, { recursive: true, force: true });
+  }
+});
+
+test("responsive generation reuses accepted and rejected outcomes without weakening recovery", async () => {
+  const fixtureId = `${process.pid}-${Date.now()}`;
+  const acceptedSource = `/assets/responsive-cache-accepted-${fixtureId}.jpg`;
+  const rejectedSource = `/assets/responsive-cache-rejected-${fixtureId}.jpg`;
+  const acceptedPath = resolve("public", acceptedSource.slice(1));
+  const rejectedPath = resolve("public", rejectedSource.slice(1));
+  const cacheDirectory = await mkdtemp(join(resolve("."), ".responsive-image-cache-fixture-"));
+  const generatedDirectory = await mkdtemp(join(resolve("public"), ".responsive-image-output-fixture-"));
+  const manifestDirectory = await mkdtemp(join(resolve("."), ".responsive-image-manifest-fixture-"));
+  const makeFixture = async (width, height, quality) => {
+    const buffer = Buffer.alloc(width * height * 3);
+    for (let index = 0; index < buffer.length; index += 3) {
+      buffer[index] = (index * 47) & 255;
+      buffer[index + 1] = (index * 19) & 255;
+      buffer[index + 2] = (index * 7) & 255;
+    }
+    return sharp(buffer, { raw: { width, height, channels: 3 } }).jpeg({ quality }).toBuffer();
+  };
+  const sourceTargets = {
+    criticalSources: new Set([acceptedSource, rejectedSource]),
+    targets: new Map([
+      [acceptedSource, new Set(["detail"])],
+      [rejectedSource, new Set(["detail"])],
+    ]),
+  };
+  const readGeneratedManifests = async () => {
+    const names = (await readdir(manifestDirectory)).filter((name) => (
+      name === "responsive-images.js"
+      || name === "responsive-images-full.js"
+      || /^responsive-images-full-\d+\.js$/u.test(name)
+    )).sort();
+    return new Map(await Promise.all(names.map(async (name) => [
+      name,
+      await readFile(join(manifestDirectory, name), "utf8"),
+    ])));
+  };
+  const countedSharp = (counter) => {
+    const wrapped = (...args) => {
+      counter.value += 1;
+      return sharp(...args);
+    };
+    wrapped.versions = sharp.versions;
+    return wrapped;
+  };
+  const options = { cacheDirectory, generatedDirectory, manifestDirectory, sourceTargets };
+  let acceptedBytes;
+  try {
+    await writeFile(acceptedPath, await makeFixture(1000, 750, 60));
+    await writeFile(rejectedPath, await makeFixture(400, 300, 1));
+
+    const coldCounter = { value: 0 };
+    const cold = await generateResponsiveImages({ ...options, sharpLibrary: countedSharp(coldCounter) });
+    assert.deepEqual([cold.sourceCount, cold.variantCount], [2, 2]);
+    assert.equal(coldCounter.value, 6);
+    const coldManifests = await readGeneratedManifests();
+    const cacheManifestPath = join(cacheDirectory, "manifest.json");
+    const coldCacheText = await readFile(cacheManifestPath, "utf8");
+    const coldCache = JSON.parse(coldCacheText);
+    assert.equal(coldCache.version, RESPONSIVE_IMAGE_CACHE_VERSION);
+    const acceptedEntries = coldCache.entries.filter((entry) => entry.outcome === "accepted");
+    const rejectedEntries = coldCache.entries.filter((entry) => entry.outcome === "rejected");
+    assert.equal(acceptedEntries.length, 2);
+    assert.equal(rejectedEntries.length, 2);
+    const rejectedOutputPath = join(generatedDirectory, rejectedEntries[0].fileName);
+    await assert.rejects(readFile(rejectedOutputPath), /ENOENT/u);
+    acceptedBytes = await readFile(join(generatedDirectory, acceptedEntries[0].fileName));
+
+    const warmCounter = { value: 0 };
+    const warm = await generateResponsiveImages({ ...options, sharpLibrary: countedSharp(warmCounter) });
+    assert.deepEqual([warm.sourceCount, warm.variantCount], [2, 2]);
+    assert.equal(warmCounter.value, 2, "warm generation only inspects each source; neither outcome is re-encoded");
+    assert.deepEqual(await readGeneratedManifests(), coldManifests);
+    assert.equal(await readFile(cacheManifestPath, "utf8"), coldCacheText);
+
+    const acceptedOutputPath = join(generatedDirectory, acceptedEntries[0].fileName);
+    await rm(acceptedOutputPath);
+    const missingCounter = { value: 0 };
+    await generateResponsiveImages({ ...options, sharpLibrary: countedSharp(missingCounter) });
+    assert.equal(missingCounter.value, 3, "a missing accepted output is regenerated while the rejected outcome remains cached");
+    assert.deepEqual(await readFile(acceptedOutputPath), acceptedBytes);
+
+    await rm(acceptedOutputPath);
+    const beforeCheckCache = await readFile(cacheManifestPath, "utf8");
+    await assert.rejects(
+      generateResponsiveImages({ ...options, check: true, sharpLibrary: countedSharp({ value: 0 }) }),
+      /缺少响应式图片候选/u,
+    );
+    assert.equal(await readFile(cacheManifestPath, "utf8"), beforeCheckCache);
+    await assert.rejects(readFile(acceptedOutputPath), /ENOENT/u);
+
+    const restoreCounter = { value: 0 };
+    await generateResponsiveImages({ ...options, sharpLibrary: countedSharp(restoreCounter) });
+    await writeFile(cacheManifestPath, "{broken cache");
+    const corruptCacheCounter = { value: 0 };
+    await generateResponsiveImages({ ...options, sharpLibrary: countedSharp(corruptCacheCounter) });
+    assert.equal(corruptCacheCounter.value, 6, "a corrupt cache falls back to a cold generation");
+    assert.deepEqual(await readFile(acceptedOutputPath), acceptedBytes);
+
+    const corruptOutput = Buffer.from(acceptedBytes);
+    corruptOutput[0] ^= 255;
+    await writeFile(acceptedOutputPath, corruptOutput);
+    const corruptOutputCounter = { value: 0 };
+    await generateResponsiveImages({ ...options, sharpLibrary: countedSharp(corruptOutputCounter) });
+    assert.equal(corruptOutputCounter.value, 3, "a corrupt accepted output is regenerated without touching cached outcomes");
+    assert.deepEqual(await readFile(acceptedOutputPath), acceptedBytes);
+
+    const sameSizeCorruption = Buffer.from(acceptedBytes);
+    sameSizeCorruption[0] ^= 255;
+    await writeFile(acceptedOutputPath, sameSizeCorruption);
+    const beforeCorruptCheckCache = await readFile(cacheManifestPath, "utf8");
+    await assert.rejects(
+      generateResponsiveImages({ ...options, check: true, sharpLibrary: countedSharp({ value: 0 }) }),
+      /已损坏/u,
+    );
+    assert.deepEqual(await readFile(acceptedOutputPath), sameSizeCorruption);
+    assert.equal(await readFile(cacheManifestPath, "utf8"), beforeCorruptCheckCache);
+    await generateResponsiveImages({ ...options, sharpLibrary: countedSharp({ value: 0 }) });
+
+    const oldGeneratedNames = new Set(await readdir(generatedDirectory));
+    await writeFile(acceptedPath, await makeFixture(1000, 750, 70));
+    const invalidatedCounter = { value: 0 };
+    await generateResponsiveImages({ ...options, sharpLibrary: countedSharp(invalidatedCounter) });
+    assert.equal(invalidatedCounter.value, 5, "changing source bytes invalidates only that source's cached candidates");
+    const invalidatedCache = JSON.parse(await readFile(cacheManifestPath, "utf8"));
+    assert.equal(invalidatedCache.entries.some((entry) => entry.source === acceptedSource), true);
+    assert.equal(invalidatedCache.entries.some((entry) => entry.source === acceptedSource && entry.sourceHash === coldCache.entries.find((candidate) => candidate.source === acceptedSource)?.sourceHash), false);
+    const invalidatedManifests = await readGeneratedManifests();
+    assert.notDeepEqual(invalidatedManifests, coldManifests);
+    const invalidatedGeneratedNames = new Set(await readdir(generatedDirectory));
+    for (const name of oldGeneratedNames) assert.equal(invalidatedGeneratedNames.has(name), false);
+  } finally {
+    await rm(acceptedPath, { force: true });
+    await rm(rejectedPath, { force: true });
+    await rm(cacheDirectory, { recursive: true, force: true });
+    await rm(generatedDirectory, { recursive: true, force: true });
+    await rm(manifestDirectory, { recursive: true, force: true });
+  }
+});
+
+test("responsive generator rejects read-only and manifest-only mode combinations before writing", async () => {
+  const manifest = await readFile("functions/_generated/responsive-images.js", "utf8");
+  await assert.rejects(
+    generateResponsiveImages({ check: true, manifestOnly: true }),
+    /不能同时使用/u,
+  );
+  assert.equal(await readFile("functions/_generated/responsive-images.js", "utf8"), manifest);
 });
 
 test("fingerprinted responsive images receive immutable deployment caching", async () => {
