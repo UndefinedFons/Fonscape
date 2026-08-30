@@ -1,6 +1,5 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import react from "@vitejs/plugin-react";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { createServer } from "vite";
@@ -10,8 +9,8 @@ test("the application error fallback renders a recoverable interface", async () 
     configFile: false,
     appType: "custom",
     optimizeDeps: { noDiscovery: true },
-    plugins: [react()],
-    server: { middlewareMode: true },
+    esbuild: { jsx: "automatic" },
+    server: { middlewareMode: true, ws: false, watch: null },
   });
   try {
     const { AppErrorBoundary, AppErrorFallback } = await server.ssrLoadModule("/src/components/AppErrorBoundary.jsx");

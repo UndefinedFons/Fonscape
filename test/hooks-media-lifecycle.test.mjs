@@ -2,7 +2,6 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 import React from "react";
-import react from "@vitejs/plugin-react";
 import { createServer } from "vite";
 
 const internals = React.__CLIENT_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE;
@@ -165,12 +164,18 @@ async function loadMediaComponents() {
     configFile: false,
     appType: "custom",
     optimizeDeps: { noDiscovery: true },
-    plugins: [react()],
-    server: { middlewareMode: true },
+    esbuild: { jsx: "automatic" },
+    server: { middlewareMode: true, ws: false, watch: null },
   });
-  const module = await server.ssrLoadModule("/src/ArticleMusicPlayer.jsx");
-  const lightboxModule = await server.ssrLoadModule("/src/ZoomableImage.jsx");
-  return { server, ArticleMusicPlayer: module.ArticleMusicPlayer, stopArticleAudio: module.stopArticleAudio, ZoomableImage: lightboxModule.ZoomableImage };
+  try {
+    assert.equal(server.config.optimizeDeps.include?.length || 0, 0);
+    const module = await server.ssrLoadModule("/src/ArticleMusicPlayer.jsx");
+    const lightboxModule = await server.ssrLoadModule("/src/ZoomableImage.jsx");
+    return { server, ArticleMusicPlayer: module.ArticleMusicPlayer, stopArticleAudio: module.stopArticleAudio, ZoomableImage: lightboxModule.ZoomableImage };
+  } catch (error) {
+    await server.close();
+    throw error;
+  }
 }
 
 test("music player volume and track object updates stay on the existing audio lifecycle", async () => {
