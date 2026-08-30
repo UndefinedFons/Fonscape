@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { X } from "@phosphor-icons/react/X";
 import { responsiveImageProps } from "./responsiveImages.ts";
@@ -22,16 +22,21 @@ export function ZoomableImage({
   const closeRef = useRef(null);
   const triggerRef = useRef(null);
   const closeTimerRef = useRef(null);
+  const openRef = useRef(false);
+  const closingRef = useRef(false);
 
-  const closeLightbox = () => {
-    if (!open || closing) return;
+  const closeLightbox = useCallback(() => {
+    if (!openRef.current || closingRef.current) return;
+    closingRef.current = true;
     setClosing(true);
     closeTimerRef.current = window.setTimeout(() => {
+      openRef.current = false;
+      closingRef.current = false;
       setOpen(false);
       setClosing(false);
       requestAnimationFrame(() => triggerRef.current?.focus());
     }, 280);
-  };
+  }, []);
   useEffect(() => { setFailed(false); }, [src]);
 
   useEffect(() => {
@@ -48,14 +53,14 @@ export function ZoomableImage({
       document.removeEventListener("keydown", handleKeyDown);
       window.clearTimeout(closeTimerRef.current);
     };
-  }, [open]);
+  }, [open, closeLightbox]);
 
   return <>
     <button
       ref={triggerRef}
       type="button"
       className={`zoomable-image-trigger ${triggerClassName}${failed ? " is-broken" : ""}`.trim()}
-      onClick={() => { if (!failed) { setClosing(false); setOpen(true); } }}
+      onClick={() => { if (!failed) { openRef.current = true; closingRef.current = false; setClosing(false); setOpen(true); } }}
       disabled={failed}
       aria-label={triggerAriaLabel || `放大查看${alt ? `：${alt}` : "图片"}`}
     >

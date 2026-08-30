@@ -299,29 +299,32 @@ function AccountCenter() {
     image.onerror = () => { URL.revokeObjectURL(url); setMessage("无法读取这张图片，请换一张重试。"); };
     image.src = url;
   };
+  const cropUrl = crop?.url;
+  const cropRotation = crop?.rotation;
+  const cropStageAspect = crop?.stageAspect;
   useEffect(() => {
-    if (!crop || !cropCanvas.current) return undefined;
+    if (!cropUrl || cropRotation == null || cropStageAspect == null || !cropCanvas.current) return undefined;
     const canvas = cropCanvas.current;
     const context = canvas.getContext("2d");
     const image = new Image();
     image.onload = () => {
       const width = 640;
-      const height = Math.round(width / crop.stageAspect);
+      const height = Math.round(width / cropStageAspect);
       canvas.width = width; canvas.height = height;
       context.clearRect(0, 0, width, height);
-      const quarterTurn = Math.abs(crop.rotation % 180) === 90;
+      const quarterTurn = Math.abs(cropRotation % 180) === 90;
       const rotatedWidth = quarterTurn ? image.naturalHeight : image.naturalWidth;
       const rotatedHeight = quarterTurn ? image.naturalWidth : image.naturalHeight;
       const scale = Math.min(width / rotatedWidth, height / rotatedHeight);
       context.save();
       context.translate(width / 2, height / 2);
-      context.rotate(crop.rotation * Math.PI / 180);
+      context.rotate(cropRotation * Math.PI / 180);
       context.drawImage(image, -image.naturalWidth * scale / 2, -image.naturalHeight * scale / 2, image.naturalWidth * scale, image.naturalHeight * scale);
       context.restore();
     };
-    image.src = crop.url;
+    image.src = cropUrl;
     return () => { image.onload = null; };
-  }, [crop?.url, crop?.rotation]);
+  }, [cropUrl, cropRotation, cropStageAspect]);
   const imageBounds = (value) => {
     const quarterTurn = Math.abs(value.rotation % 180) === 90;
     const width = quarterTurn ? value.height : value.width;

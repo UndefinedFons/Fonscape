@@ -348,8 +348,11 @@ export function App() {
   const hasArticleOutline = activePostOutline.length > 1;
   useEffect(() => {
     setArticleOutlineOpen(false);
-    setActiveOutlineId(activePostOutline[0]?.id || "");
+    setActiveOutlineId("");
   }, [route]);
+  useEffect(() => {
+    setActiveOutlineId((current) => current && activePostOutline.some((item) => item.id === current) ? current : activePostOutline[0]?.id || "");
+  }, [activePostOutline]);
   useEffect(() => {
     if (!hasArticleOutline) return undefined;
     let frame = 0;
@@ -375,7 +378,7 @@ export function App() {
       window.removeEventListener("scroll", update);
       window.removeEventListener("resize", update);
     };
-  }, [route, hasArticleOutline]);
+  }, [route, hasArticleOutline, activePostOutline]);
   const toggleTheme = () => {
     const nextTheme = theme === "light" ? "dark" : "light";
     flushSync(() => setThemeChanging(true));
