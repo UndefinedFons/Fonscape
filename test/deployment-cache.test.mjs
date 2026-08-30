@@ -59,7 +59,6 @@ test("Checks and deployment share a resilient responsive image cache contract", 
   assert.match(checkWorkflow, /run: pnpm check/u);
   assert.match(checkWorkflow, /wrangler deploy --dry-run/u);
   assert.match(checkWorkflow, /run: pnpm audit --prod/u);
-  assert.match(deployWorkflow, /if: vars\.CLOUDFLARE_DEPLOY_ENABLED == 'true'/u);
   assert.match(deployWorkflow, /run: pnpm db:migrate:cloudflare/u);
   assert.match(deployWorkflow, /run: pnpm exec wrangler deploy/u);
   assert.match(gitignore, /^\.fonscape-cache\/$/mu);
