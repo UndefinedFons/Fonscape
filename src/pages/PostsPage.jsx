@@ -22,30 +22,34 @@ export function PostsPage({ query, stats, onStatsTargets }) {
   const parameters = useMemo(() => new URLSearchParams(query), [query]);
   const allTags = [...new Set(posts.flatMap((post) => post.tags || []))].sort((a, b) => a.localeCompare(b, "zh-CN"));
   const allSeries = [...new Set(posts.map((post) => post.series).filter(Boolean))].sort((a, b) => a.localeCompare(b, "zh-CN"));
-  const requestedTag = parameters.get("tag");
-  const requestedSeries = parameters.get("series");
+  const requestedTag = parameters.get("tag") || "";
+  const requestedSeries = parameters.get("series") || "";
+  const requestedView = parameters.get("view") || "";
+  const hasFilterParameter = parameters.has("filter");
   const hasRequestedFilter = Boolean(requestedTag || requestedSeries);
   const initialIndexState = hasRequestedFilter ? ARTICLE_INDEX_DEFAULTS : articleIndexState;
   const [category, setCategory] = useState(initialIndexState.category);
   const [selectedTag, setSelectedTag] = useState(allTags.includes(requestedTag) ? requestedTag : initialIndexState.tag);
   const [selectedSeries, setSelectedSeries] = useState(allSeries.includes(requestedSeries) ? requestedSeries : initialIndexState.series);
-  const [filterOpen, setFilterOpen] = useState(parameters.has("filter"));
-  const [view, setView] = useState(parameters.get("view") === "archive" ? "archive" : initialIndexState.view);
+  const [filterOpen, setFilterOpen] = useState(hasFilterParameter);
+  const [view, setView] = useState(requestedView === "archive" ? "archive" : initialIndexState.view);
   const [viewSwitching, setViewSwitching] = useState(false);
   const [filterSummaryClosing, setFilterSummaryClosing] = useState(false);
   const [filterResultsLeaving, setFilterResultsLeaving] = useState(false);
   const viewSwitchTimer = useRef(0);
   const filterSummaryTimer = useRef(0);
+  const requestedTagSelection = allTags.includes(requestedTag) ? requestedTag : "";
+  const requestedSeriesSelection = allSeries.includes(requestedSeries) ? requestedSeries : "";
   useEffect(() => {
-    if (!parameters.has("filter") && !requestedTag && !requestedSeries && parameters.get("view") !== "archive") return;
+    if (!hasFilterParameter && !requestedTag && !requestedSeries && requestedView !== "archive") return;
     setFilterSummaryClosing(false);
     setFilterResultsLeaving(false);
     setCategory("全部");
-    setSelectedTag(allTags.includes(requestedTag) ? requestedTag : "");
-    setSelectedSeries(allSeries.includes(requestedSeries) ? requestedSeries : "");
-    setView(parameters.get("view") === "archive" ? "archive" : "cards");
-    setFilterOpen(parameters.has("filter"));
-  }, [query]);
+    setSelectedTag(requestedTagSelection);
+    setSelectedSeries(requestedSeriesSelection);
+    setView(requestedView === "archive" ? "archive" : "cards");
+    setFilterOpen(hasFilterParameter);
+  }, [hasFilterParameter, requestedSeries, requestedSeriesSelection, requestedTag, requestedTagSelection, requestedView]);
   useEffect(() => { updateArticleIndexState({ category, tag: selectedTag, series: selectedSeries, view }); }, [category, selectedTag, selectedSeries, view]);
   useEffect(() => () => {
     window.clearTimeout(viewSwitchTimer.current);
@@ -54,10 +58,14 @@ export function PostsPage({ query, stats, onStatsTargets }) {
   const filtered = posts.filter((post) => (category === "全部" || post.category === category) && (!selectedTag || post.tags?.includes(selectedTag)) && (!selectedSeries || post.series === selectedSeries));
   const filterKey = `${category}|${selectedTag}|${selectedSeries}`;
   const pagination = usePagination(filtered, useResponsivePageSize(6, 3), filterKey, "posts");
-  const pageStatsKey = pagination.pageItems.map((post) => post.slug).join("|");
+  const pageStatsKey = JSON.stringify(pagination.pageItems.map((post) => post.slug));
+  const pageStatsTargets = useMemo(
+    () => JSON.parse(pageStatsKey).map((slug) => ({ type: "post", slug })),
+    [pageStatsKey],
+  );
   useEffect(() => {
-    if (view === "cards") onStatsTargets(pagination.pageItems.map((post) => ({ type: "post", slug: post.slug })));
-  }, [onStatsTargets, pageStatsKey, view]);
+    if (view === "cards") onStatsTargets(pageStatsTargets);
+  }, [onStatsTargets, pageStatsTargets, view]);
   const categories = ["全部", ...POST_CATEGORIES];
   const replaceFilterQuery = (tag, series) => {
     const currentParameters = new URLSearchParams(parseHashQuery());
@@ -175,6 +183,8 @@ function ArticleFilterDialog({ tags, series, selectedTag, selectedSeries, onTag,
 
 function ArticleArchive({ posts: filteredPosts, stats = {}, onBack, onStatsTargets }) {
   const years = [...new Set(filteredPosts.map((post) => post.date.slice(0, 4)))].sort().reverse();
+  const yearsKey = JSON.stringify(years);
+  const filteredPostsKey = JSON.stringify(filteredPosts.map((post) => [post.slug, post.date]));
   const [year, setYear] = useState(years[0] || "");
   const yearPosts = filteredPosts.filter((post) => post.date.startsWith(year));
   const months = [...new Set(yearPosts.map((post) => post.date.slice(5, 7)))].sort().reverse();
@@ -183,7 +193,11 @@ function ArticleArchive({ posts: filteredPosts, stats = {}, onBack, onStatsTarge
   const [wrapHeight, setWrapHeight] = useState(null);
   const archiveTimer = useRef(0);
   const archiveWrapRef = useRef(null);
-  useEffect(() => { if (!years.includes(year)) setYear(years[0] || ""); setMonth(""); }, [filteredPosts]);
+  useEffect(() => {
+    const availableYears = JSON.parse(yearsKey);
+    setYear((currentYear) => availableYears.includes(currentYear) ? currentYear : availableYears[0] || "");
+    setMonth("");
+  }, [filteredPostsKey, yearsKey]);
   useEffect(() => () => window.clearTimeout(archiveTimer.current), []);
   useEffect(() => {
     if (switching !== "entering") return undefined;
@@ -217,8 +231,12 @@ function ArticleArchive({ posts: filteredPosts, stats = {}, onBack, onStatsTarge
     }, 190);
   };
   const visible = month ? yearPosts.filter((post) => post.date.slice(5, 7) === month) : yearPosts;
-  const visibleStatsKey = visible.map((post) => post.slug).join("|");
-  useEffect(() => { onStatsTargets(visible.map((post) => ({ type: "post", slug: post.slug }))); }, [onStatsTargets, visibleStatsKey]);
+  const visibleStatsKey = JSON.stringify(visible.map((post) => post.slug));
+  const visibleStatsTargets = useMemo(
+    () => JSON.parse(visibleStatsKey).map((slug) => ({ type: "post", slug })),
+    [visibleStatsKey],
+  );
+  useEffect(() => { onStatsTargets(visibleStatsTargets); }, [onStatsTargets, visibleStatsTargets]);
   if (!filteredPosts.length) return <div className="article-archive"><div className="archive-controls archive-controls--empty"><button type="button" className="archive-return" onClick={onBack}><ArrowLeft size={17} />返回文章</button></div><div className="section-empty"><FolderOpen size={34} weight="duotone" /><h2>归档中没有匹配项</h2></div></div>;
   return <div className="article-archive"><div className="archive-controls"><div className="archive-control-groups"><div><span>年份</span>{years.map((item) => <button className={year === item ? "active" : ""} key={item} onClick={() => selectArchive(item, "")}>{item}</button>)}</div><div><span>月份</span><button className={!month ? "active" : ""} onClick={() => selectArchive(year, "")}>全年</button>{months.map((item) => <button className={month === item ? "active" : ""} key={item} onClick={() => selectArchive(year, item)}>{item} 月</button>)}</div></div><button type="button" className="archive-return" onClick={onBack}><ArrowLeft size={17} />返回文章</button></div><div className="archive-timeline-wrap" ref={archiveWrapRef} style={wrapHeight == null ? undefined : { height: wrapHeight }}><div className={`archive-timeline${switching === "leaving" ? " is-leaving" : ""}${switching === "entering" ? " is-entering" : ""}`} key={`${year}-${month}`}>{visible.map((post) => <a href={`#/post/${post.slug}`} key={post.slug}><time>{post.date.slice(0, 10)}</time><i aria-hidden="true" /><div><span>{post.category}{post.series ? ` · ${post.series}` : ""}</span><strong>{post.title}</strong></div><small><Eye size={14} />{stats[post.slug]?.views || 0}<ChatCircleDots size={14} />{stats[post.slug]?.comments || 0}</small></a>)}</div></div></div>;
 }

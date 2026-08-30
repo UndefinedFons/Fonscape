@@ -168,7 +168,7 @@ function ReplyEditor({ closing, immediateOpen, onClosed, children }) {
     return () => {
       window.cancelAnimationFrame(openFrame);
     };
-  }, []);
+  }, [immediateOpen]);
   useLayoutEffect(() => {
     const editorNode = editor.current;
     if (!editorNode || !closing) return undefined;
@@ -312,8 +312,8 @@ export function CommentsSection({ targetType, slug }) {
     } catch (error) {
       setState({ loading: false, error: error?.message || "评论服务暂时不可用，请稍后再试。", comments: [] });
     }
-  }, [targetType, slug, viewer?.id]);
-  useEffect(() => { setState((value) => ({ ...value, loading: true })); load(); }, [load]);
+  }, [targetType, slug]);
+  useEffect(() => { setState((value) => ({ ...value, loading: true })); load(); }, [load, viewer?.id]);
   useEffect(() => {
     const requestLocation = (event) => setLocationTarget(event.detail?.id || "");
     window.addEventListener("fonscape:locate-comment", requestLocation);

@@ -1,6 +1,6 @@
 {
   "name": "fonscape",
-  "version": "1.12.1",
+  "version": "1.12.2",
   "description": "Fonscape（风栖），一款清新、响应式、注重阅读体验的 React 个人博客主题模板。",
   "private": true,
   "license": "MIT",
@@ -41,7 +41,7 @@
     "preview": "vite preview",
     "pretest": "node scripts/generate-content-targets.mjs && node scripts/generate-font-css.mjs && node scripts/generate-responsive-images.mjs",
     "test": "node --test",
-    "lint": "eslint . --max-warnings 15",
+    "lint": "eslint . --max-warnings 0",
     "typecheck": "tsc -p tsconfig.json",
     "db:migrate:cloudflare": "wrangler d1 migrations apply DB --remote",
     "deploy": "pnpm db:migrate:cloudflare && wrangler deploy",

@@ -5,7 +5,7 @@ import { ChatCircleDots } from "@phosphor-icons/react/ChatCircleDots";
 import { Eye } from "@phosphor-icons/react/Eye";
 import { MusicNotes } from "@phosphor-icons/react/MusicNotes";
 import { TextAa } from "@phosphor-icons/react/TextAa";
-import { lazy, use, useEffect, useState } from "react";
+import { lazy, use, useEffect, useMemo, useState } from "react";
 import { MusicReviewCard } from "../components/Cards.jsx";
 import { Pagination } from "../components/Pagination.jsx";
 import { PageHero } from "../components/PageHero.jsx";
@@ -28,8 +28,12 @@ export function MusicPage({ stats, onStatsTargets }) {
   const activeEntries = allMusicReviews.filter((entry) => entry.section === section);
   const ActiveSectionIcon = musicSections.find((item) => item.id === section).icon;
   const pagination = usePagination(activeEntries, useResponsivePageSize(6, 3), section, "music");
-  const pageStatsKey = pagination.pageItems.map((entry) => `${entry.section}/${entry.slug}`).join("|");
-  useEffect(() => { onStatsTargets(pagination.pageItems.map((entry) => ({ type: "music", slug: `${entry.section}/${entry.slug}` }))); }, [onStatsTargets, pageStatsKey]);
+  const pageStatsKey = JSON.stringify(pagination.pageItems.map((entry) => `${entry.section}/${entry.slug}`));
+  const pageStatsTargets = useMemo(
+    () => JSON.parse(pageStatsKey).map((slug) => ({ type: "music", slug })),
+    [pageStatsKey],
+  );
+  useEffect(() => { onStatsTargets(pageStatsTargets); }, [onStatsTargets, pageStatsTargets]);
   const selectSection = (nextSection) => {
     setSection(nextSection);
     const nextQuery = nextSection === "songs" ? "" : `?section=${nextSection}`;

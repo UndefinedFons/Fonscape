@@ -67,6 +67,9 @@ export function HomePage({ stats, onStatsTargets }) {
   const previousFeaturedPost = featuredState.previous === null || !featuredPosts.length
     ? null
     : featuredPosts[featuredState.previous % featuredPosts.length];
+  const nextFeaturedPost = featuredPosts.length > 1
+    ? featuredPosts[(featuredIndex + 1) % featuredPosts.length]
+    : null;
   const articleScroller = useHorizontalScroller();
   const poemScroller = useHorizontalScroller();
   const musicScroller = useHorizontalScroller();
@@ -77,19 +80,17 @@ export function HomePage({ stats, onStatsTargets }) {
     if (featuredState.previous === null) return undefined;
     const timer = window.setTimeout(() => setFeaturedState((current) => ({ ...current, previous: null })), 560);
     return () => window.clearTimeout(timer);
-  }, [featuredState.current, featuredState.previous]);
+  }, [featuredState.previous]);
   useEffect(() => {
-    if (featuredPosts.length < 2) return;
-    const nextPost = featuredPosts[(featuredIndex + 1) % featuredPosts.length];
-    if (!nextPost?.image) return;
-    const source = nextPost.cardImage || nextPost.image;
+    if (!nextFeaturedPost?.image) return;
+    const source = nextFeaturedPost.cardImage || nextFeaturedPost.image;
     const image = new Image();
     image.decoding = "async";
     const responsive = responsiveImageProps(source, "(max-width: 760px) calc(100vw - 24px), min(62vw, 760px)");
     if (responsive.srcSet) image.srcset = responsive.srcSet;
     if (responsive.sizes) image.sizes = responsive.sizes;
     image.src = responsiveImageUrl(source, 768);
-  }, [featuredIndex]);
+  }, [nextFeaturedPost]);
   const showNextFeaturedPost = () => {
     if (featuredCount < 2 || featuredLoading) return;
     const next = (featuredState.current + 1) % featuredCount;

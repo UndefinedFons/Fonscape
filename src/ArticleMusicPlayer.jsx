@@ -20,6 +20,8 @@ const formatAudioTime = (value) => {
 export function ArticleMusicPlayer({ track, autoplay = true }) {
   const audioRef = useRef(null);
   const seekingRef = useRef(false);
+  const volumeRef = useRef(1);
+  const trackSrc = track.src;
   const [playing, setPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
@@ -29,7 +31,7 @@ export function ArticleMusicPlayer({ track, autoplay = true }) {
   const [buffering, setBuffering] = useState(true);
 
   useEffect(() => {
-    const audio = acquireAudio(track);
+    const audio = acquireAudio({ src: trackSrc });
     audioRef.current = audio;
     const updateDuration = () => setDuration(Number.isFinite(audio.duration) ? audio.duration : 0);
     const updateTime = () => !seekingRef.current && setCurrentTime(audio.currentTime);
@@ -51,7 +53,7 @@ export function ArticleMusicPlayer({ track, autoplay = true }) {
     audio.addEventListener("playing", markPlaying);
     audio.addEventListener("pause", markPaused);
     audio.addEventListener("ended", markEnded);
-    audio.volume = volume;
+    audio.volume = volumeRef.current;
     if (audio.readyState >= 1) updateDuration();
     if (audio.readyState >= 3) markReady();
     updateTime();
@@ -83,7 +85,12 @@ export function ArticleMusicPlayer({ track, autoplay = true }) {
       releaseAudio(audio);
       audioRef.current = null;
     };
-  }, [track.src, autoplay]);
+  }, [trackSrc, autoplay]);
+
+  useEffect(() => {
+    volumeRef.current = volume;
+    if (audioRef.current) audioRef.current.volume = volume;
+  }, [volume]);
 
   const togglePlayback = async () => {
     const audio = audioRef.current;
