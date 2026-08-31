@@ -10,6 +10,9 @@ export interface HeroConfig {
 export interface ChannelConfig {
   label?: string;
   url?: string;
+}
+
+export interface EmailChannelConfig {
   address?: string;
 }
 
@@ -21,7 +24,12 @@ export interface AuthorConfig {
   tagline: string;
   introduction: string;
   interests: string[];
-  channels?: Record<string, ChannelConfig>;
+  channels?: {
+    github?: ChannelConfig;
+    bilibili?: ChannelConfig;
+    x?: ChannelConfig;
+    email?: EmailChannelConfig;
+  };
   support?: {
     label: string;
     handle: string;

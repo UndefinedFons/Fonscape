@@ -32,7 +32,6 @@ const siteConfig = {
         url: "",
       },
       email: {
-        label: "",
         address: "",
       },
     },

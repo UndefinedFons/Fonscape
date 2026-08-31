@@ -24,7 +24,7 @@ const channelTypes = [
   { key: "email", eyebrow: "EMAIL", Icon: EnvelopeSimple },
 ];
 
-function resolveChannels(author) {
+export function resolveChannels(author) {
   const configured = author.channels || {};
   const legacyGithub = author.github || {};
 
@@ -34,7 +34,7 @@ function resolveChannels(author) {
     const address = key === "email" ? channel.address?.trim() : "";
     const href = key === "email" ? (address ? `mailto:${address}` : "") : channel.url?.trim();
     if (!href) return [];
-    return [{ key, eyebrow, Icon, href, label: channel.label?.trim() || address || href }];
+    return [{ key, eyebrow, Icon, href, label: key === "email" ? address : (channel.label?.trim() || href) }];
   });
 }
 
