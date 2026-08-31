@@ -33,29 +33,22 @@ showPoems: false,
 showMusic: false,
 ```
 
-可按需组合布尔值：
-
-| `showPoems` | `showMusic` | 效果 |
-| --- | --- | --- |
-| `false` | `false` | 隐藏小诗和音乐 |
-| `true` | `false` | 只显示小诗 |
-| `false` | `true` | 只显示音乐 |
-| `true` | `true` | 显示小诗和音乐 |
+各板块开关彼此独立，可按需自由组合；`true` 表示显示，`false` 表示隐藏。
 
 ### 个人渠道
 
-关于页支持 GitHub、哔哩哔哩、X 与邮箱入口，对应配置位于 `author.channels`：
+关于页目前支持 GitHub、哔哩哔哩、X 与邮箱入口，对应配置位于 `author.channels`：
 
 ```js
 channels: {
   github: { label: "@yourname", url: "https://github.com/yourname" },
   bilibili: { label: "@yourname", url: "https://space.bilibili.com/你的UID" },
   x: { label: "@yourname", url: "https://x.com/yourname" },
-  email: { label: "hello@example.com", address: "hello@example.com" },
+  email: { address: "hello@example.com" },
 },
 ```
 
-`label` 是关于页显示的名称。外部渠道填写完整的 `url`；邮箱只填写 `address`，主题会自动生成邮件链接。删除不需要的渠道对象，或把对应地址留空，即可隐藏该入口。
+外部渠道的 `label` 是关于页显示的名称，`url` 填写完整链接；邮箱只填写 `address`，主题会直接显示邮箱地址并自动生成邮件链接。删除不需要的渠道对象，或把对应地址留空，即可隐藏该入口。
 
 ### 页面头图
 
@@ -311,7 +304,7 @@ pnpm check
 
 ## 部署
 
-Fonscape 支持 Cloudflare Workers + D1 与 Vercel + Turso。只需准备一个 GitHub 账号，即可通过任一平台的 GitHub 登录完成授权和部署；部署表单只要求填写自行生成的 `ADMIN_BOOTSTRAP_TOKEN`。部署完成后打开 `/admin/setup`，使用同一令牌创建首位管理员。初始化成功后，数据库会永久拒绝再次使用该令牌。
+Fonscape 目前支持 Cloudflare Workers + D1 与 Vercel + Turso。只需准备一个 GitHub 账号，即可通过任一平台的 GitHub 登录完成授权和部署；部署表单只要求填写自行生成的 `ADMIN_BOOTSTRAP_TOKEN`。部署完成后打开 `/admin/setup`，使用同一令牌创建首位管理员。初始化成功后，数据库会永久拒绝再次使用该令牌。
 
 ### Cloudflare Workers + D1
 

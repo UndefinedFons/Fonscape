@@ -71,7 +71,7 @@ showPoems: true,
 showMusic: false,
 ```
 
-两个开关彼此独立，完整组合和显示范围见 [使用指南](./GUIDE.md#小诗与音乐板块显示开关)。
+各板块开关可按需自由组合，显示范围见 [使用指南](./GUIDE.md#小诗与音乐板块显示开关)。
 
 完成基础配置后，在 `src/content/posts/hello-world.md` 创建第一篇文章：
 
