@@ -14,8 +14,7 @@ import { loadCollection, siteConfig } from "../content/index.js";
 import { usePagination, useResponsivePageSize } from "../hooks.js";
 import { lockPageScroll } from "../lockPageScroll.js";
 import { ARTICLE_INDEX_DEFAULTS, articleIndexState, parseHash, parseHashQuery, updateArticleIndexState } from "../routeState.js";
-
-const POST_CATEGORIES = ["随笔", "小说", "评谈", "记录", "笔记", "指南"];
+import { getPostCategories } from "../siteConfig.js";
 
 export function PostsPage({ query, stats, onStatsTargets }) {
   const posts = use(loadCollection("post"));
@@ -28,7 +27,9 @@ export function PostsPage({ query, stats, onStatsTargets }) {
   const hasFilterParameter = parameters.has("filter");
   const hasRequestedFilter = Boolean(requestedTag || requestedSeries);
   const initialIndexState = hasRequestedFilter ? ARTICLE_INDEX_DEFAULTS : articleIndexState;
-  const [category, setCategory] = useState(initialIndexState.category);
+  const categories = getPostCategories(siteConfig);
+  const initialCategory = categories.includes(initialIndexState.category) ? initialIndexState.category : "全部";
+  const [category, setCategory] = useState(initialCategory);
   const [selectedTag, setSelectedTag] = useState(allTags.includes(requestedTag) ? requestedTag : initialIndexState.tag);
   const [selectedSeries, setSelectedSeries] = useState(allSeries.includes(requestedSeries) ? requestedSeries : initialIndexState.series);
   const [filterOpen, setFilterOpen] = useState(hasFilterParameter);
@@ -66,7 +67,7 @@ export function PostsPage({ query, stats, onStatsTargets }) {
   useEffect(() => {
     if (view === "cards") onStatsTargets(pageStatsTargets);
   }, [onStatsTargets, pageStatsTargets, view]);
-  const categories = ["全部", ...POST_CATEGORIES];
+  const activeCategoryIndex = Math.max(0, categories.indexOf(category));
   const replaceFilterQuery = (tag, series) => {
     const currentParameters = new URLSearchParams(parseHashQuery());
     if (tag) currentParameters.set("tag", tag); else currentParameters.delete("tag");
@@ -131,7 +132,7 @@ export function PostsPage({ query, stats, onStatsTargets }) {
   };
   return <main><PageHero kicker="ARTICLE INDEX" title="文章" description={siteConfig.pages.postsDescription} icon={BookOpenText} variant="posts" />
     <section className={`article-index page-width${view === "archive" ? " article-index--archive" : ""}${viewSwitching ? " is-view-switching" : ""}`}>
-      {view === "cards" && <div className="article-index-toolbar article-index-toolbar--cards"><div className="article-type-tabs" role="tablist" aria-label="文章类型" data-active-index={categories.indexOf(category)}><span className="article-type-indicator" aria-hidden="true" />{categories.map((item) => <button type="button" role="tab" aria-selected={category === item} key={item} className={category === item ? "active" : ""} onClick={() => setCategory(item)}>{item}</button>)}</div><div className="article-index-actions"><button type="button" className={filterOpen ? "active" : ""} onClick={() => setFilterOpen(true)}><Funnel size={17} />筛选</button><button type="button" onClick={toggleArchive}><FolderOpen size={17} />文章归档</button></div></div>}
+      {view === "cards" && <div className="article-index-toolbar article-index-toolbar--cards"><div className="article-type-tabs" role="tablist" aria-label="文章类型" style={{ "--type-count": categories.length, "--type-index": activeCategoryIndex }}><span className="article-type-indicator" aria-hidden="true" />{categories.map((item) => <button type="button" role="tab" aria-selected={category === item} key={item} className={category === item ? "active" : ""} onClick={() => setCategory(item)} title={item}>{item}</button>)}</div><div className="article-index-actions"><button type="button" className={filterOpen ? "active" : ""} onClick={() => setFilterOpen(true)}><Funnel size={17} />筛选</button><button type="button" onClick={toggleArchive}><FolderOpen size={17} />文章归档</button></div></div>}
       {view === "cards" && (selectedTag || selectedSeries) && <div className={`active-filter-summary${filterSummaryClosing ? " is-leaving" : ""}`}><div className="active-filter-current">{selectedTag ? <Hash size={18} weight="duotone" /> : <FolderOpen size={18} weight="duotone" />}<span><small>{selectedTag ? "当前标签" : "当前系列"}</small><strong>{selectedTag || selectedSeries}</strong></span></div><button type="button" className="clear-filter" onClick={clearSelectedFilter} disabled={filterSummaryClosing}><X size={14} />清除筛选</button></div>}
       {view === "archive" ? <ArticleArchive posts={posts} stats={stats} onBack={toggleArchive} onStatsTargets={onStatsTargets} /> : <><div key={filterKey} ref={pagination.topRef} className={`article-grid paginated-view${pagination.leaving ? " is-leaving" : ""}${filterResultsLeaving ? " is-filter-leaving" : ""}`}>{pagination.pageItems.length ? pagination.pageItems.map((post) => <ArticleCard key={post.slug} post={post} stats={stats[post.slug]} />) : posts.length ? <div className="section-empty"><Funnel size={34} weight="duotone" /><h2>没有符合条件的文章</h2><p>换一种类型、标签或系列试试。</p></div> : <div className="section-empty"><BookOpenText size={34} weight="duotone" /><h2>暂无文章</h2></div>}</div><Pagination page={pagination.page} totalPages={pagination.totalPages} onChange={pagination.changePage} /></>}
     </section>

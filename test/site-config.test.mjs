@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { resolveGlassBackground } from "../src/heroImages.js";
-import { getNavItems, siteConfig } from "../src/siteConfig.js";
+import { DEFAULT_POST_CATEGORIES, getNavItems, getPostCategories, normalizePostCategories, siteConfig } from "../src/siteConfig.js";
 import { formatCopyrightYears } from "../src/siteUtils.js";
 
 test("site configuration keeps the portable theme shape", () => {
@@ -9,6 +9,9 @@ test("site configuration keeps the portable theme shape", () => {
   assert.equal(typeof siteConfig.home.description, "string");
   assert.equal(typeof siteConfig.showPoems, "boolean");
   assert.equal(typeof siteConfig.showMusic, "boolean");
+  assert.equal(Array.isArray(siteConfig.postCategories), true);
+  assert.equal(siteConfig.postCategories.every((category) => typeof category === "string" && category.trim() === category && category !== "" && category !== "全部"), true);
+  assert.equal(new Set(siteConfig.postCategories).size, siteConfig.postCategories.length);
   assert.equal(typeof siteConfig.author.tagline, "string");
   assert.equal(typeof siteConfig.author.introduction, "string");
   assert.equal(Array.isArray(siteConfig.author.interests), true);
@@ -29,6 +32,14 @@ test("site configuration keeps the portable theme shape", () => {
       assert.notEqual(hero.glassImage.trim(), "");
     }
   }
+});
+
+test("post categories normalize safely while preserving an explicit empty list", () => {
+  assert.deepEqual(normalizePostCategories(), [...DEFAULT_POST_CATEGORIES]);
+  assert.deepEqual(getPostCategories({}), ["全部", ...DEFAULT_POST_CATEGORIES]);
+  assert.deepEqual(getPostCategories({ postCategories: [] }), ["全部"]);
+  assert.deepEqual(normalizePostCategories(["  书写  ", "书写", "全部", "", "  ", "影像", null, 42]), ["书写", "影像"]);
+  assert.deepEqual(getPostCategories({ postCategories: ["自由分类"] }), ["全部", "自由分类"]);
 });
 
 test("poem and music navigation visibility is independently configurable", () => {

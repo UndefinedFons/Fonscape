@@ -71,6 +71,12 @@ test("metadata parsers keep listing data while omitting Markdown bodies", () => 
   assert.equal(music.wordCount, 5);
 });
 
+test("post parsers preserve custom categories outside the default list", () => {
+  const source = `---\ntitle: "一卷照片"\ndate: "2026-01-01"\ncategory: "摄影"\n---\n正文。`;
+  assert.equal(parsePost("custom.md", source).category, "摄影");
+  assert.equal(parsePostMetadata("custom.md", source).category, "摄影");
+});
+
 test("invalid or duplicate frontmatter is rejected during the build", () => {
   assert.throws(() => parsePost("broken.md", "---\ntitle: A\ntitle: B\ndate: 2026-07-30\ncategory: 开发\n---\nBody"), /字段 title 重复/u);
   assert.throws(() => parsePost("broken.md", "---\ntitle: A\ndate: nope\ncategory: 开发\n---\nBody"), /date 格式无效/u);

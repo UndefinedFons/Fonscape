@@ -73,6 +73,8 @@ showMusic: false,
 
 各板块开关可按需自由组合，显示范围见 [使用指南](./GUIDE.md#小诗与音乐板块显示开关)。
 
+文章分类的名称、数量和顺序也可通过 `postCategories` 自定义；配置方法与文章 `category` 的对应规则见 [文章分类](./GUIDE.md#文章分类)。
+
 完成基础配置后，在 `src/content/posts/hello-world.md` 创建第一篇文章：
 
 ```md
