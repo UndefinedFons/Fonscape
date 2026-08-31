@@ -14,10 +14,10 @@
 
 ## 示例界面
 
-以下截图来自 [Fonstage](https://fonstage.space/)，一个基于 Fonscape 构建的实际个人博客。桌面首页集中展示头图、导航、作者信息、置顶内容与近期文章。
+以下截图来自 [Fonstage](https://fonstage.space/)，一个基于 Fonscape 构建的实际个人博客。桌面首页集中展示头图、导航、作者信息与置顶内容。
 
 <p align="center">
-  <a href="https://fonstage.space/"><img src="./.github/assets/fonstage-desktop.webp" width="100%" alt="Fonstage 的 Fonscape 桌面首页，展示头图导航、作者卡、置顶文章和近期文章入口"></a>
+  <a href="https://fonstage.space/"><img src="./.github/assets/fonstage-desktop.webp" width="100%" alt="Fonstage 的 Fonscape 桌面首页，展示头图导航、作者卡与置顶文章"></a>
 </p>
 
 在线示例还展示响应式布局、全局搜索、明暗主题、磨砂材质、文章目录、阅读进度和账户评论流程，以及小诗、音乐手记与友链等内容页面。
