@@ -86,6 +86,12 @@ home: {
 
 头像同样只配置 `author.avatar`。旧站点已有的 `mobileImage`、`avatarSmall` 或文章 `cardImage` 仍会兼容读取，并自动继续优化，但新内容无需再创建这些轻量副本。
 
+#### 图片焦点位置
+
+`position`、`mobilePosition` 和文章的 `cardPosition` 使用相同的方向顺序：第一个值控制水平方向（左右），第二个值控制垂直方向（上下）。水平方向的 `0%`、`50%`、`100%` 分别对应左、中、右；垂直方向分别对应上、中、下。
+
+例如 `"50% 30%"` 表示水平居中、垂直偏上；`"60% center"` 表示水平略偏右、垂直居中。单独填写 `"center"` 表示两个方向都居中。
+
 ### 友链
 
 已发布友链保存在 `src/content/friends.json`：
@@ -175,7 +181,7 @@ musicPlacement: "inline"
 | `featured` | 否 | 是否置顶，默认 `false` |
 | `featuredOrder` | 否 | 置顶顺序，必须是正整数；仅可在 `featured: true` 时使用 |
 | `image` | 否 | 封面路径，例如 `/assets/my-note.webp` |
-| `cardPosition` | 否 | 列表卡片图片焦点，例如 `50% 30%` |
+| `cardPosition` | 否 | 列表卡片的[图片焦点位置](#图片焦点位置)，按“水平 垂直”填写，例如 `50% 30%` |
 | `coverMode` | 否 | 详情页封面模式：`wide` 或 `none`，默认 `wide` |
 | `music` | 否 | 文章配乐对象，字段见下文 |
 | `musicPlacement` | 否 | 默认显示在正文前；设为 `inline` 时由正文标记决定位置 |

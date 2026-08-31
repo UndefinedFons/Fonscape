@@ -77,18 +77,18 @@ export function AdminSetupPage() {
             <input id="admin-setup-token" name="token" type="text" value={form.token} onChange={update("token")} autoComplete="off" spellCheck="false" required placeholder="输入部署时设置的令牌" />
           </span>
         </label>
-        <label htmlFor="admin-setup-username">
-          <span>账户名</span>
-          <span className="community-input">
-            <At size={18} aria-hidden="true" />
-            <input id="admin-setup-username" name="username" value={form.username} onChange={update("username")} autoComplete="username" minLength="3" maxLength="20" pattern="[A-Za-z0-9]{3,20}" required placeholder="3–20 位英文字母或数字" />
-          </span>
-        </label>
         <label htmlFor="admin-setup-nickname">
           <span>昵称</span>
           <span className="community-input">
             <UserCircle size={18} aria-hidden="true" />
             <input id="admin-setup-nickname" name="nickname" value={form.nickname} onChange={update("nickname")} autoComplete="nickname" minLength="1" maxLength="10" required placeholder="希望大家怎样称呼你" />
+          </span>
+        </label>
+        <label htmlFor="admin-setup-username">
+          <span>账户名</span>
+          <span className="community-input">
+            <At size={18} aria-hidden="true" />
+            <input id="admin-setup-username" name="username" value={form.username} onChange={update("username")} autoComplete="username" minLength="3" maxLength="20" pattern="[A-Za-z0-9]{3,20}" required placeholder="3–20 位英文字母或数字" />
           </span>
         </label>
         <label htmlFor="admin-setup-password">
