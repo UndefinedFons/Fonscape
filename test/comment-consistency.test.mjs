@@ -58,6 +58,8 @@ test("comment consistency migration backfills generic target usage and removes d
     assert.deepEqual(targetColumns, ["content_type", "content_slug", "active_comments", "published_comments", "updated_at"]);
     const schema = String((await client.execute("SELECT sql FROM sqlite_schema WHERE name = 'comment_target_usage'")).rows[0].sql);
     assert.doesNotMatch(schema, /post|poem|music/iu);
+    const retiredDuplicateIndex = (await client.execute("SELECT name FROM sqlite_schema WHERE type = 'index' AND name = 'comments_duplicate_idx'")).rows;
+    assert.deepEqual(retiredDuplicateIndex, []);
     const triggers = (await client.execute("SELECT name FROM sqlite_schema WHERE type = 'trigger' AND name LIKE 'comments_usage_%' ORDER BY name")).rows;
     assert.deepEqual(triggers.map((row) => row.name), [
       "comments_usage_after_delete",
@@ -69,7 +71,7 @@ test("comment consistency migration backfills generic target usage and removes d
   }
 });
 
-test("concurrent comment writes enforce duplicate and capacity limits exactly once", async () => {
+test("concurrent comment writes enforce capacity limits exactly once", async () => {
   const { client, db } = await migratedDatabase();
   try {
     const now = Date.now();
@@ -87,22 +89,22 @@ test("concurrent comment writes enforce duplicate and capacity limits exactly on
     assert.equal(results.filter((value) => value === "created").length, 4);
     assert.equal(results.filter((value) => value === "comment_storage_limit").length, 16);
 
-    const duplicateResults = await Promise.all(["a", "b"].map((suffix) => insertCommentAtomically(db, {
-      id: `duplicate-${suffix}`,
+    const sameBodyResults = await Promise.all(["a", "b"].map((suffix) => insertCommentAtomically(db, {
+      id: `same-body-${suffix}`,
       userId: "member-1",
       role: "member",
       target: { type: "post", slug: "site-about" },
       body: "same body",
       now: now + 100,
     }, { ...env, MAX_COMMENTS_PER_USER: "100" }).then(() => "created").catch((error) => error.code)));
-    assert.deepEqual(duplicateResults.sort(), ["created", "duplicate_comment"]);
+    assert.deepEqual(sameBodyResults.sort(), ["created", "created"]);
 
     const counts = (await client.execute(`SELECT
       (SELECT COUNT(*) FROM comments WHERE status != 'deleted') AS comments,
       (SELECT value FROM storage_counters WHERE metric = 'comments_created') AS stored_comments,
       (SELECT comments_created FROM account_usage WHERE user_id = 'member-1') AS account_comments,
       (SELECT active_comments FROM comment_target_usage WHERE content_type = 'post' AND content_slug = 'site-friends') AS target_comments`)).rows[0];
-    assert.deepEqual(counts, { comments: 5, stored_comments: 5, account_comments: 5, target_comments: 4 });
+    assert.deepEqual(counts, { comments: 6, stored_comments: 6, account_comments: 6, target_comments: 4 });
   } finally {
     await client.close();
   }
