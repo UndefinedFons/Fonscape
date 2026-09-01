@@ -267,12 +267,11 @@ export async function reserveRegistrationSlot(db, env) {
   return () => rollbackStorageCounter(db, "member_accounts", 1);
 }
 
-const COMMENT_DUPLICATE_WINDOW = 10 * MINUTE;
-
 /**
  * Insert and validate one comment in a single SQLite write statement. D1 and
  * libSQL serialize the conditional INSERT together with its counter triggers,
- * so concurrent writers cannot pass a stale read-side capacity check.
+ * so concurrent writers cannot pass a stale read-side capacity check. The
+ * comment rate-limit windows remain enforced before this capacity write.
  */
 export async function insertCommentAtomically(db, {
   id,
@@ -288,7 +287,6 @@ export async function insertCommentAtomically(db, {
   const userMaximum = limitFromEnv(env, "MAX_COMMENTS_PER_USER");
   const targetMaximum = limitFromEnv(env, "MAX_COMMENTS_PER_TARGET");
   const totalMaximum = limitFromEnv(env, "MAX_TOTAL_COMMENTS");
-  const duplicateCutoff = now - COMMENT_DUPLICATE_WINDOW;
   const result = await db.prepare(`INSERT INTO comments
     (id, content_type, content_slug, parent_id, reply_to_user_id,
       reply_to_comment_id, user_id, body, status, created_at, updated_at)
@@ -304,18 +302,12 @@ export async function insertCommentAtomically(db, {
       AND COALESCE((
         SELECT active_comments FROM comment_target_usage
         WHERE content_type = ? AND content_slug = ?
-      ), 0) < ?
-      AND NOT EXISTS (
-        SELECT 1 FROM comments
-        WHERE user_id = ? AND content_type = ? AND content_slug = ?
-          AND body = ? AND status != 'deleted' AND created_at > ?
-      )`)
+      ), 0) < ?`)
     .bind(
       id, target.type, target.slug, parentId, replyToUserId,
       replyToCommentId, userId, body, now, now,
       totalMaximum, role, userId, userMaximum,
       target.type, target.slug, targetMaximum,
-      userId, target.type, target.slug, body, duplicateCutoff,
     ).run();
   if (Number(result.meta?.changes || 0) === 1) return;
 
@@ -327,23 +319,16 @@ export async function insertCommentAtomically(db, {
       SELECT active_comments FROM comment_target_usage
       WHERE content_type = ? AND content_slug = ?
     ), 0) >= ? THEN 1 ELSE 0 END AS target_full,
-    CASE WHEN EXISTS (
-      SELECT 1 FROM comments
-      WHERE user_id = ? AND content_type = ? AND content_slug = ?
-        AND body = ? AND status != 'deleted' AND created_at > ?
-    ) THEN 1 ELSE 0 END AS duplicate,
     CASE WHEN COALESCE((
       SELECT value FROM storage_counters WHERE metric = 'comments_created'
     ), ?) >= ? THEN 1 ELSE 0 END AS total_full`)
     .bind(
       role, userId, userMaximum,
       target.type, target.slug, targetMaximum,
-      userId, target.type, target.slug, body, duplicateCutoff,
       totalMaximum, totalMaximum,
     ).first();
   if (Number(state?.user_full || 0)) throw new ApiError(429, "该账户已达到评论存储上限。", "comment_storage_limit");
   if (Number(state?.target_full || 0)) throw new ApiError(429, "该页面的评论数量已达到上限。", "comment_target_full");
-  if (Number(state?.duplicate || 0)) throw new ApiError(409, "请勿重复发布相同评论。", "duplicate_comment");
   throw new ApiError(503, "评论区暂时无法接收更多内容。", "comment_capacity_reached");
 }
 
