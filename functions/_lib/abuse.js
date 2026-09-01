@@ -309,7 +309,7 @@ export async function insertCommentAtomically(db, {
       totalMaximum, role, userId, userMaximum,
       target.type, target.slug, targetMaximum,
     ).run();
-  if (Number(result.meta?.changes || 0) === 1) return;
+  if (Number(result.meta?.changes || 0) > 0) return;
 
   const state = await db.prepare(`SELECT
     CASE WHEN ? != 'admin' AND NOT EXISTS (

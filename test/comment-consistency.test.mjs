@@ -49,6 +49,27 @@ function requestContext({ path, method = "GET", db, currentUser, query = "", bod
   };
 }
 
+function withD1TriggerChangeCount(db) {
+  return {
+    prepare(sql) {
+      const statement = db.prepare(sql);
+      if (!String(sql).trimStart().startsWith("INSERT INTO comments")) return statement;
+      return {
+        bind(...values) {
+          const bound = statement.bind(...values);
+          return {
+            async run() {
+              const result = await bound.run();
+              return { ...result, meta: { ...result.meta, changes: 4, rows_written: 4 } };
+            },
+          };
+        },
+      };
+    },
+    batch(statements) { return db.batch(statements); },
+  };
+}
+
 test("comment consistency migration backfills generic target usage and removes dead session state", async () => {
   const { client } = await migratedDatabase();
   try {
@@ -105,6 +126,26 @@ test("concurrent comment writes enforce capacity limits exactly once", async () 
       (SELECT comments_created FROM account_usage WHERE user_id = 'member-1') AS account_comments,
       (SELECT active_comments FROM comment_target_usage WHERE content_type = 'post' AND content_slug = 'site-friends') AS target_comments`)).rows[0];
     assert.deepEqual(counts, { comments: 6, stored_comments: 6, account_comments: 6, target_comments: 4 });
+  } finally {
+    await client.close();
+  }
+});
+
+test("comment creation accepts D1 change counts that include trigger writes", async () => {
+  const { client, db: baseDb } = await migratedDatabase();
+  try {
+    const now = Date.now();
+    await seedUser(client, { now });
+    const id = "d1-trigger-count";
+    await insertCommentAtomically(withD1TriggerChangeCount(baseDb), {
+      id,
+      userId: "member-1",
+      role: "member",
+      target: { type: "post", slug: "site-about" },
+      body: "written once",
+      now,
+    }, { MAX_COMMENTS_PER_USER: "10", MAX_COMMENTS_PER_TARGET: "10", MAX_TOTAL_COMMENTS: "10" });
+    assert.equal((await client.execute({ sql: "SELECT COUNT(*) AS count FROM comments WHERE id = ?", args: [id] })).rows[0].count, 1);
   } finally {
     await client.close();
   }
