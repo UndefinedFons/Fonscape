@@ -1,8 +1,4 @@
 <p align="center">
-  <img src="./.github/assets/hero.svg" width="100%" alt="Fonscape：兼顾高颜值界面、沉浸式阅读与简洁使用流程的 React 个人博客主题">
-</p>
-
-<p align="center">
   Fonscape 是一款面向个人写作者的 React 博客主题，提供可定制界面、Markdown 内容管理、长文阅读、评论消息追溯，以及 Cloudflare 与 Vercel 一键部署。
 </p>
 
