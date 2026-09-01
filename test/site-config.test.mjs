@@ -35,6 +35,7 @@ test("site configuration keeps the portable theme shape", () => {
 });
 
 test("post categories normalize safely while preserving an explicit empty list", () => {
+  assert.deepEqual(DEFAULT_POST_CATEGORIES, ["随笔", "评谈", "记录", "笔记", "指南"]);
   assert.deepEqual(normalizePostCategories(), [...DEFAULT_POST_CATEGORIES]);
   assert.deepEqual(getPostCategories({}), ["全部", ...DEFAULT_POST_CATEGORIES]);
   assert.deepEqual(getPostCategories({ postCategories: [] }), ["全部"]);

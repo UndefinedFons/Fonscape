@@ -1,6 +1,6 @@
 import configuredSite from "../fonscape.config.js";
 
-export const DEFAULT_POST_CATEGORIES = Object.freeze(["随笔", "小说", "评谈", "记录", "笔记", "指南"]);
+export const DEFAULT_POST_CATEGORIES = Object.freeze(["随笔", "评谈", "记录", "笔记", "指南"]);
 
 /**
  * @param {unknown} value

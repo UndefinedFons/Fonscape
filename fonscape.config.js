@@ -4,7 +4,7 @@ const siteConfig = {
   language: "zh-CN",
   title: "我的博客",
   description: "网站简介",
-  postCategories: ["随笔", "小说", "评谈", "记录", "笔记", "指南"],
+  postCategories: ["随笔", "评谈", "记录", "笔记", "指南"],
   showPoems: false,
   showMusic: false,
   home: {
