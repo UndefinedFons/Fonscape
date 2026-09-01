@@ -16,14 +16,24 @@ test("all account message feeds use the same two-line body preview", async () =>
 
 test("read-receipt failures cannot replace an already loaded message feed", async () => {
   let receipts = 0;
+  const snapshot = { items: [{ id: "message-1", body: "仍然可见" }], readThrough: 123 };
   const feed = await loadFeedWithBestEffortReceipt(
-    async () => [{ id: "message-1", body: "仍然可见" }],
-    async () => { receipts += 1; throw new Error("receipt failed"); },
+    async () => snapshot,
+    async (readThrough) => { receipts += 1; assert.equal(readThrough, 123); throw new Error("receipt failed"); },
     1,
   );
-  await Promise.resolve();
-  assert.deepEqual(feed, [{ id: "message-1", body: "仍然可见" }]);
+  assert.deepEqual(feed, snapshot);
   assert.equal(receipts, 1);
+});
+
+test("a failed message feed never sends a read receipt", async () => {
+  let receipts = 0;
+  await assert.rejects(() => loadFeedWithBestEffortReceipt(
+    async () => { throw new Error("feed failed"); },
+    async () => { receipts += 1; },
+    1,
+  ), /feed failed/u);
+  assert.equal(receipts, 0);
 });
 
 test("the combined search feed applies newest-first ordering with stable ties", () => {

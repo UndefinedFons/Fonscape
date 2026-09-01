@@ -328,17 +328,100 @@ const commentSelect = `SELECT c.*, u.nickname, u.role AS user_role,
   LEFT JOIN users reply ON reply.id = c.reply_to_user_id
   LEFT JOIN user_avatars reply_avatar ON reply_avatar.user_id = reply.id`;
 
+const COMMENT_PAGE_SIZE = 40;
+
+function encodeCommentCursor(row) {
+  return btoa(JSON.stringify([Number(row.created_at), String(row.id)]))
+    .replaceAll("+", "-").replaceAll("/", "_").replace(/=+$/u, "");
+}
+
+function decodeCommentCursor(value) {
+  if (!value) return null;
+  try {
+    const normalized = String(value).replaceAll("-", "+").replaceAll("_", "/");
+    const [createdAt, id] = JSON.parse(atob(normalized.padEnd(Math.ceil(normalized.length / 4) * 4, "=")));
+    if (!Number.isSafeInteger(createdAt) || createdAt < 0 || typeof id !== "string" || !id || id.length > 64) throw new Error("invalid cursor");
+    return { createdAt, id };
+  } catch {
+    throw new ApiError(400, "评论分页位置无效。", "invalid_comment_cursor");
+  }
+}
+
+function normalizeCommentMutationId(value) {
+  if (value === undefined || value === null || value === "") return crypto.randomUUID();
+  const id = String(value).trim();
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu.test(id)) {
+    throw new ApiError(400, "评论提交标识无效。", "invalid_comment_mutation_id");
+  }
+  return id;
+}
+
+function commentMutationMatches(row, { userId, target, body, requestedParentId }) {
+  return row
+    && row.status === "published"
+    && row.user_id === userId
+    && row.content_type === target.type
+    && row.content_slug === target.slug
+    && row.body === body
+    && (row.reply_to_comment_id || null) === requestedParentId;
+}
+
+function isCommentIdConflict(error) {
+  const code = String(error?.code || "");
+  const message = error instanceof Error ? error.message : String(error);
+  return /SQLITE_CONSTRAINT(?:_PRIMARYKEY|_UNIQUE)?/iu.test(code)
+    || /UNIQUE constraint failed:\s*(?:main\.)?comments\.id/iu.test(message);
+}
+
+async function commentById(db, id) {
+  return db.prepare(`${commentSelect} WHERE c.id = ? LIMIT 1`).bind(id).first();
+}
+
 async function listComments(context, url) {
   const db = requireDatabase(context.env);
   const target = validateTarget(url.searchParams.get("type"), url.searchParams.get("slug"));
   await assertTargetExists(db, target);
   const viewer = await currentUser(context);
   const viewerRole = viewer ? publicUser(viewer).role : null;
-  const result = await db.prepare(`${commentSelect} WHERE c.content_type = ? AND c.content_slug = ? AND c.status = 'published'
+  const cursor = decodeCommentCursor(url.searchParams.get("cursor"));
+  const cursorClause = cursor ? "AND (c.created_at < ? OR (c.created_at = ? AND c.id < ?))" : "";
+  const pageStatement = db.prepare(`${commentSelect} WHERE c.content_type = ? AND c.content_slug = ? AND c.status = 'published'
     AND (c.parent_id IS NULL OR EXISTS (SELECT 1 FROM comments parent WHERE parent.id = c.parent_id AND parent.status = 'published'))
-    ORDER BY c.created_at ASC LIMIT 200`)
-    .bind(target.type, target.slug).all();
-  return json({ comments: result.results.map((row) => commentRow(row, viewer?.id || null, viewerRole)) });
+    ${cursorClause}
+    ORDER BY c.created_at DESC, c.id DESC LIMIT ?`);
+  const pageResult = cursor
+    ? await pageStatement.bind(target.type, target.slug, cursor.createdAt, cursor.createdAt, cursor.id, COMMENT_PAGE_SIZE + 1).all()
+    : await pageStatement.bind(target.type, target.slug, COMMENT_PAGE_SIZE + 1).all();
+  const pageRows = (pageResult.results || []).slice(0, COMMENT_PAGE_SIZE);
+  const rowsById = new Map(pageRows.map((row) => [row.id, row]));
+  const missingParentIds = [...new Set(pageRows.map((row) => row.parent_id).filter((id) => id && !rowsById.has(id)))];
+  if (missingParentIds.length) {
+    const placeholders = missingParentIds.map(() => "?").join(", ");
+    const parents = await db.prepare(`${commentSelect} WHERE c.id IN (${placeholders}) AND c.status = 'published'`)
+      .bind(...missingParentIds).all();
+    for (const row of parents.results || []) rowsById.set(row.id, row);
+  }
+  const locatedId = String(url.searchParams.get("comment") || "").trim();
+  if (locatedId && /^[A-Za-z0-9-]{1,64}$/u.test(locatedId) && !rowsById.has(locatedId)) {
+    const located = await db.prepare(`${commentSelect} WHERE c.id = ? AND c.content_type = ? AND c.content_slug = ? AND c.status = 'published'
+      AND (c.parent_id IS NULL OR EXISTS (SELECT 1 FROM comments parent WHERE parent.id = c.parent_id AND parent.status = 'published')) LIMIT 1`)
+      .bind(locatedId, target.type, target.slug).first();
+    if (located) {
+      rowsById.set(located.id, located);
+      if (located.parent_id && !rowsById.has(located.parent_id)) {
+        const parent = await db.prepare(`${commentSelect} WHERE c.id = ? AND c.status = 'published' LIMIT 1`).bind(located.parent_id).first();
+        if (parent) rowsById.set(parent.id, parent);
+      }
+    }
+  }
+  const usage = await db.prepare("SELECT published_comments FROM comment_target_usage WHERE content_type = ? AND content_slug = ? LIMIT 1")
+    .bind(target.type, target.slug).first();
+  const hasMore = (pageResult.results || []).length > COMMENT_PAGE_SIZE;
+  return json({
+    comments: [...rowsById.values()].map((row) => commentRow(row, viewer?.id || null, viewerRole)),
+    total: Number(usage?.published_comments || 0),
+    nextCursor: hasMore ? encodeCommentCursor(pageRows.at(-1)) : null,
+  });
 }
 
 async function createComment(context) {
@@ -347,38 +430,52 @@ async function createComment(context) {
   const input = await readJson(context.request);
   const target = validateTarget(input.type, input.slug);
   const body = normalizeComment(input.body);
+  const requestedParentId = input.parentId ? String(input.parentId) : null;
+  const id = normalizeCommentMutationId(input.clientMutationId);
   await assertTargetExists(db, target);
+  const existing = await commentById(db, id);
+  if (existing) {
+    if (!commentMutationMatches(existing, { userId: user.id, target, body, requestedParentId })) {
+      throw new ApiError(409, "评论提交标识已被其他内容使用。", "comment_mutation_conflict");
+    }
+    return json({ comment: commentRow(existing, user.id, publicUser(user).role), replayed: true });
+  }
   await protectComment(context, user);
   let parentId = null;
   let replyToUserId = null;
   let replyToCommentId = null;
-  if (input.parentId) {
-    const parent = await db.prepare("SELECT id, parent_id, user_id, content_type, content_slug, status FROM comments WHERE id = ? LIMIT 1").bind(String(input.parentId)).first();
+  if (requestedParentId) {
+    const parent = await db.prepare("SELECT id, parent_id, user_id, content_type, content_slug, status FROM comments WHERE id = ? LIMIT 1").bind(requestedParentId).first();
     if (!parent || parent.status !== "published" || parent.content_type !== target.type || parent.content_slug !== target.slug) throw new ApiError(400, "回复的评论不存在。", "invalid_parent");
     parentId = parent.parent_id || parent.id;
     replyToUserId = parent.user_id;
     replyToCommentId = parent.id;
   }
-  const id = crypto.randomUUID();
   const now = Date.now();
-  await insertCommentAtomically(db, {
-    id,
-    userId: user.id,
-    role: user.role,
-    target,
-    body,
-    parentId,
-    replyToUserId,
-    replyToCommentId,
-    now,
-  }, context.env);
-  const row = await db.prepare(`${commentSelect} WHERE c.id = ?`).bind(id).first();
+  try {
+    await insertCommentAtomically(db, {
+      id,
+      userId: user.id,
+      role: user.role,
+      target,
+      body,
+      parentId,
+      replyToUserId,
+      replyToCommentId,
+      now,
+    }, context.env);
+  } catch (error) {
+    if (!isCommentIdConflict(error)) throw error;
+    const replayed = await commentById(db, id);
+    if (!commentMutationMatches(replayed, { userId: user.id, target, body, requestedParentId })) throw error;
+    return json({ comment: commentRow(replayed, user.id, publicUser(user).role), replayed: true });
+  }
+  const row = await commentById(db, id);
   return json({ comment: commentRow(row, user.id, publicUser(user).role) }, 201);
 }
 
 async function deleteComment(context, commentId) {
   const user = await requireUser(context);
-  await protectProfileUpdate(context, user);
   const db = requireDatabase(context.env);
   const existing = await db.prepare("SELECT user_id, status FROM comments WHERE id = ? LIMIT 1").bind(commentId).first();
   if (!existing) throw new ApiError(404, "评论不存在。", "comment_not_found");
@@ -410,7 +507,8 @@ async function myReplies(context) {
     LEFT JOIN comments target ON target.id = COALESCE(c.reply_to_comment_id, c.parent_id)
     WHERE c.reply_to_user_id = ? AND c.user_id != ? AND c.status = 'published'
     ORDER BY c.created_at DESC LIMIT 100`).bind(user.id, user.id).all();
-  return json({ replies: result.results.map((row) => ({
+  const rows = result.results || [];
+  return json({ replies: rows.map((row) => ({
     id: row.id,
     body: row.body,
     createdAt: row.created_at,
@@ -426,18 +524,19 @@ async function myReplies(context) {
       avatarUrl: row.avatar_user_id === row.user_id && row.avatar_updated_at ? `/api/avatar/${row.user_id}?v=${row.avatar_updated_at}` : null,
       avatarUpdatedAt: row.avatar_user_id === row.user_id && row.avatar_updated_at ? Number(row.avatar_updated_at) : null,
     },
-  })) });
+  })), readThrough: rows.reduce((latest, row) => Math.max(latest, Number(row.created_at) || 0), 0) });
 }
 
 async function markReplyNotificationsRead(context) {
   const user = await requireUser(context);
-  await protectProfileUpdate(context, user);
   const db = requireDatabase(context.env);
-  const now = Date.now();
+  const input = await readJson(context.request);
+  const readThrough = Number(input.readThrough);
+  if (!Number.isSafeInteger(readThrough) || readThrough <= 0) throw new ApiError(400, "已读位置无效。", "invalid_read_receipt");
   await db.prepare(`UPDATE users
     SET notifications_seen_at = MAX(COALESCE(notifications_seen_at, 0), ?),
         updated_at = MAX(updated_at, ?)
-    WHERE id = ?`).bind(now, now, user.id).run();
+    WHERE id = ?`).bind(readThrough, readThrough, user.id).run();
   return json({ ok: true });
 }
 
@@ -454,27 +553,29 @@ async function adminReceivedComments(context) {
     WHERE c.user_id != ? AND c.parent_id IS NULL AND c.status = 'published'
     ORDER BY c.created_at DESC LIMIT 100`).bind(admin.id).all();
   const seenAt = Number(admin.admin_comments_seen_at || admin.created_at || 0);
-  return json({ comments: (result.results || []).map((row) => ({
+  const rows = result.results || [];
+  return json({ comments: rows.map((row) => ({
     ...commentRow(row, admin.id, "admin"),
     contentType: row.content_type,
     contentSlug: row.content_slug,
     contentTitle: "",
     unread: Number(row.created_at) > seenAt,
-  })) });
+  })), readThrough: rows.reduce((latest, row) => Math.max(latest, Number(row.created_at) || 0), 0) });
 }
 
 async function markAdminCommentsRead(context) {
   const admin = await requireAdmin(context);
-  await protectProfileUpdate(context, admin);
   const db = requireDatabase(context.env);
-  const now = Date.now();
+  const input = await readJson(context.request);
+  const readThrough = Number(input.readThrough);
+  if (!Number.isSafeInteger(readThrough) || readThrough <= 0) throw new ApiError(400, "已读位置无效。", "invalid_read_receipt");
   await db.prepare(`UPDATE users
     SET admin_comments_seen_at = MAX(COALESCE(admin_comments_seen_at, 0), ?),
         updated_at = MAX(updated_at, ?)
-    WHERE id = ?`).bind(now, now, admin.id).run();
+    WHERE id = ?`).bind(readThrough, readThrough, admin.id).run();
   context.data.currentUser = {
     ...admin,
-    admin_comments_seen_at: Math.max(Number(admin.admin_comments_seen_at || 0), now),
+    admin_comments_seen_at: Math.max(Number(admin.admin_comments_seen_at || 0), readThrough),
   };
   return json({ ok: true });
 }

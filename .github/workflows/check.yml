@@ -44,6 +44,12 @@ jobs:
       - name: Test and build
         run: pnpm check
 
+      - name: Install browser for the critical user journey
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Verify the critical comment journey
+        run: pnpm test:e2e
+
       - name: Validate Cloudflare Worker bundle
         run: pnpm exec wrangler deploy --dry-run --outdir .wrangler/worker-dry-run
 

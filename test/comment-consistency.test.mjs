@@ -151,6 +151,80 @@ test("comment creation accepts D1 change counts that include trigger writes", as
   }
 });
 
+test("comment mutation ids replay one completed write without consuming another rate window", async () => {
+  const { client, db } = await migratedDatabase();
+  try {
+    const now = Date.now();
+    const user = await seedUser(client, { now });
+    const mutationId = "7d7e8b6d-34f1-4f49-9471-77d2a6070f73";
+    const request = () => requestContext({
+      path: ["comments"], method: "POST", db, currentUser: user,
+      body: { type: "post", slug: "site-about", body: "只写入一次", clientMutationId: mutationId },
+    });
+    const first = request();
+    const firstResponse = await onRequest(first);
+    await first.settle();
+    assert.equal(firstResponse.status, 201);
+    const consumedAfterFirst = (await client.execute("SELECT COALESCE(SUM(count), 0) AS count FROM rate_limits")).rows[0].count;
+
+    const replay = request();
+    const replayResponse = await onRequest(replay);
+    await replay.settle();
+    assert.equal(replayResponse.status, 200);
+    assert.equal((await replayResponse.json()).replayed, true);
+    assert.equal((await client.execute({ sql: "SELECT COUNT(*) AS count FROM comments WHERE id = ?", args: [mutationId] })).rows[0].count, 1);
+    assert.equal((await client.execute("SELECT COALESCE(SUM(count), 0) AS count FROM rate_limits")).rows[0].count, consumedAfterFirst);
+
+    const conflict = requestContext({
+      path: ["comments"], method: "POST", db, currentUser: user,
+      body: { type: "post", slug: "site-about", body: "不同内容", clientMutationId: mutationId },
+    });
+    const conflictResponse = await onRequest(conflict);
+    assert.equal(conflictResponse.status, 409);
+    assert.equal((await conflictResponse.json()).code, "comment_mutation_conflict");
+  } finally {
+    await client.close();
+  }
+});
+
+test("comment cursor pagination exposes every comment beyond the former 200 item boundary", async () => {
+  const { client, db } = await migratedDatabase();
+  try {
+    const now = Date.now();
+    await seedUser(client, { now });
+    await Promise.all(Array.from({ length: 201 }, (_, index) => insertCommentAtomically(db, {
+      id: `page-${String(index).padStart(3, "0")}`,
+      userId: "member-1",
+      role: "member",
+      target: { type: "post", slug: "site-about" },
+      body: `comment-${index}`,
+      now: now + index,
+    }, { MAX_COMMENTS_PER_USER: "300", MAX_COMMENTS_PER_TARGET: "300", MAX_TOTAL_COMMENTS: "300" })));
+
+    const ids = new Set();
+    let cursor = "";
+    let page = 0;
+    do {
+      const query = `?type=post&slug=site-about${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ""}`;
+      const context = requestContext({ path: ["comments"], db, currentUser: undefined, query });
+      const response = await onRequest(context);
+      assert.equal(response.status, 200);
+      const body = await response.json();
+      assert.equal(body.total, 201);
+      assert.ok(body.comments.length <= 40);
+      if (page === 0) assert.equal(body.comments.some((comment) => comment.id === "page-200"), true);
+      body.comments.forEach((comment) => ids.add(comment.id));
+      cursor = body.nextCursor || "";
+      page += 1;
+    } while (cursor);
+    assert.equal(page, 6);
+    assert.equal(ids.size, 201);
+    assert.equal(ids.has("page-000"), true);
+  } finally {
+    await client.close();
+  }
+});
+
 test("comment aggregates distinguish hidden capacity from published statistics", async () => {
   const { client, db } = await migratedDatabase();
   try {
@@ -214,6 +288,7 @@ test("notification read receipts never move backwards", async () => {
         method: "PATCH",
         db,
         currentUser: { ...user, notifications_seen_at: future, admin_comments_seen_at: future },
+        body: { readThrough: now },
       });
       assert.equal((await onRequest(context)).status, 200);
       await context.settle();
@@ -223,6 +298,44 @@ test("notification read receipts never move backwards", async () => {
       admin_comments_seen_at: future,
       updated_at: future,
     }]);
+  } finally {
+    await client.close();
+  }
+});
+
+test("notification receipts only advance through the successfully loaded snapshot", async () => {
+  const { client, db } = await migratedDatabase();
+  try {
+    const now = Date.now();
+    const recipient = await seedUser(client, { id: "member-1", now });
+    await seedUser(client, { id: "member-2", username: "writer02", nickname: "写作者", now });
+    await insertCommentAtomically(db, {
+      id: "reply-before-snapshot", userId: "member-2", role: "member",
+      target: { type: "post", slug: "site-about" }, body: "第一条回复",
+      replyToUserId: recipient.id, now: now + 1,
+    }, { MAX_COMMENTS_PER_USER: "10", MAX_COMMENTS_PER_TARGET: "10", MAX_TOTAL_COMMENTS: "10" });
+    const feedContext = requestContext({ path: ["me", "replies"], db, currentUser: recipient });
+    const feedResponse = await onRequest(feedContext);
+    const feed = await feedResponse.json();
+    assert.equal(feed.readThrough, now + 1);
+
+    await insertCommentAtomically(db, {
+      id: "reply-after-snapshot", userId: "member-2", role: "member",
+      target: { type: "post", slug: "site-about" }, body: "稍后到达的回复",
+      replyToUserId: recipient.id, now: now + 2,
+    }, { MAX_COMMENTS_PER_USER: "10", MAX_COMMENTS_PER_TARGET: "10", MAX_TOTAL_COMMENTS: "10" });
+    const receipt = requestContext({
+      path: ["me", "notifications"], method: "PATCH", db, currentUser: recipient,
+      body: { readThrough: feed.readThrough },
+    });
+    assert.equal((await onRequest(receipt)).status, 200);
+    await receipt.settle();
+    const seenAt = (await client.execute("SELECT notifications_seen_at FROM users WHERE id = 'member-1'")).rows[0].notifications_seen_at;
+    assert.equal(seenAt, now + 1);
+    assert.equal((await client.execute({
+      sql: "SELECT COUNT(*) AS count FROM comments WHERE reply_to_user_id = ? AND created_at > ?",
+      args: [recipient.id, seenAt],
+    })).rows[0].count, 1);
   } finally {
     await client.close();
   }

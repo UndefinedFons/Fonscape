@@ -65,7 +65,7 @@ test("image crop and reply transitions react only to their lifecycle inputs", as
   assert.doesNotMatch(cropEffect, /\bcrop\./u);
   assert.match(replyEditor, /if \(immediateOpen\) editorNode\.classList\.add\("is-open"\)/u);
   assert.match(replyEditor, /\}, \[immediateOpen\]\);/u);
-  assert.match(comments, /useEffect\(\(\) => \{ setState\(\(value\) => \(\{ \.\.\.value, loading: true \}\)\); load\(\); \}, \[load, viewer\?\.id\]\);/u);
+  assert.match(comments, /useEffect\(\(\) => \{\s+setState\(\{ loading: true,[^}]+\}\);\s+load\(\);\s+\}, \[load, viewer\?\.id\]\);/u);
   assert.doesNotMatch(comments, /\}, \[targetType, slug, viewer\?\.id\]\);/u);
 });
 

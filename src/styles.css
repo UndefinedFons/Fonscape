@@ -811,6 +811,10 @@ footer::before { content:""; position:absolute; top:0; left:50%; width:min(1180p
 .comments-error { min-height:180px; display:grid; place-items:center; align-content:center; gap:6px; color:var(--muted); text-align:center; }
 .comments-error p { margin:0; font-size:11px; }
 .comments-error button { min-height:34px; padding:0 13px; border:1px solid var(--line); border-radius:9px; background:var(--surface); color:var(--muted); cursor:pointer; }
+.comments-refresh-error { display:flex; align-items:center; justify-content:center; gap:8px; margin:16px 0 4px; color:var(--accent); font-size:11px; text-align:center; }
+.comments-refresh-error button,.comments-load-more { min-height:34px; padding:0 13px; border:1px solid var(--line); border-radius:999px; background:var(--surface); color:var(--muted); cursor:pointer; }
+.comments-load-more { display:block; margin:20px auto 0; }
+.comments-load-more:disabled { cursor:wait; opacity:.62; }
 .community-skeleton { display:grid; gap:10px; padding:22px 0; }
 .community-skeleton i { height:56px; border-radius:13px; background:linear-gradient(90deg,var(--surface-soft),var(--surface),var(--surface-soft)); background-size:220% 100%; animation:content-loading 1.4s linear infinite; }
 

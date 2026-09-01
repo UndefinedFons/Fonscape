@@ -35,12 +35,12 @@ export function CommunityProvider({ children }) {
     setAuthMode(mode);
     setAccountOpen(true);
   }, []);
-  const markRepliesRead = useCallback(async () => {
-    await api("/me/notifications", { method: "PATCH" });
+  const markRepliesRead = useCallback(async (readThrough) => {
+    await api("/me/notifications", { method: "PATCH", body: { readThrough } });
     setViewer((current) => current?.unreadReplies ? { ...current, unreadReplies: 0 } : current);
   }, []);
-  const markAdminCommentsRead = useCallback(async () => {
-    await api("/me/admin-comments", { method: "PATCH" });
+  const markAdminCommentsRead = useCallback(async (readThrough) => {
+    await api("/me/admin-comments", { method: "PATCH", body: { readThrough } });
     setViewer((current) => current?.unreadAdminComments ? { ...current, unreadAdminComments: 0 } : current);
   }, []);
 

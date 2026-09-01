@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "version": "1.13.4",
+  "version": "1.13.5",
   "ownership": {
     "user": [
       ".env",
@@ -43,11 +43,13 @@
       ".gitignore",
       ".fonscape-version",
       "content-repository.config.mjs",
+      "e2e/**",
       "eslint.config.js",
       "fonscape.manifest.json",
       "GUIDE.md",
       "LICENSE",
       "README.md",
+      "playwright.config.mjs",
       "api/**",
       "functions/**",
       "public/fonscape/**",
