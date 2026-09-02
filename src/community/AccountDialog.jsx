@@ -16,7 +16,6 @@ import { AVATAR_MAX_BYTES, api, compressAvatar, contentHref, formatCommunityTime
 import { useCommunity } from "./CommunityProvider.jsx";
 import { loadSearchIndex } from "../content/index.js";
 import { lockPageScroll } from "../lockPageScroll.js";
-import { loadFeedWithBestEffortReceipt } from "./messageFeeds.js";
 
 const commentsCache = new Map();
 const commentsRequests = new Map();
@@ -46,7 +45,7 @@ function loadMyReplies(viewerId, refresh = false) {
   if (!refresh && repliesCache.has(viewerId)) return Promise.resolve(repliesCache.get(viewerId));
   if (repliesRequests.has(viewerId)) return repliesRequests.get(viewerId);
   const request = api("/me/replies").then((result) => {
-    const feed = { items: result.replies || [], readThrough: Number(result.readThrough || 0) };
+    const feed = { items: result.replies || [] };
     repliesCache.set(viewerId, feed);
     repliesRequests.delete(viewerId);
     return feed;
@@ -77,7 +76,7 @@ function loadReceivedComments(viewerId, refresh = false) {
   if (!refresh && receivedCommentsCache.has(viewerId)) return Promise.resolve(receivedCommentsCache.get(viewerId));
   if (receivedCommentsRequests.has(viewerId)) return receivedCommentsRequests.get(viewerId);
   const request = api("/me/admin-comments").then((result) => {
-    const feed = { items: result.comments || [], readThrough: Number(result.readThrough || 0) };
+    const feed = { items: result.comments || [] };
     receivedCommentsCache.set(viewerId, feed);
     receivedCommentsRequests.delete(viewerId);
     return feed;
@@ -89,12 +88,13 @@ function loadReceivedComments(viewerId, refresh = false) {
   return request;
 }
 
-function commentLinkProps(item, closeAccount) {
+function commentLinkProps(item, closeAccount, markRead) {
   const href = `${contentHref(item.contentType, item.contentSlug)}?comment=${encodeURIComponent(item.id)}`;
   return {
     href,
     onClick: (event) => {
       event.preventDefault();
+      if (item.unread && markRead) Promise.resolve(markRead(item.id)).catch(() => {});
       closeAccount();
       const currentPath = window.location.hash.slice(1).split("?")[0];
       const nextPath = href.split("#")[1].split("?")[0];
@@ -192,57 +192,49 @@ function MyMessages() {
 }
 
 function MyReplies() {
-  const { viewer, closeAccount, markRepliesRead } = useCommunity();
+  const { viewer, closeAccount, markReplyRead } = useCommunity();
   const cached = repliesCache.get(viewer.id);
   const [state, setState] = useState({ loading: !cached, error: "", replies: cached?.items || [] });
   useEffect(() => {
     let alive = true;
-    loadFeedWithBestEffortReceipt(
-      () => loadMyReplies(viewer.id, true),
-      markRepliesRead,
-      viewer.unreadReplies,
-    ).then((feed) => {
+    loadMyReplies(viewer.id, true).then((feed) => {
       if (alive) setState({ loading: false, error: "", replies: feed.items });
     }).catch((error) => alive && setState({ loading: false, error: error.message, replies: [] }));
     return () => { alive = false; };
-  }, [markRepliesRead, viewer.id, viewer.unreadReplies]);
+  }, [viewer.id]);
   if (state.loading) return <div className="community-skeleton" aria-label="正在读取收到的回复"><i /><i /><i /></div>;
   if (state.error) return <p className="community-inline-error">{state.error}</p>;
   if (!state.replies.length) return <div className="account-empty"><BellRinging size={30} weight="duotone" /><p>还没有收到回复。</p></div>;
   return <div className="account-reply-list">{state.replies.map((reply) => {
     const meta = contentMeta(reply);
-    return <a className={reply.unread ? "is-unread" : ""} key={reply.id} {...commentLinkProps(reply, closeAccount)}><Avatar user={reply.author} size="small" /><div><header><strong>{reply.author.nickname}</strong><span>回复了你</span>{reply.unread && <i>新消息</i>}</header><em>{meta.section} ·《{meta.title}》</em><p className="account-message-body">{reply.body}</p>{reply.repliedToBody && <blockquote>你的评论：{reply.repliedToBody}</blockquote>}<small>{formatCommunityTime(reply.createdAt)}</small></div></a>;
+    return <a className={reply.unread ? "is-unread" : ""} key={reply.id} {...commentLinkProps(reply, closeAccount, markReplyRead)}><Avatar user={reply.author} size="small" /><div><header><strong>{reply.author.nickname}</strong><span>回复了你</span>{reply.unread && <i>新消息</i>}</header><em>{meta.section} ·《{meta.title}》</em><p className="account-message-body">{reply.body}</p>{reply.repliedToBody && <blockquote>你的评论：{reply.repliedToBody}</blockquote>}<small>{formatCommunityTime(reply.createdAt)}</small></div></a>;
   })}</div>;
 }
 
 function ReceivedComments() {
-  const { viewer, closeAccount, markAdminCommentsRead } = useCommunity();
+  const { viewer, closeAccount, markAdminCommentRead } = useCommunity();
   const cached = receivedCommentsCache.get(viewer.id);
   const [state, setState] = useState({ loading: !cached, error: "", comments: cached?.items || [] });
   useEffect(() => {
     let alive = true;
-    loadFeedWithBestEffortReceipt(
-      () => loadReceivedComments(viewer.id, true),
-      markAdminCommentsRead,
-      viewer.unreadAdminComments,
-    ).then((feed) => {
+    loadReceivedComments(viewer.id, true).then((feed) => {
       if (alive) setState({ loading: false, error: "", comments: feed.items });
     }).catch((error) => alive && setState({ loading: false, error: error.message, comments: [] }));
     return () => { alive = false; };
-  }, [markAdminCommentsRead, viewer.id, viewer.unreadAdminComments]);
+  }, [viewer.id]);
   if (state.loading) return <div className="community-skeleton" aria-label="正在读取收到的评论"><i /><i /><i /></div>;
   if (state.error) return <p className="community-inline-error">{state.error}</p>;
   if (!state.comments.length) return <div className="account-empty"><ChatCircleDots size={30} weight="duotone" /><p>还没有收到评论。</p></div>;
   return <div className="account-reply-list account-received-list">{state.comments.map((comment) => {
     const meta = contentMeta(comment);
-    return <a className={comment.unread ? "is-unread" : ""} key={comment.id} {...commentLinkProps(comment, closeAccount)}><Avatar user={comment.author} size="small" /><div><header><strong>{comment.author.nickname}</strong><span>留下了评论</span>{comment.unread && <i>新评论</i>}</header><em>{meta.section} ·《{meta.title}》</em><p className="account-message-body">{comment.body}</p><small>{formatCommunityTime(comment.createdAt)}</small></div></a>;
+    return <a className={comment.unread ? "is-unread" : ""} key={comment.id} {...commentLinkProps(comment, closeAccount, markAdminCommentRead)}><Avatar user={comment.author} size="small" /><div><header><strong>{comment.author.nickname}</strong><span>留下了评论</span>{comment.unread && <i>新评论</i>}</header><em>{meta.section} ·《{meta.title}》</em><p className="account-message-body">{comment.body}</p><small>{formatCommunityTime(comment.createdAt)}</small></div></a>;
   })}</div>;
 }
 
 function AccountCenter() {
   const { viewer, logout, updateViewer, closeAccount } = useCommunity();
   const adminTabs = viewer.role === "admin";
-  const [tab, setTab] = useState(viewer.unreadAdminComments > 0 ? "received" : viewer.unreadReplies > 0 ? "replies" : "profile");
+  const [tab, setTab] = useState("profile");
   const [nickname, setNickname] = useState(viewer.nickname);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");

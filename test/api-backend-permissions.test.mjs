@@ -257,6 +257,8 @@ test("retired backend routes are unavailable even to an administrator", async ()
     { method: "DELETE", path: ["admin", "friend-links"] },
     { method: "GET", path: ["articles", "stats"] },
     { method: "POST", path: ["articles", "example", "view"] },
+    { method: "PATCH", path: ["me", "notifications"] },
+    { method: "PATCH", path: ["me", "admin-comments"] },
   ];
 
   for (const { method, path } of routes) {
@@ -264,6 +266,20 @@ test("retired backend routes are unavailable even to an administrator", async ()
     assert.equal(response.status, 404, path.join("/"));
     assert.equal((await response.json()).code, "not_found");
   }
+  assert.equal(fake.operations.length, 0);
+});
+
+test("a member cannot mark an administrator notification as read", async () => {
+  const fake = createDb();
+  const response = await onRequest(createContext({
+    path: ["me", "admin-comments", "comment-1"],
+    method: "PATCH",
+    currentUser: member,
+    db: fake.db,
+  }));
+
+  assert.equal(response.status, 403);
+  assert.equal((await response.json()).code, "admin_required");
   assert.equal(fake.operations.length, 0);
 });
 

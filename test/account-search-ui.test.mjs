@@ -2,7 +2,6 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 import { buildSearchItems, enabledSearchTypes, filterSearchItems, searchScopeOptions, searchScopeStyle } from "../src/components/searchModel.js";
-import { loadFeedWithBestEffortReceipt } from "../src/community/messageFeeds.js";
 
 test("all account message feeds use the same two-line body preview", async () => {
   const [dialog, styles] = await Promise.all([
@@ -14,36 +13,13 @@ test("all account message feeds use the same two-line body preview", async () =>
   assert.match(styles, /\.account-message-body\s*\{[^}]*-webkit-line-clamp:2;/u);
 });
 
-test("read-receipt failures cannot replace an already loaded message feed", async () => {
-  let receipts = 0;
-  const snapshot = { items: [{ id: "message-1", body: "仍然可见" }], readThrough: 123 };
-  const feed = await loadFeedWithBestEffortReceipt(
-    async () => snapshot,
-    async (readThrough) => { receipts += 1; assert.equal(readThrough, 123); throw new Error("receipt failed"); },
-    1,
-  );
-  assert.deepEqual(feed, snapshot);
-  assert.equal(receipts, 1);
-});
-
-test("a slow read receipt cannot hold an already loaded message feed", async () => {
-  const snapshot = { items: [{ id: "message-1" }], readThrough: 123 };
-  const feed = await loadFeedWithBestEffortReceipt(
-    async () => snapshot,
-    async () => new Promise(() => {}),
-    1,
-  );
-  assert.deepEqual(feed, snapshot);
-});
-
-test("a failed message feed never sends a read receipt", async () => {
-  let receipts = 0;
-  await assert.rejects(() => loadFeedWithBestEffortReceipt(
-    async () => { throw new Error("feed failed"); },
-    async () => { receipts += 1; },
-    1,
-  ), /feed failed/u);
-  assert.equal(receipts, 0);
+test("account notifications stay unread until an individual message is opened", async () => {
+  const dialog = await readFile("src/community/AccountDialog.jsx", "utf8");
+  assert.doesNotMatch(dialog, /loadFeedWithBestEffortReceipt|readThrough/u);
+  assert.match(dialog, /const \[tab, setTab\] = useState\("profile"\);/u);
+  assert.match(dialog, /if \(item\.unread && markRead\) Promise\.resolve\(markRead\(item\.id\)\)\.catch\(\(\) => \{\}\);/u);
+  assert.match(dialog, /commentLinkProps\(reply, closeAccount, markReplyRead\)/u);
+  assert.match(dialog, /commentLinkProps\(comment, closeAccount, markAdminCommentRead\)/u);
 });
 
 test("the combined search feed applies newest-first ordering with stable ties", () => {
