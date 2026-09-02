@@ -362,6 +362,9 @@ export async function insertCommentWithRateLimitsAtomically(db, {
     ? `AND (SELECT COUNT(*) FROM rate_limits WHERE key IN (${policies.map(() => "?").join(", ")})
       AND comment_mutation_token = ?) = ?`
     : "";
+  const rateReadyBindings = policies.length
+    ? [...policies.map((policy) => policy.key), claimToken, policies.length]
+    : [];
   const statements = [db.prepare(`INSERT INTO comment_mutations
     (id, user_id, request_hash, claim_token, status, created_at, updated_at)
     VALUES (?, ?, ?, ?, 'pending', ?, ?)
@@ -412,7 +415,7 @@ export async function insertCommentWithRateLimitsAtomically(db, {
     replyToCommentId, userId, body, now, now,
     id, claimToken, id, totalMaximum, role, userId, userMaximum,
     target.type, target.slug, targetMaximum,
-    ...policies.map((policy) => policy.key), claimToken, policies.length,
+    ...rateReadyBindings,
   ));
   // The CHECK constraint deliberately aborts this batch when the claimed
   // mutation could not create its comment. That rolls back every rate-window
