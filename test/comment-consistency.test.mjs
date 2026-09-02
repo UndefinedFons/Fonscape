@@ -348,38 +348,7 @@ test("maintenance reconciliation remains consistent with concurrent writes", asy
   }
 });
 
-test("notification read receipts never move backwards", async () => {
-  const { client, db } = await migratedDatabase();
-  try {
-    const now = Date.now();
-    const user = await seedUser(client, { role: "admin", now });
-    const future = now + 60 * 60 * 1000;
-    await client.execute({
-      sql: "UPDATE users SET notifications_seen_at = ?, admin_comments_seen_at = ?, updated_at = ? WHERE id = ?",
-      args: [future, future, future, user.id],
-    });
-    for (const path of [["me", "notifications"], ["me", "admin-comments"]]) {
-      const context = requestContext({
-        path,
-        method: "PATCH",
-        db,
-        currentUser: { ...user, notifications_seen_at: future, admin_comments_seen_at: future },
-        body: { readThrough: now },
-      });
-      assert.equal((await onRequest(context)).status, 200);
-      await context.settle();
-    }
-    assert.deepEqual((await client.execute("SELECT notifications_seen_at, admin_comments_seen_at, updated_at FROM users WHERE id = 'member-1'")).rows, [{
-      notifications_seen_at: future,
-      admin_comments_seen_at: future,
-      updated_at: future,
-    }]);
-  } finally {
-    await client.close();
-  }
-});
-
-test("notification receipts only advance through the successfully loaded snapshot", async () => {
+test("reply notification receipts mark only the clicked message", async () => {
   const { client, db } = await migratedDatabase();
   try {
     const now = Date.now();
@@ -390,28 +359,71 @@ test("notification receipts only advance through the successfully loaded snapsho
       target: { type: "post", slug: "site-about" }, body: "第一条回复",
       replyToUserId: recipient.id, now: now + 1,
     }, { MAX_COMMENTS_PER_USER: "10", MAX_COMMENTS_PER_TARGET: "10", MAX_TOTAL_COMMENTS: "10" });
-    const feedContext = requestContext({ path: ["me", "replies"], db, currentUser: recipient });
-    const feedResponse = await onRequest(feedContext);
-    const feed = await feedResponse.json();
-    assert.equal(feed.readThrough, now + 1);
-
     await insertCommentAtomically(db, {
       id: "reply-after-snapshot", userId: "member-2", role: "member",
       target: { type: "post", slug: "site-about" }, body: "稍后到达的回复",
       replyToUserId: recipient.id, now: now + 2,
     }, { MAX_COMMENTS_PER_USER: "10", MAX_COMMENTS_PER_TARGET: "10", MAX_TOTAL_COMMENTS: "10" });
-    const receipt = requestContext({
-      path: ["me", "notifications"], method: "PATCH", db, currentUser: recipient,
-      body: { readThrough: feed.readThrough },
-    });
+    const initialFeed = await onRequest(requestContext({ path: ["me", "replies"], db, currentUser: recipient }));
+    const initial = await initialFeed.json();
+    assert.deepEqual(initial.replies.map((item) => [item.id, item.unread]), [
+      ["reply-after-snapshot", true],
+      ["reply-before-snapshot", true],
+    ]);
+    assert.equal(Object.hasOwn(initial, "readThrough"), false);
+
+    const receipt = requestContext({ path: ["me", "notifications", "reply-before-snapshot"], method: "PATCH", db, currentUser: recipient });
     assert.equal((await onRequest(receipt)).status, 200);
     await receipt.settle();
-    const seenAt = (await client.execute("SELECT notifications_seen_at FROM users WHERE id = 'member-1'")).rows[0].notifications_seen_at;
-    assert.equal(seenAt, now + 1);
-    assert.equal((await client.execute({
-      sql: "SELECT COUNT(*) AS count FROM comments WHERE reply_to_user_id = ? AND created_at > ?",
-      args: [recipient.id, seenAt],
-    })).rows[0].count, 1);
+    const afterOne = await (await onRequest(requestContext({ path: ["me", "replies"], db, currentUser: recipient }))).json();
+    assert.deepEqual(afterOne.replies.map((item) => [item.id, item.unread]), [
+      ["reply-after-snapshot", true],
+      ["reply-before-snapshot", false],
+    ]);
+    const sessionAfterOne = await (await onRequest(requestContext({ path: ["auth", "session"], db, currentUser: recipient }))).json();
+    assert.equal(sessionAfterOne.user.unreadReplies, 1);
+
+    const secondReceipt = requestContext({ path: ["me", "notifications", "reply-after-snapshot"], method: "PATCH", db, currentUser: recipient });
+    assert.equal((await onRequest(secondReceipt)).status, 200);
+    await secondReceipt.settle();
+    const sessionAfterTwo = await (await onRequest(requestContext({ path: ["auth", "session"], db, currentUser: recipient }))).json();
+    assert.equal(sessionAfterTwo.user.unreadReplies, 0);
+    assert.deepEqual((await client.execute("SELECT user_id, comment_id FROM comment_notification_reads ORDER BY comment_id")).rows, [
+      { user_id: recipient.id, comment_id: "reply-after-snapshot" },
+      { user_id: recipient.id, comment_id: "reply-before-snapshot" },
+    ]);
+  } finally {
+    await client.close();
+  }
+});
+
+test("admin comment notification receipts are also per message", async () => {
+  const { client, db } = await migratedDatabase();
+  try {
+    const now = Date.now();
+    const admin = await seedUser(client, { id: "admin-1", username: "admin01", nickname: "管理员", role: "admin", now });
+    await seedUser(client, { id: "member-1", now });
+    for (const [id, body, offset] of [["admin-comment-old", "较早留言", 1], ["admin-comment-new", "较新留言", 2]]) {
+      await insertCommentAtomically(db, {
+        id, userId: "member-1", role: "member", target: { type: "post", slug: "site-friends" }, body, now: now + offset,
+      }, { MAX_COMMENTS_PER_USER: "10", MAX_COMMENTS_PER_TARGET: "10", MAX_TOTAL_COMMENTS: "10" });
+    }
+
+    const initial = await (await onRequest(requestContext({ path: ["me", "admin-comments"], db, currentUser: admin }))).json();
+    assert.deepEqual(initial.comments.map((item) => [item.id, item.unread]), [
+      ["admin-comment-new", true],
+      ["admin-comment-old", true],
+    ]);
+    const receipt = requestContext({ path: ["me", "admin-comments", "admin-comment-old"], method: "PATCH", db, currentUser: admin });
+    assert.equal((await onRequest(receipt)).status, 200);
+    await receipt.settle();
+    const afterOne = await (await onRequest(requestContext({ path: ["me", "admin-comments"], db, currentUser: admin }))).json();
+    assert.deepEqual(afterOne.comments.map((item) => [item.id, item.unread]), [
+      ["admin-comment-new", true],
+      ["admin-comment-old", false],
+    ]);
+    const session = await (await onRequest(requestContext({ path: ["auth", "session"], db, currentUser: admin }))).json();
+    assert.equal(session.user.unreadAdminComments, 1);
   } finally {
     await client.close();
   }

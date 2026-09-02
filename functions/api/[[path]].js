@@ -74,11 +74,19 @@ async function session(context) {
     return json({ user: null, accountNotice: "该账户已被管理员停用，当前登录已退出。" }, 200, { "Set-Cookie": clearSessionCookie(context.request) });
   }
   const db = requireDatabase(context.env);
+  const notificationsSeenAt = Number(user.notifications_seen_at || user.created_at || 0);
+  const adminCommentsSeenAt = Number(user.admin_comments_seen_at || user.created_at || 0);
   const [unreadReplies, unreadAdminComments] = await db.batch([
-    db.prepare("SELECT COUNT(*) AS count FROM comments WHERE reply_to_user_id = ? AND user_id != ? AND status = 'published' AND created_at > ?")
-      .bind(user.id, user.id, user.notifications_seen_at || user.created_at),
-    db.prepare("SELECT COUNT(*) AS count FROM comments WHERE ? = 'admin' AND user_id != ? AND parent_id IS NULL AND status = 'published' AND created_at > ?")
-      .bind(user.role, user.id, user.admin_comments_seen_at || user.created_at),
+    db.prepare(`SELECT COUNT(*) AS count FROM comments c
+      WHERE c.reply_to_user_id = ? AND c.user_id != ? AND c.status = 'published' AND c.created_at > ?
+        AND NOT EXISTS (SELECT 1 FROM comment_notification_reads notification_read
+          WHERE notification_read.user_id = ? AND notification_read.comment_id = c.id)`)
+      .bind(user.id, user.id, notificationsSeenAt, user.id),
+    db.prepare(`SELECT COUNT(*) AS count FROM comments c
+      WHERE ? = 'admin' AND c.user_id != ? AND c.parent_id IS NULL AND c.status = 'published' AND c.created_at > ?
+        AND NOT EXISTS (SELECT 1 FROM comment_notification_reads notification_read
+          WHERE notification_read.user_id = ? AND notification_read.comment_id = c.id)`)
+      .bind(user.role, user.id, adminCommentsSeenAt, user.id),
   ]);
   const publicViewer = publicUser({
     ...user,
@@ -359,6 +367,12 @@ function normalizeCommentMutationId(value) {
   return id;
 }
 
+function normalizeNotificationId(value) {
+  const id = String(value || "").trim();
+  if (!/^[A-Za-z0-9_-]{1,64}$/u.test(id)) throw new ApiError(400, "通知标识无效。", "invalid_notification_id");
+  return id;
+}
+
 function commentMutationMatches(row, { userId, target, body, requestedParentId }) {
   return row
     && row.status === "published"
@@ -513,15 +527,18 @@ async function myComments(context) {
 async function myReplies(context) {
   const user = await requireUser(context);
   const db = requireDatabase(context.env);
+  const seenAt = Number(user.notifications_seen_at || user.created_at || 0);
   const result = await db.prepare(`SELECT c.*, u.nickname, u.role AS user_role,
     ua.user_id AS avatar_user_id, ua.updated_at AS avatar_updated_at,
-    target.body AS replied_to_body, target.id AS replied_to_comment_id
+    target.body AS replied_to_body, target.id AS replied_to_comment_id,
+    notification_read.comment_id AS notification_read_id
     FROM comments c
     JOIN users u ON u.id = c.user_id
     LEFT JOIN user_avatars ua ON ua.user_id = u.id
     LEFT JOIN comments target ON target.id = COALESCE(c.reply_to_comment_id, c.parent_id)
+    LEFT JOIN comment_notification_reads notification_read ON notification_read.user_id = ? AND notification_read.comment_id = c.id
     WHERE c.reply_to_user_id = ? AND c.user_id != ? AND c.status = 'published'
-    ORDER BY c.created_at DESC LIMIT 100`).bind(user.id, user.id).all();
+    ORDER BY c.created_at DESC LIMIT 100`).bind(user.id, user.id, user.id).all();
   const rows = result.results || [];
   return json({ replies: rows.map((row) => ({
     id: row.id,
@@ -531,7 +548,7 @@ async function myReplies(context) {
     contentSlug: row.content_slug,
     repliedToBody: row.replied_to_body || "",
     repliedToCommentId: row.replied_to_comment_id || row.parent_id,
-    unread: Number(row.created_at) > Number(user.notifications_seen_at || 0),
+    unread: Number(row.created_at) > seenAt && !row.notification_read_id,
     author: {
       id: row.user_id,
       nickname: row.nickname,
@@ -539,59 +556,53 @@ async function myReplies(context) {
       avatarUrl: row.avatar_user_id === row.user_id && row.avatar_updated_at ? `/api/avatar/${row.user_id}?v=${row.avatar_updated_at}` : null,
       avatarUpdatedAt: row.avatar_user_id === row.user_id && row.avatar_updated_at ? Number(row.avatar_updated_at) : null,
     },
-  })), readThrough: rows.reduce((latest, row) => Math.max(latest, Number(row.created_at) || 0), 0) });
+  })) });
 }
 
-async function markReplyNotificationsRead(context) {
+async function markReplyNotificationRead(context, commentId) {
   const user = await requireUser(context);
   const db = requireDatabase(context.env);
-  const input = await readJson(context.request);
-  const readThrough = Number(input.readThrough);
-  if (!Number.isSafeInteger(readThrough) || readThrough <= 0) throw new ApiError(400, "已读位置无效。", "invalid_read_receipt");
-  await db.prepare(`UPDATE users
-    SET notifications_seen_at = MAX(COALESCE(notifications_seen_at, 0), ?),
-        updated_at = MAX(updated_at, ?)
-    WHERE id = ?`).bind(readThrough, readThrough, user.id).run();
+  const normalizedCommentId = normalizeNotificationId(commentId);
+  await db.prepare(`INSERT INTO comment_notification_reads (user_id, comment_id, created_at)
+    SELECT ?, c.id, ? FROM comments c
+    WHERE c.id = ? AND c.reply_to_user_id = ? AND c.user_id != ? AND c.status = 'published'
+    ON CONFLICT(user_id, comment_id) DO NOTHING`).bind(user.id, Date.now(), normalizedCommentId, user.id, user.id).run();
   return json({ ok: true });
 }
 
 async function adminReceivedComments(context) {
   const admin = await requireAdmin(context);
   const db = requireDatabase(context.env);
+  const seenAt = Number(admin.admin_comments_seen_at || admin.created_at || 0);
   const result = await db.prepare(`SELECT c.*, u.nickname, u.role AS user_role,
     ua.user_id AS avatar_user_id, ua.updated_at AS avatar_updated_at,
-    reply.nickname AS reply_to_nickname
+    reply.nickname AS reply_to_nickname,
+    notification_read.comment_id AS notification_read_id
     FROM comments c
     JOIN users u ON u.id = c.user_id
     LEFT JOIN user_avatars ua ON ua.user_id = u.id
     LEFT JOIN users reply ON reply.id = c.reply_to_user_id
+    LEFT JOIN comment_notification_reads notification_read ON notification_read.user_id = ? AND notification_read.comment_id = c.id
     WHERE c.user_id != ? AND c.parent_id IS NULL AND c.status = 'published'
-    ORDER BY c.created_at DESC LIMIT 100`).bind(admin.id).all();
-  const seenAt = Number(admin.admin_comments_seen_at || admin.created_at || 0);
+    ORDER BY c.created_at DESC LIMIT 100`).bind(admin.id, admin.id).all();
   const rows = result.results || [];
   return json({ comments: rows.map((row) => ({
     ...commentRow(row, admin.id, "admin"),
     contentType: row.content_type,
     contentSlug: row.content_slug,
     contentTitle: "",
-    unread: Number(row.created_at) > seenAt,
-  })), readThrough: rows.reduce((latest, row) => Math.max(latest, Number(row.created_at) || 0), 0) });
+    unread: Number(row.created_at) > seenAt && !row.notification_read_id,
+  })) });
 }
 
-async function markAdminCommentsRead(context) {
+async function markAdminCommentRead(context, commentId) {
   const admin = await requireAdmin(context);
   const db = requireDatabase(context.env);
-  const input = await readJson(context.request);
-  const readThrough = Number(input.readThrough);
-  if (!Number.isSafeInteger(readThrough) || readThrough <= 0) throw new ApiError(400, "已读位置无效。", "invalid_read_receipt");
-  await db.prepare(`UPDATE users
-    SET admin_comments_seen_at = MAX(COALESCE(admin_comments_seen_at, 0), ?),
-        updated_at = MAX(updated_at, ?)
-    WHERE id = ?`).bind(readThrough, readThrough, admin.id).run();
-  context.data.currentUser = {
-    ...admin,
-    admin_comments_seen_at: Math.max(Number(admin.admin_comments_seen_at || 0), readThrough),
-  };
+  const normalizedCommentId = normalizeNotificationId(commentId);
+  await db.prepare(`INSERT INTO comment_notification_reads (user_id, comment_id, created_at)
+    SELECT ?, c.id, ? FROM comments c
+    WHERE c.id = ? AND c.user_id != ? AND c.parent_id IS NULL AND c.status = 'published'
+    ON CONFLICT(user_id, comment_id) DO NOTHING`).bind(admin.id, Date.now(), normalizedCommentId, admin.id).run();
   return json({ ok: true });
 }
 
@@ -755,9 +766,9 @@ async function handle(context) {
   if (method === "POST" && parts[0] === "me" && parts[1] === "avatar") return uploadAvatar(context);
   if (method === "GET" && parts[0] === "me" && parts[1] === "comments") return myComments(context);
   if (method === "GET" && parts[0] === "me" && parts[1] === "replies") return myReplies(context);
-  if (method === "PATCH" && parts[0] === "me" && parts[1] === "notifications") return markReplyNotificationsRead(context);
+  if (method === "PATCH" && parts[0] === "me" && parts[1] === "notifications" && parts.length === 3) return markReplyNotificationRead(context, parts[2]);
   if (method === "GET" && parts[0] === "me" && parts[1] === "admin-comments") return adminReceivedComments(context);
-  if (method === "PATCH" && parts[0] === "me" && parts[1] === "admin-comments") return markAdminCommentsRead(context);
+  if (method === "PATCH" && parts[0] === "me" && parts[1] === "admin-comments" && parts.length === 3) return markAdminCommentRead(context, parts[2]);
   if (method === "GET" && parts[0] === "profile" && parts[1] && parts.length === 2) return profile(context, parts[1]);
   if ((method === "GET" || method === "HEAD") && parts[0] === "avatar" && parts[1]) return avatar(context, parts[1]);
   if (method === "GET" && parts[0] === "content" && parts[1] === "stats" && parts.length === 2) return contentStats(context, url);

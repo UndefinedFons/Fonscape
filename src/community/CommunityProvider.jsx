@@ -35,13 +35,13 @@ export function CommunityProvider({ children }) {
     setAuthMode(mode);
     setAccountOpen(true);
   }, []);
-  const markRepliesRead = useCallback(async (readThrough) => {
-    await api("/me/notifications", { method: "PATCH", body: { readThrough } });
-    setViewer((current) => current?.unreadReplies ? { ...current, unreadReplies: 0 } : current);
+  const markReplyRead = useCallback(async (commentId) => {
+    await api(`/me/notifications/${encodeURIComponent(commentId)}`, { method: "PATCH" });
+    setViewer((current) => current?.unreadReplies ? { ...current, unreadReplies: Math.max(0, Number(current.unreadReplies) - 1) } : current);
   }, []);
-  const markAdminCommentsRead = useCallback(async (readThrough) => {
-    await api("/me/admin-comments", { method: "PATCH", body: { readThrough } });
-    setViewer((current) => current?.unreadAdminComments ? { ...current, unreadAdminComments: 0 } : current);
+  const markAdminCommentRead = useCallback(async (commentId) => {
+    await api(`/me/admin-comments/${encodeURIComponent(commentId)}`, { method: "PATCH" });
+    setViewer((current) => current?.unreadAdminComments ? { ...current, unreadAdminComments: Math.max(0, Number(current.unreadAdminComments) - 1) } : current);
   }, []);
 
   const value = useMemo(() => ({
@@ -69,10 +69,10 @@ export function CommunityProvider({ children }) {
       setViewer(null);
     },
     updateViewer: setViewer,
-    markRepliesRead,
-    markAdminCommentsRead,
+    markReplyRead,
+    markAdminCommentRead,
     refresh,
-  }), [viewer, loading, accountOpen, authMode, accountNotice, openAccount, markRepliesRead, markAdminCommentsRead, refresh]);
+  }), [viewer, loading, accountOpen, authMode, accountNotice, openAccount, markReplyRead, markAdminCommentRead, refresh]);
 
   return <CommunityContext.Provider value={value}>{children}</CommunityContext.Provider>;
 }

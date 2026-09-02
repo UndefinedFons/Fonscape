@@ -18,7 +18,6 @@
     "src/heroImages.js",
     "src/pages/homeContent.js",
     "src/routeState.js",
-    "src/community/messageFeeds.js",
     "src/richContent.js",
     "src/responsiveImages.ts",
     "src/siteConfig.js",
