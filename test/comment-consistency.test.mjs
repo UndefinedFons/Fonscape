@@ -3,6 +3,7 @@ import test from "node:test";
 import { createClient } from "@libsql/client";
 import { insertCommentAtomically, reconcileRuntimeCounters } from "../functions/_lib/abuse.js";
 import { onRequest } from "../functions/api/[[path]].js";
+import { sha256 } from "../functions/_lib/community.js";
 import { migrateTurso } from "../scripts/migrate-turso.mjs";
 import { createTursoD1Database } from "../server/turso-d1.js";
 
@@ -187,6 +188,59 @@ test("comment mutation ids replay one completed write without consuming another 
   }
 });
 
+test("overlapping retries charge one mutation only once", async () => {
+  const { client, db } = await migratedDatabase();
+  try {
+    const now = Date.now();
+    const user = await seedUser(client, { now });
+    const body = { type: "post", slug: "site-about", body: "并发重试只写一次", clientMutationId: "f4c0e348-0b79-4f52-8db3-d2c81ae4f8b2" };
+    const contexts = [1, 2].map(() => requestContext({ path: ["comments"], method: "POST", db, currentUser: user, body }));
+    const responses = await Promise.all(contexts.map(onRequest));
+    await Promise.all(contexts.map((context) => context.settle()));
+    assert.deepEqual(responses.map((response) => response.status).sort(), [200, 201]);
+    assert.equal((await client.execute({ sql: "SELECT COUNT(*) AS count FROM comments WHERE id = ?", args: [body.clientMutationId] })).rows[0].count, 1);
+    const secret = (await client.execute("SELECT rate_limit_secret FROM site_runtime WHERE id = 1")).rows[0].rate_limit_secret;
+    const policyKeys = await Promise.all([
+      ["user-10m", user.id, 10 * 60 * 1000],
+      ["user-day", user.id, 24 * 60 * 60 * 1000],
+      ["ip-10m", "local", 10 * 60 * 1000],
+      ["global-hour", "global", 60 * 60 * 1000],
+      ["global-day", "global", 24 * 60 * 60 * 1000],
+    ].map(([scope, subject, windowMs]) => sha256(`${secret}:comment:${scope}:${windowMs}:${subject}`)));
+    assert.equal((await client.execute({
+      sql: `SELECT COALESCE(SUM(count), 0) AS count FROM rate_limits WHERE key IN (${policyKeys.map(() => "?").join(", ")})`,
+      args: policyKeys,
+    })).rows[0].count, 5);
+  } finally {
+    await client.close();
+  }
+});
+
+test("a rejected comment mutation rolls back every partial rate-window charge", async () => {
+  const { client, db } = await migratedDatabase();
+  try {
+    const now = Date.now();
+    const user = await seedUser(client, { now });
+    const environment = { COMMENT_USER_10M: "1" };
+    const create = (id, body) => requestContext({
+      path: ["comments"], method: "POST", db, currentUser: user, env: environment,
+      body: { type: "post", slug: "site-about", body, clientMutationId: id },
+    });
+    const first = create("0f5d9be1-5d2b-48da-8ee3-2fb94c0a7e01", "先占用一个名额");
+    assert.equal((await onRequest(first)).status, 201);
+    await first.settle();
+    const second = create("3f34dc4a-8e53-4d1c-9f16-f3e8169bf6f7", "应该被拒绝");
+    const response = await onRequest(second);
+    assert.equal(response.status, 429);
+    assert.equal((await response.json()).code, "rate_limited");
+    await second.settle();
+    assert.equal((await client.execute({ sql: "SELECT COUNT(*) AS count FROM comments WHERE user_id = ?", args: [user.id] })).rows[0].count, 1);
+    assert.equal((await client.execute("SELECT COUNT(*) AS count FROM comment_mutations")).rows[0].count, 1);
+  } finally {
+    await client.close();
+  }
+});
+
 test("comment cursor pagination exposes every comment beyond the former 200 item boundary", async () => {
   const { client, db } = await migratedDatabase();
   try {
@@ -242,6 +296,28 @@ test("comment aggregates distinguish hidden capacity from published statistics",
     assert.deepEqual((await client.execute("SELECT active_comments, published_comments FROM comment_target_usage WHERE content_type = 'post' AND content_slug = 'site-about'")).rows, [{ active_comments: 1, published_comments: 0 }]);
     await client.execute({ sql: "UPDATE comments SET status = 'deleted', updated_at = ? WHERE id = 'visibility-comment'", args: [now + 2] });
     assert.deepEqual((await client.execute("SELECT active_comments, published_comments FROM comment_target_usage WHERE content_type = 'post' AND content_slug = 'site-about'")).rows, [{ active_comments: 0, published_comments: 0 }]);
+  } finally {
+    await client.close();
+  }
+});
+
+test("published comment totals exclude replies whose parent is deleted", async () => {
+  const { client, db } = await migratedDatabase();
+  try {
+    const now = Date.now();
+    await seedUser(client, { now });
+    await insertCommentAtomically(db, {
+      id: "deleted-parent", userId: "member-1", role: "member",
+      target: { type: "post", slug: "site-about" }, body: "父评论", now,
+    }, { MAX_COMMENTS_PER_USER: "10", MAX_COMMENTS_PER_TARGET: "10", MAX_TOTAL_COMMENTS: "10" });
+    await insertCommentAtomically(db, {
+      id: "orphaned-reply", userId: "member-1", role: "member",
+      target: { type: "post", slug: "site-about" }, body: "回复", parentId: "deleted-parent",
+      replyToUserId: "member-1", replyToCommentId: "deleted-parent", now: now + 1,
+    }, { MAX_COMMENTS_PER_USER: "10", MAX_COMMENTS_PER_TARGET: "10", MAX_TOTAL_COMMENTS: "10" });
+    assert.equal((await client.execute("SELECT published_comments FROM comment_target_usage WHERE content_type = 'post' AND content_slug = 'site-about'")).rows[0].published_comments, 2);
+    await client.execute({ sql: "UPDATE comments SET status = 'deleted', updated_at = ? WHERE id = 'deleted-parent'", args: [now + 2] });
+    assert.equal((await client.execute("SELECT published_comments FROM comment_target_usage WHERE content_type = 'post' AND content_slug = 'site-about'")).rows[0].published_comments, 0);
   } finally {
     await client.close();
   }

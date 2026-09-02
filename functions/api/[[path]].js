@@ -19,20 +19,23 @@ import {
   requireAdmin,
   requireDatabase,
   requireUser,
+  sha256,
   validatePassword,
   validateTarget,
 } from "../_lib/community.js";
 import {
   assertTargetExists,
+  commentCapacityFailure,
+  commentRateLimitFailure,
+  insertCommentWithRateLimitsAtomically,
   limitFromEnv,
   protectAdminBootstrap,
   protectAvatar,
-  protectComment,
   protectContentView,
   protectLogin,
   protectProfileUpdate,
   protectRegistration,
-  insertCommentAtomically,
+  prepareCommentRatePolicies,
   reserveRegistrationSlot,
   scheduleMaintenance,
 } from "../_lib/abuse.js";
@@ -366,13 +369,6 @@ function commentMutationMatches(row, { userId, target, body, requestedParentId }
     && (row.reply_to_comment_id || null) === requestedParentId;
 }
 
-function isCommentIdConflict(error) {
-  const code = String(error?.code || "");
-  const message = error instanceof Error ? error.message : String(error);
-  return /SQLITE_CONSTRAINT(?:_PRIMARYKEY|_UNIQUE)?/iu.test(code)
-    || /UNIQUE constraint failed:\s*(?:main\.)?comments\.id/iu.test(message);
-}
-
 async function commentById(db, id) {
   return db.prepare(`${commentSelect} WHERE c.id = ? LIMIT 1`).bind(id).first();
 }
@@ -440,7 +436,6 @@ async function createComment(context) {
     }
     return json({ comment: commentRow(existing, user.id, publicUser(user).role), replayed: true });
   }
-  await protectComment(context, user);
   let parentId = null;
   let replyToUserId = null;
   let replyToCommentId = null;
@@ -452,8 +447,10 @@ async function createComment(context) {
     replyToCommentId = parent.id;
   }
   const now = Date.now();
+  const requestHash = await sha256(JSON.stringify([user.id, target.type, target.slug, body, requestedParentId]));
+  const policies = await prepareCommentRatePolicies(context, user);
   try {
-    await insertCommentAtomically(db, {
+    const result = await insertCommentWithRateLimitsAtomically(db, {
       id,
       userId: user.id,
       role: user.role,
@@ -462,16 +459,34 @@ async function createComment(context) {
       parentId,
       replyToUserId,
       replyToCommentId,
+      requestHash,
       now,
-    }, context.env);
+      env: context.env,
+    }, policies);
+    if (result.rateLimit) {
+      context.data ||= {};
+      context.data.rateLimit = result.rateLimit;
+    }
+    const row = await commentById(db, id);
+    if (!row) throw new ApiError(503, "评论区暂时无法接收更多内容。", "comment_mutation_in_progress");
+    if (!commentMutationMatches(row, { userId: user.id, target, body, requestedParentId })) {
+      throw new ApiError(409, "评论提交标识已被其他内容使用。", "comment_mutation_conflict");
+    }
+    const created = Number(result.created || 0) > 0;
+    return json({ comment: commentRow(row, user.id, publicUser(user).role), ...(created ? {} : { replayed: true }) }, created ? 201 : 200);
   } catch (error) {
-    if (!isCommentIdConflict(error)) throw error;
-    const replayed = await commentById(db, id);
-    if (!commentMutationMatches(replayed, { userId: user.id, target, body, requestedParentId })) throw error;
-    return json({ comment: commentRow(replayed, user.id, publicUser(user).role), replayed: true });
+    if (!(error instanceof ApiError) || error.code !== "comment_mutation_not_created") throw error;
+    const capacity = await commentCapacityFailure(db, { role: user.role, userId: user.id, target, env: context.env });
+    if (capacity) throw new ApiError(capacity.status, capacity.message, capacity.code);
+    const rateLimit = await commentRateLimitFailure(db, policies, now);
+    if (rateLimit) throw new ApiError(429, "操作太频繁，请稍后再试。", "rate_limited", {
+      "RateLimit-Limit": String(rateLimit.limit),
+      "RateLimit-Remaining": String(rateLimit.remaining),
+      "RateLimit-Reset": String(Math.ceil(rateLimit.resetAt / 1000)),
+      "Retry-After": String(rateLimit.retryAfterSeconds),
+    });
+    throw new ApiError(503, "评论区暂时无法接收更多内容。", "comment_capacity_reached");
   }
-  const row = await commentById(db, id);
-  return json({ comment: commentRow(row, user.id, publicUser(user).role) }, 201);
 }
 
 async function deleteComment(context, commentId) {

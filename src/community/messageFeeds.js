@@ -13,7 +13,7 @@ export async function loadFeedWithBestEffortReceipt(loadFeed, markRead, unreadCo
   const feed = await loadFeed();
   const readThrough = Number(feed?.readThrough || 0);
   if (unreadCount > 0 && readThrough > 0) {
-    await Promise.resolve(markRead(readThrough)).catch(() => {});
+    Promise.resolve().then(() => markRead(readThrough)).catch(() => {});
   }
   return feed;
 }

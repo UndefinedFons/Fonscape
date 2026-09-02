@@ -26,6 +26,16 @@ test("read-receipt failures cannot replace an already loaded message feed", asyn
   assert.equal(receipts, 1);
 });
 
+test("a slow read receipt cannot hold an already loaded message feed", async () => {
+  const snapshot = { items: [{ id: "message-1" }], readThrough: 123 };
+  const feed = await loadFeedWithBestEffortReceipt(
+    async () => snapshot,
+    async () => new Promise(() => {}),
+    1,
+  );
+  assert.deepEqual(feed, snapshot);
+});
+
 test("a failed message feed never sends a read receipt", async () => {
   let receipts = 0;
   await assert.rejects(() => loadFeedWithBestEffortReceipt(
