@@ -241,7 +241,7 @@ test("a rejected comment mutation rolls back every partial rate-window charge", 
   }
 });
 
-test("comment cursor pagination exposes every comment beyond the former 200 item boundary", async () => {
+test("comment page pagination exposes every thread beyond the former 200 item boundary", async () => {
   const { client, db } = await migratedDatabase();
   try {
     const now = Date.now();
@@ -256,22 +256,23 @@ test("comment cursor pagination exposes every comment beyond the former 200 item
     }, { MAX_COMMENTS_PER_USER: "300", MAX_COMMENTS_PER_TARGET: "300", MAX_TOTAL_COMMENTS: "300" })));
 
     const ids = new Set();
-    let cursor = "";
-    let page = 0;
-    do {
-      const query = `?type=post&slug=site-about${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ""}`;
+    let totalPages = 0;
+    for (let page = 1; page <= (totalPages || 1); page += 1) {
+      const query = `?type=post&slug=site-about&page=${page}`;
       const context = requestContext({ path: ["comments"], db, currentUser: undefined, query });
       const response = await onRequest(context);
       assert.equal(response.status, 200);
       const body = await response.json();
       assert.equal(body.total, 201);
-      assert.ok(body.comments.length <= 40);
-      if (page === 0) assert.equal(body.comments.some((comment) => comment.id === "page-200"), true);
+      assert.equal(body.page, page);
+      assert.equal(body.pageSize, 20);
+      totalPages = body.totalPages;
+      assert.ok(body.comments.length <= body.pageSize);
+      if (page === 1) assert.equal(body.comments[0].id, "page-200");
+      if (page === 2) assert.equal(body.comments[0].id, "page-180");
       body.comments.forEach((comment) => ids.add(comment.id));
-      cursor = body.nextCursor || "";
-      page += 1;
-    } while (cursor);
-    assert.equal(page, 6);
+    }
+    assert.equal(totalPages, 11);
     assert.equal(ids.size, 201);
     assert.equal(ids.has("page-000"), true);
   } finally {

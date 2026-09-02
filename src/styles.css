@@ -808,13 +808,15 @@ footer::before { content:""; position:absolute; top:0; left:50%; width:min(1180p
 .comment-item.is-located-comment::before { content:""; position:absolute; z-index:-1; inset:-4px 0 12px; border-radius:8px; pointer-events:none; background:linear-gradient(90deg,color-mix(in srgb,var(--accent) 7%,transparent),color-mix(in srgb,var(--accent) 4%,transparent)); animation:comment-location-wash 1.9s ease both; }
 .comment-replies .comment-item.is-located-comment::before { inset:-5px -8px -5px -16px; border-radius:10px; background:color-mix(in srgb,var(--accent) 5%,var(--surface-soft)); }
 @keyframes comment-location-wash { 0% { opacity:0; } 14%,72% { opacity:1; } 100% { opacity:0; } }
+.comments-page-list { scroll-margin-top:100px; animation:comments-page-enter .38s cubic-bezier(.22,1,.36,1) both; transition:opacity .2s ease,transform .2s ease; }
+.comments-page-list.is-loading { opacity:.42; transform:translateY(5px); pointer-events:none; }
+@keyframes comments-page-enter { from { opacity:0; transform:translateY(9px); } to { opacity:1; transform:translateY(0); } }
 .comments-error { min-height:180px; display:grid; place-items:center; align-content:center; gap:6px; color:var(--muted); text-align:center; }
 .comments-error p { margin:0; font-size:11px; }
 .comments-error button { min-height:34px; padding:0 13px; border:1px solid var(--line); border-radius:9px; background:var(--surface); color:var(--muted); cursor:pointer; }
 .comments-refresh-error { display:flex; align-items:center; justify-content:center; gap:8px; margin:16px 0 4px; color:var(--accent); font-size:11px; text-align:center; }
-.comments-refresh-error button,.comments-load-more { min-height:34px; padding:0 13px; border:1px solid var(--line); border-radius:999px; background:var(--surface); color:var(--muted); cursor:pointer; }
-.comments-load-more { display:block; margin:20px auto 0; }
-.comments-load-more:disabled { cursor:wait; opacity:.62; }
+.comments-refresh-error button { min-height:34px; padding:0 13px; border:1px solid var(--line); border-radius:999px; background:var(--surface); color:var(--muted); cursor:pointer; }
+.comments-pagination { margin-top:25px; padding-top:22px; border-top:1px solid var(--line); }
 .community-skeleton { display:grid; gap:10px; padding:22px 0; }
 .community-skeleton i { height:56px; border-radius:13px; background:linear-gradient(90deg,var(--surface-soft),var(--surface),var(--surface-soft)); background-size:220% 100%; animation:content-loading 1.4s linear infinite; }
 

@@ -65,8 +65,10 @@ test("image crop and reply transitions react only to their lifecycle inputs", as
   assert.doesNotMatch(cropEffect, /\bcrop\./u);
   assert.match(replyEditor, /if \(immediateOpen\) editorNode\.classList\.add\("is-open"\)/u);
   assert.match(replyEditor, /\}, \[immediateOpen\]\);/u);
-  assert.match(comments, /useEffect\(\(\) => \{\s+setState\(\{ loading: true,[^}]+\}\);\s+load\(\);\s+\}, \[load, viewer\?\.id\]\);/u);
-  assert.doesNotMatch(comments, /\}, \[targetType, slug, viewer\?\.id\]\);/u);
+  assert.match(comments, /const loadPage = useCallback\(async \(requestedPage = 1, includeLocation = true, reset = false\)/u);
+  assert.match(comments, /loadPage\(1, true, true\);/u);
+  assert.match(comments, /const changePage = useCallback\(async \(nextPage\)/u);
+  assert.doesNotMatch(comments, /\bloadMore\b|nextCursor|加载更早评论/u);
 });
 
 test("listing statistics keep a stable target identity while pagination arrays are recreated", async () => {

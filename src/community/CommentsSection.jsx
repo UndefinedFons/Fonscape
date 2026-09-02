@@ -13,6 +13,7 @@ import { Avatar } from "./Avatar.jsx";
 import { api, formatCommunityTime } from "./api.js";
 import { useCommunity } from "./CommunityProvider.jsx";
 import { friendEntryJson, parseFriendApplication } from "./friendApplication.js";
+import { Pagination } from "../components/Pagination.jsx";
 
 function readCommentTarget() {
   return new URLSearchParams(window.location.hash.split("?")[1] || "").get("comment") || "";
@@ -294,11 +295,13 @@ const CommentItem = memo(CommentItemImpl, commentItemPropsEqual);
 
 export function CommentsSection({ targetType, slug }) {
   const { viewer } = useCommunity();
-  const [state, setState] = useState({ loading: true, loadingMore: false, error: "", retryMore: false, comments: [], total: 0, nextCursor: null });
+  const [state, setState] = useState({ loading: true, loadingPage: false, error: "", retryPage: false, comments: [], total: 0, page: 1, totalPages: 1 });
   const locationTargetRef = useRef(readCommentTarget());
   const [locationTarget, setLocationTarget] = useState(locationTargetRef.current);
   const [locatedCommentId, setLocatedCommentId] = useState("");
   const [replyState, setReplyState] = useState({ activeId: "", closingId: "", switching: false });
+  const pageTopRef = useRef(null);
+  const pageSwitchRef = useRef(false);
   useEffect(() => {
     setReplyState({ activeId: "", closingId: "", switching: false });
   }, [targetType, slug]);
@@ -322,71 +325,64 @@ export function CommentsSection({ targetType, slug }) {
         : { activeId: "", closingId: "", switching: false };
     });
   }, []);
-  const load = useCallback(async () => {
-    setState((current) => ({ ...current, loading: current.comments.length === 0, error: "", retryMore: false }));
+  const loadPage = useCallback(async (requestedPage = 1, includeLocation = true, reset = false) => {
+    setState((current) => ({
+      ...current,
+      loading: reset || current.comments.length === 0,
+      loadingPage: !reset && current.comments.length > 0 && requestedPage !== current.page,
+      error: "",
+      retryPage: false,
+    }));
     try {
-      const query = new URLSearchParams({ type: targetType, slug });
-      if (locationTargetRef.current) query.set("comment", locationTargetRef.current);
+      const query = new URLSearchParams({ type: targetType, slug, page: String(requestedPage) });
+      if (includeLocation && locationTargetRef.current) query.set("comment", locationTargetRef.current);
       const result = await api(`/comments?${query}`);
       setState({
         loading: false,
-        loadingMore: false,
+        loadingPage: false,
         error: "",
-        retryMore: false,
+        retryPage: false,
         comments: Array.isArray(result?.comments) ? result.comments : [],
         total: Number(result?.total || 0),
-        nextCursor: result?.nextCursor || null,
+        page: Math.max(1, Number(result?.page || requestedPage)),
+        totalPages: Math.max(1, Number(result?.totalPages || 1)),
       });
+      return true;
     } catch (error) {
-      setState((current) => ({ ...current, loading: false, loadingMore: false, error: error?.message || "评论服务暂时不可用，请稍后再试。", retryMore: false }));
+      setState((current) => ({ ...current, loading: false, loadingPage: false, error: error?.message || "评论服务暂时不可用，请稍后再试。", retryPage: true }));
+      return false;
     }
   }, [targetType, slug]);
-  const loadMore = useCallback(async () => {
-    if (!state.nextCursor || state.loadingMore) return;
-    setState((current) => ({ ...current, loadingMore: true, error: "", retryMore: false }));
+  const changePage = useCallback(async (nextPage) => {
+    if (pageSwitchRef.current || state.loadingPage || nextPage === state.page) return;
+    const page = Math.max(1, Math.min(state.totalPages, nextPage));
+    if (page === state.page) return;
+    pageSwitchRef.current = true;
+    locationTargetRef.current = "";
+    setLocationTarget("");
     try {
-      const query = new URLSearchParams({ type: targetType, slug, cursor: state.nextCursor });
-      const result = await api(`/comments?${query}`);
-      setState((current) => {
-        const merged = new Map(current.comments.map((comment) => [comment.id, comment]));
-        for (const comment of Array.isArray(result?.comments) ? result.comments : []) merged.set(comment.id, comment);
-        return {
-          ...current,
-          loadingMore: false,
-          error: "",
-          retryMore: false,
-          comments: [...merged.values()],
-          total: Number(result?.total || current.total),
-          nextCursor: result?.nextCursor || null,
-        };
-      });
-    } catch (error) {
-      setState((current) => ({ ...current, loadingMore: false, error: error?.message || "更早的评论加载失败，请稍后再试。", retryMore: true }));
+      if (await loadPage(page, false)) requestAnimationFrame(() => pageTopRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }));
+    } finally {
+      pageSwitchRef.current = false;
     }
-  }, [slug, state.loadingMore, state.nextCursor, targetType]);
-  const refreshComments = useCallback((created) => {
-    if (created?.id) {
-      setState((current) => {
-        if (current.comments.some((comment) => comment.id === created.id)) return current;
-        return { ...current, comments: [created, ...current.comments], total: current.total + 1 };
-      });
-    }
-    load();
-  }, [load]);
+  }, [loadPage, state.loadingPage, state.page, state.totalPages]);
+  const refreshComments = useCallback(() => {
+    loadPage(state.page, false);
+  }, [loadPage, state.page]);
   useEffect(() => {
-    setState({ loading: true, loadingMore: false, error: "", retryMore: false, comments: [], total: 0, nextCursor: null });
-    load();
-  }, [load, viewer?.id]);
+    setState({ loading: true, loadingPage: false, error: "", retryPage: false, comments: [], total: 0, page: 1, totalPages: 1 });
+    loadPage(1, true, true);
+  }, [loadPage, viewer?.id]);
   useEffect(() => {
     const requestLocation = (event) => {
       const id = event.detail?.id || "";
       locationTargetRef.current = id;
       setLocationTarget(id);
-      load();
+      loadPage(1, true, true);
     };
     window.addEventListener("fonscape:locate-comment", requestLocation);
     return () => window.removeEventListener("fonscape:locate-comment", requestLocation);
-  }, [load]);
+  }, [loadPage]);
   useEffect(() => {
     if (!locatedCommentId) return undefined;
     const timer = window.setTimeout(() => setLocatedCommentId(""), 1900);
@@ -486,6 +482,6 @@ export function CommentsSection({ targetType, slug }) {
     return state.comments.filter((comment) => !comment.parentId).sort((left, right) => new Date(right.createdAt) - new Date(left.createdAt)).map((comment) => ({ comment, replies: (replies.get(comment.id) || []).sort((left, right) => new Date(left.createdAt) - new Date(right.createdAt)) }));
   }, [state.comments]);
   const replyProps = { activeReplyId: replyState.activeId, closingReplyId: replyState.closingId, replySwitchInProgress: replyState.switching, onReplyOpen: openReply, onReplyClose: closeReply, onReplyClosed: finishReplyClose, friendApplicationEnabled: targetType === "post" && slug === "site-friends" };
-  const initialError = state.error && state.comments.length === 0;
-  return <section className="comments-section" aria-labelledby={`comments-${targetType}-${slug}`}><header className="comments-heading"><div><span className="comments-heading-icon" aria-hidden="true"><ChatCircleDots size={22} weight="duotone" /></span><h2 id={`comments-${targetType}-${slug}`}>评论</h2></div><span>{state.total} 条评论</span></header><StableCommentComposer targetType={targetType} slug={slug} onCreated={refreshComments} />{state.loading ? <div className="community-skeleton" aria-label="正在读取评论"><i /><i /><i /></div> : initialError ? <div className="comments-error"><WarningCircle size={23} /><p>{state.error}</p><button type="button" onClick={load}>重试</button></div> : <>{state.error && <div className="comments-refresh-error" role="status"><WarningCircle size={18} /><span>{state.error}</span><button type="button" onClick={state.retryMore ? loadMore : load}>重试</button></div>}{threads.length ? <ul className="comment-list">{threads.map(({ comment, replies }) => <CommentItem key={comment.id} comment={comment} replies={replies} targetType={targetType} slug={slug} onRefresh={refreshComments} locatedCommentId={locatedCommentId} {...replyProps} />)}</ul> : null}{state.nextCursor && <button className="comments-load-more" type="button" onClick={loadMore} disabled={state.loadingMore}>{state.loadingMore ? "正在加载…" : "加载更早评论"}</button>}</>}</section>;
+  const initialError = Boolean(state.error && state.comments.length === 0);
+  return <section className="comments-section" aria-labelledby={`comments-${targetType}-${slug}`}><header className="comments-heading"><div><span className="comments-heading-icon" aria-hidden="true"><ChatCircleDots size={22} weight="duotone" /></span><h2 id={`comments-${targetType}-${slug}`}>评论</h2></div><span>{state.total} 条评论</span></header><StableCommentComposer targetType={targetType} slug={slug} onCreated={refreshComments} />{state.loading ? <div className="community-skeleton" aria-label="正在读取评论"><i /><i /><i /></div> : initialError ? <div className="comments-error"><WarningCircle size={23} /><p>{state.error}</p><button type="button" onClick={() => loadPage(state.page, Boolean(locationTargetRef.current))}>重试</button></div> : <>{state.error && <div className="comments-refresh-error" role="status"><WarningCircle size={18} /><span>{state.error}</span><button type="button" onClick={() => loadPage(state.page, false)}>重试</button></div>}<div ref={pageTopRef} key={state.page} className={`comments-page-list${state.loadingPage ? " is-loading" : ""}`} aria-busy={state.loadingPage || undefined}>{threads.length ? <ul className="comment-list">{threads.map(({ comment, replies }) => <CommentItem key={comment.id} comment={comment} replies={replies} targetType={targetType} slug={slug} onRefresh={refreshComments} locatedCommentId={locatedCommentId} {...replyProps} />)}</ul> : null}</div><Pagination page={state.page} totalPages={state.totalPages} onChange={changePage} ariaLabel="评论分页" className="comments-pagination" /></>}</section>;
 }

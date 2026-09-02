@@ -339,23 +339,17 @@ const commentSelect = `SELECT c.*, u.nickname, u.role AS user_role,
   LEFT JOIN users reply ON reply.id = c.reply_to_user_id
   LEFT JOIN user_avatars reply_avatar ON reply_avatar.user_id = reply.id`;
 
-const COMMENT_PAGE_SIZE = 40;
+const COMMENT_PAGE_SIZE = 20;
+const COMMENT_PAGE_MAX = 100000;
 
-function encodeCommentCursor(row) {
-  return btoa(JSON.stringify([Number(row.created_at), String(row.id)]))
-    .replaceAll("+", "-").replaceAll("/", "_").replace(/=+$/u, "");
-}
-
-function decodeCommentCursor(value) {
-  if (!value) return null;
-  try {
-    const normalized = String(value).replaceAll("-", "+").replaceAll("_", "/");
-    const [createdAt, id] = JSON.parse(atob(normalized.padEnd(Math.ceil(normalized.length / 4) * 4, "=")));
-    if (!Number.isSafeInteger(createdAt) || createdAt < 0 || typeof id !== "string" || !id || id.length > 64) throw new Error("invalid cursor");
-    return { createdAt, id };
-  } catch {
-    throw new ApiError(400, "评论分页位置无效。", "invalid_comment_cursor");
+function parseCommentPage(value) {
+  const normalized = String(value || "1").trim();
+  if (!/^\d+$/u.test(normalized)) throw new ApiError(400, "评论页码无效。", "invalid_comment_page");
+  const page = Number(normalized);
+  if (!Number.isSafeInteger(page) || page < 1 || page > COMMENT_PAGE_MAX) {
+    throw new ApiError(400, "评论页码无效。", "invalid_comment_page");
   }
+  return page;
 }
 
 function normalizeCommentMutationId(value) {
@@ -393,44 +387,65 @@ async function listComments(context, url) {
   await assertTargetExists(db, target);
   const viewer = await currentUser(context);
   const viewerRole = viewer ? publicUser(viewer).role : null;
-  const cursor = decodeCommentCursor(url.searchParams.get("cursor"));
-  const cursorClause = cursor ? "AND (c.created_at < ? OR (c.created_at = ? AND c.id < ?))" : "";
-  const pageStatement = db.prepare(`${commentSelect} WHERE c.content_type = ? AND c.content_slug = ? AND c.status = 'published'
-    AND (c.parent_id IS NULL OR EXISTS (SELECT 1 FROM comments parent WHERE parent.id = c.parent_id AND parent.status = 'published'))
-    ${cursorClause}
-    ORDER BY c.created_at DESC, c.id DESC LIMIT ?`);
-  const pageResult = cursor
-    ? await pageStatement.bind(target.type, target.slug, cursor.createdAt, cursor.createdAt, cursor.id, COMMENT_PAGE_SIZE + 1).all()
-    : await pageStatement.bind(target.type, target.slug, COMMENT_PAGE_SIZE + 1).all();
-  const pageRows = (pageResult.results || []).slice(0, COMMENT_PAGE_SIZE);
-  const rowsById = new Map(pageRows.map((row) => [row.id, row]));
-  const missingParentIds = [...new Set(pageRows.map((row) => row.parent_id).filter((id) => id && !rowsById.has(id)))];
-  if (missingParentIds.length) {
-    const placeholders = missingParentIds.map(() => "?").join(", ");
-    const parents = await db.prepare(`${commentSelect} WHERE c.id IN (${placeholders}) AND c.status = 'published'`)
-      .bind(...missingParentIds).all();
-    for (const row of parents.results || []) rowsById.set(row.id, row);
-  }
   const locatedId = String(url.searchParams.get("comment") || "").trim();
-  if (locatedId && /^[A-Za-z0-9-]{1,64}$/u.test(locatedId) && !rowsById.has(locatedId)) {
+  const requestedPage = parseCommentPage(url.searchParams.get("page"));
+  let locatedRoot = null;
+  if (locatedId && /^[A-Za-z0-9-]{1,64}$/u.test(locatedId)) {
     const located = await db.prepare(`${commentSelect} WHERE c.id = ? AND c.content_type = ? AND c.content_slug = ? AND c.status = 'published'
       AND (c.parent_id IS NULL OR EXISTS (SELECT 1 FROM comments parent WHERE parent.id = c.parent_id AND parent.status = 'published')) LIMIT 1`)
       .bind(locatedId, target.type, target.slug).first();
-    if (located) {
-      rowsById.set(located.id, located);
-      if (located.parent_id && !rowsById.has(located.parent_id)) {
-        const parent = await db.prepare(`${commentSelect} WHERE c.id = ? AND c.status = 'published' LIMIT 1`).bind(located.parent_id).first();
-        if (parent) rowsById.set(parent.id, parent);
-      }
+    if (located?.parent_id) {
+      locatedRoot = await db.prepare(`${commentSelect} WHERE c.id = ? AND c.content_type = ? AND c.content_slug = ?
+        AND c.status = 'published' AND c.parent_id IS NULL LIMIT 1`)
+        .bind(located.parent_id, target.type, target.slug).first();
+    } else if (located) {
+      locatedRoot = located;
     }
   }
-  const usage = await db.prepare("SELECT published_comments FROM comment_target_usage WHERE content_type = ? AND content_slug = ? LIMIT 1")
-    .bind(target.type, target.slug).first();
-  const hasMore = (pageResult.results || []).length > COMMENT_PAGE_SIZE;
+
+  const [totalResult, threadResult] = await db.batch([
+    db.prepare(`SELECT COUNT(*) AS count FROM comments c
+      WHERE c.content_type = ? AND c.content_slug = ? AND c.status = 'published'
+        AND (c.parent_id IS NULL OR EXISTS (
+          SELECT 1 FROM comments parent WHERE parent.id = c.parent_id AND parent.status = 'published'
+        ))`).bind(target.type, target.slug),
+    db.prepare(`SELECT COUNT(*) AS count FROM comments c
+      WHERE c.content_type = ? AND c.content_slug = ? AND c.status = 'published' AND c.parent_id IS NULL`)
+      .bind(target.type, target.slug),
+  ]);
+  const total = Number(totalResult?.results?.[0]?.count || 0);
+  const threadTotal = Number(threadResult?.results?.[0]?.count || 0);
+  const totalPages = Math.max(1, Math.ceil(threadTotal / COMMENT_PAGE_SIZE));
+  let page = Math.min(requestedPage, totalPages);
+  if (locatedRoot) {
+    const newerRoots = await db.prepare(`SELECT COUNT(*) AS count FROM comments c
+      WHERE c.content_type = ? AND c.content_slug = ? AND c.status = 'published' AND c.parent_id IS NULL
+        AND (c.created_at > ? OR (c.created_at = ? AND c.id > ?))`)
+      .bind(target.type, target.slug, locatedRoot.created_at, locatedRoot.created_at, locatedRoot.id).first();
+    page = Math.min(totalPages, Math.floor(Number(newerRoots?.count || 0) / COMMENT_PAGE_SIZE) + 1);
+  }
+
+  const rootResult = await db.prepare(`${commentSelect} WHERE c.content_type = ? AND c.content_slug = ?
+    AND c.status = 'published' AND c.parent_id IS NULL
+    ORDER BY c.created_at DESC, c.id DESC LIMIT ? OFFSET ?`)
+    .bind(target.type, target.slug, COMMENT_PAGE_SIZE, (page - 1) * COMMENT_PAGE_SIZE).all();
+  const rootRows = rootResult.results || [];
+  let replyRows = [];
+  if (rootRows.length) {
+    const rootIds = rootRows.map((row) => row.id);
+    const placeholders = rootIds.map(() => "?").join(", ");
+    const replies = await db.prepare(`${commentSelect} WHERE c.content_type = ? AND c.content_slug = ?
+      AND c.status = 'published' AND c.parent_id IN (${placeholders})
+      ORDER BY c.created_at ASC, c.id ASC`)
+      .bind(target.type, target.slug, ...rootIds).all();
+    replyRows = replies.results || [];
+  }
   return json({
-    comments: [...rowsById.values()].map((row) => commentRow(row, viewer?.id || null, viewerRole)),
-    total: Number(usage?.published_comments || 0),
-    nextCursor: hasMore ? encodeCommentCursor(pageRows.at(-1)) : null,
+    comments: [...rootRows, ...replyRows].map((row) => commentRow(row, viewer?.id || null, viewerRole)),
+    total,
+    page,
+    pageSize: COMMENT_PAGE_SIZE,
+    totalPages,
   });
 }
 
