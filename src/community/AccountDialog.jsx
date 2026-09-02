@@ -46,9 +46,10 @@ function loadMyReplies(viewerId, refresh = false) {
   if (!refresh && repliesCache.has(viewerId)) return Promise.resolve(repliesCache.get(viewerId));
   if (repliesRequests.has(viewerId)) return repliesRequests.get(viewerId);
   const request = api("/me/replies").then((result) => {
-    repliesCache.set(viewerId, result.replies || []);
+    const feed = { items: result.replies || [], readThrough: Number(result.readThrough || 0) };
+    repliesCache.set(viewerId, feed);
     repliesRequests.delete(viewerId);
-    return result.replies || [];
+    return feed;
   }).catch((error) => {
     repliesRequests.delete(viewerId);
     throw error;
@@ -76,9 +77,10 @@ function loadReceivedComments(viewerId, refresh = false) {
   if (!refresh && receivedCommentsCache.has(viewerId)) return Promise.resolve(receivedCommentsCache.get(viewerId));
   if (receivedCommentsRequests.has(viewerId)) return receivedCommentsRequests.get(viewerId);
   const request = api("/me/admin-comments").then((result) => {
-    receivedCommentsCache.set(viewerId, result.comments || []);
+    const feed = { items: result.comments || [], readThrough: Number(result.readThrough || 0) };
+    receivedCommentsCache.set(viewerId, feed);
     receivedCommentsRequests.delete(viewerId);
-    return result.comments || [];
+    return feed;
   }).catch((error) => {
     receivedCommentsRequests.delete(viewerId);
     throw error;
@@ -192,15 +194,15 @@ function MyMessages() {
 function MyReplies() {
   const { viewer, closeAccount, markRepliesRead } = useCommunity();
   const cached = repliesCache.get(viewer.id);
-  const [state, setState] = useState({ loading: !cached, error: "", replies: cached || [] });
+  const [state, setState] = useState({ loading: !cached, error: "", replies: cached?.items || [] });
   useEffect(() => {
     let alive = true;
     loadFeedWithBestEffortReceipt(
       () => loadMyReplies(viewer.id, true),
       markRepliesRead,
       viewer.unreadReplies,
-    ).then((replies) => {
-      if (alive) setState({ loading: false, error: "", replies });
+    ).then((feed) => {
+      if (alive) setState({ loading: false, error: "", replies: feed.items });
     }).catch((error) => alive && setState({ loading: false, error: error.message, replies: [] }));
     return () => { alive = false; };
   }, [markRepliesRead, viewer.id, viewer.unreadReplies]);
@@ -216,15 +218,15 @@ function MyReplies() {
 function ReceivedComments() {
   const { viewer, closeAccount, markAdminCommentsRead } = useCommunity();
   const cached = receivedCommentsCache.get(viewer.id);
-  const [state, setState] = useState({ loading: !cached, error: "", comments: cached || [] });
+  const [state, setState] = useState({ loading: !cached, error: "", comments: cached?.items || [] });
   useEffect(() => {
     let alive = true;
     loadFeedWithBestEffortReceipt(
       () => loadReceivedComments(viewer.id, true),
       markAdminCommentsRead,
       viewer.unreadAdminComments,
-    ).then((comments) => {
-      if (alive) setState({ loading: false, error: "", comments });
+    ).then((feed) => {
+      if (alive) setState({ loading: false, error: "", comments: feed.items });
     }).catch((error) => alive && setState({ loading: false, error: error.message, comments: [] }));
     return () => { alive = false; };
   }, [markAdminCommentsRead, viewer.id, viewer.unreadAdminComments]);

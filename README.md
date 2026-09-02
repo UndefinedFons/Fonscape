@@ -102,6 +102,7 @@ pnpm check
 | `pnpm build` | 生成生产构建 |
 | `pnpm preview` | 预览生产构建 |
 | `pnpm test` | 运行测试 |
+| `pnpm test:e2e` | 运行精简的评论关键路径浏览器测试 |
 | `pnpm lint` | 检查 JavaScript、React 与 Hooks 的正确性规则 |
 | `pnpm typecheck` | 检查核心 JavaScript 数据边界的静态类型 |
 | `pnpm check` | 校验内容、运行测试与类型检查，并完成生产构建 |

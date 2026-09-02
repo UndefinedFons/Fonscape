@@ -3,6 +3,7 @@ import test from "node:test";
 import { createClient } from "@libsql/client";
 import { insertCommentAtomically, reconcileRuntimeCounters } from "../functions/_lib/abuse.js";
 import { onRequest } from "../functions/api/[[path]].js";
+import { sha256 } from "../functions/_lib/community.js";
 import { migrateTurso } from "../scripts/migrate-turso.mjs";
 import { createTursoD1Database } from "../server/turso-d1.js";
 
@@ -151,6 +152,133 @@ test("comment creation accepts D1 change counts that include trigger writes", as
   }
 });
 
+test("comment mutation ids replay one completed write without consuming another rate window", async () => {
+  const { client, db } = await migratedDatabase();
+  try {
+    const now = Date.now();
+    const user = await seedUser(client, { now });
+    const mutationId = "7d7e8b6d-34f1-4f49-9471-77d2a6070f73";
+    const request = () => requestContext({
+      path: ["comments"], method: "POST", db, currentUser: user,
+      body: { type: "post", slug: "site-about", body: "只写入一次", clientMutationId: mutationId },
+    });
+    const first = request();
+    const firstResponse = await onRequest(first);
+    await first.settle();
+    assert.equal(firstResponse.status, 201);
+    const consumedAfterFirst = (await client.execute("SELECT COALESCE(SUM(count), 0) AS count FROM rate_limits")).rows[0].count;
+
+    const replay = request();
+    const replayResponse = await onRequest(replay);
+    await replay.settle();
+    assert.equal(replayResponse.status, 200);
+    assert.equal((await replayResponse.json()).replayed, true);
+    assert.equal((await client.execute({ sql: "SELECT COUNT(*) AS count FROM comments WHERE id = ?", args: [mutationId] })).rows[0].count, 1);
+    assert.equal((await client.execute("SELECT COALESCE(SUM(count), 0) AS count FROM rate_limits")).rows[0].count, consumedAfterFirst);
+
+    const conflict = requestContext({
+      path: ["comments"], method: "POST", db, currentUser: user,
+      body: { type: "post", slug: "site-about", body: "不同内容", clientMutationId: mutationId },
+    });
+    const conflictResponse = await onRequest(conflict);
+    assert.equal(conflictResponse.status, 409);
+    assert.equal((await conflictResponse.json()).code, "comment_mutation_conflict");
+  } finally {
+    await client.close();
+  }
+});
+
+test("overlapping retries charge one mutation only once", async () => {
+  const { client, db } = await migratedDatabase();
+  try {
+    const now = Date.now();
+    const user = await seedUser(client, { now });
+    const body = { type: "post", slug: "site-about", body: "并发重试只写一次", clientMutationId: "f4c0e348-0b79-4f52-8db3-d2c81ae4f8b2" };
+    const contexts = [1, 2].map(() => requestContext({ path: ["comments"], method: "POST", db, currentUser: user, body }));
+    const responses = await Promise.all(contexts.map(onRequest));
+    await Promise.all(contexts.map((context) => context.settle()));
+    assert.deepEqual(responses.map((response) => response.status).sort(), [200, 201]);
+    assert.equal((await client.execute({ sql: "SELECT COUNT(*) AS count FROM comments WHERE id = ?", args: [body.clientMutationId] })).rows[0].count, 1);
+    const secret = (await client.execute("SELECT rate_limit_secret FROM site_runtime WHERE id = 1")).rows[0].rate_limit_secret;
+    const policyKeys = await Promise.all([
+      ["user-10m", user.id, 10 * 60 * 1000],
+      ["user-day", user.id, 24 * 60 * 60 * 1000],
+      ["ip-10m", "local", 10 * 60 * 1000],
+      ["global-hour", "global", 60 * 60 * 1000],
+      ["global-day", "global", 24 * 60 * 60 * 1000],
+    ].map(([scope, subject, windowMs]) => sha256(`${secret}:comment:${scope}:${windowMs}:${subject}`)));
+    assert.equal((await client.execute({
+      sql: `SELECT COALESCE(SUM(count), 0) AS count FROM rate_limits WHERE key IN (${policyKeys.map(() => "?").join(", ")})`,
+      args: policyKeys,
+    })).rows[0].count, 5);
+  } finally {
+    await client.close();
+  }
+});
+
+test("a rejected comment mutation rolls back every partial rate-window charge", async () => {
+  const { client, db } = await migratedDatabase();
+  try {
+    const now = Date.now();
+    const user = await seedUser(client, { now });
+    const environment = { COMMENT_USER_10M: "1" };
+    const create = (id, body) => requestContext({
+      path: ["comments"], method: "POST", db, currentUser: user, env: environment,
+      body: { type: "post", slug: "site-about", body, clientMutationId: id },
+    });
+    const first = create("0f5d9be1-5d2b-48da-8ee3-2fb94c0a7e01", "先占用一个名额");
+    assert.equal((await onRequest(first)).status, 201);
+    await first.settle();
+    const second = create("3f34dc4a-8e53-4d1c-9f16-f3e8169bf6f7", "应该被拒绝");
+    const response = await onRequest(second);
+    assert.equal(response.status, 429);
+    assert.equal((await response.json()).code, "rate_limited");
+    await second.settle();
+    assert.equal((await client.execute({ sql: "SELECT COUNT(*) AS count FROM comments WHERE user_id = ?", args: [user.id] })).rows[0].count, 1);
+    assert.equal((await client.execute("SELECT COUNT(*) AS count FROM comment_mutations")).rows[0].count, 1);
+  } finally {
+    await client.close();
+  }
+});
+
+test("comment cursor pagination exposes every comment beyond the former 200 item boundary", async () => {
+  const { client, db } = await migratedDatabase();
+  try {
+    const now = Date.now();
+    await seedUser(client, { now });
+    await Promise.all(Array.from({ length: 201 }, (_, index) => insertCommentAtomically(db, {
+      id: `page-${String(index).padStart(3, "0")}`,
+      userId: "member-1",
+      role: "member",
+      target: { type: "post", slug: "site-about" },
+      body: `comment-${index}`,
+      now: now + index,
+    }, { MAX_COMMENTS_PER_USER: "300", MAX_COMMENTS_PER_TARGET: "300", MAX_TOTAL_COMMENTS: "300" })));
+
+    const ids = new Set();
+    let cursor = "";
+    let page = 0;
+    do {
+      const query = `?type=post&slug=site-about${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ""}`;
+      const context = requestContext({ path: ["comments"], db, currentUser: undefined, query });
+      const response = await onRequest(context);
+      assert.equal(response.status, 200);
+      const body = await response.json();
+      assert.equal(body.total, 201);
+      assert.ok(body.comments.length <= 40);
+      if (page === 0) assert.equal(body.comments.some((comment) => comment.id === "page-200"), true);
+      body.comments.forEach((comment) => ids.add(comment.id));
+      cursor = body.nextCursor || "";
+      page += 1;
+    } while (cursor);
+    assert.equal(page, 6);
+    assert.equal(ids.size, 201);
+    assert.equal(ids.has("page-000"), true);
+  } finally {
+    await client.close();
+  }
+});
+
 test("comment aggregates distinguish hidden capacity from published statistics", async () => {
   const { client, db } = await migratedDatabase();
   try {
@@ -168,6 +296,28 @@ test("comment aggregates distinguish hidden capacity from published statistics",
     assert.deepEqual((await client.execute("SELECT active_comments, published_comments FROM comment_target_usage WHERE content_type = 'post' AND content_slug = 'site-about'")).rows, [{ active_comments: 1, published_comments: 0 }]);
     await client.execute({ sql: "UPDATE comments SET status = 'deleted', updated_at = ? WHERE id = 'visibility-comment'", args: [now + 2] });
     assert.deepEqual((await client.execute("SELECT active_comments, published_comments FROM comment_target_usage WHERE content_type = 'post' AND content_slug = 'site-about'")).rows, [{ active_comments: 0, published_comments: 0 }]);
+  } finally {
+    await client.close();
+  }
+});
+
+test("published comment totals exclude replies whose parent is deleted", async () => {
+  const { client, db } = await migratedDatabase();
+  try {
+    const now = Date.now();
+    await seedUser(client, { now });
+    await insertCommentAtomically(db, {
+      id: "deleted-parent", userId: "member-1", role: "member",
+      target: { type: "post", slug: "site-about" }, body: "父评论", now,
+    }, { MAX_COMMENTS_PER_USER: "10", MAX_COMMENTS_PER_TARGET: "10", MAX_TOTAL_COMMENTS: "10" });
+    await insertCommentAtomically(db, {
+      id: "orphaned-reply", userId: "member-1", role: "member",
+      target: { type: "post", slug: "site-about" }, body: "回复", parentId: "deleted-parent",
+      replyToUserId: "member-1", replyToCommentId: "deleted-parent", now: now + 1,
+    }, { MAX_COMMENTS_PER_USER: "10", MAX_COMMENTS_PER_TARGET: "10", MAX_TOTAL_COMMENTS: "10" });
+    assert.equal((await client.execute("SELECT published_comments FROM comment_target_usage WHERE content_type = 'post' AND content_slug = 'site-about'")).rows[0].published_comments, 2);
+    await client.execute({ sql: "UPDATE comments SET status = 'deleted', updated_at = ? WHERE id = 'deleted-parent'", args: [now + 2] });
+    assert.equal((await client.execute("SELECT published_comments FROM comment_target_usage WHERE content_type = 'post' AND content_slug = 'site-about'")).rows[0].published_comments, 0);
   } finally {
     await client.close();
   }
@@ -214,6 +364,7 @@ test("notification read receipts never move backwards", async () => {
         method: "PATCH",
         db,
         currentUser: { ...user, notifications_seen_at: future, admin_comments_seen_at: future },
+        body: { readThrough: now },
       });
       assert.equal((await onRequest(context)).status, 200);
       await context.settle();
@@ -223,6 +374,44 @@ test("notification read receipts never move backwards", async () => {
       admin_comments_seen_at: future,
       updated_at: future,
     }]);
+  } finally {
+    await client.close();
+  }
+});
+
+test("notification receipts only advance through the successfully loaded snapshot", async () => {
+  const { client, db } = await migratedDatabase();
+  try {
+    const now = Date.now();
+    const recipient = await seedUser(client, { id: "member-1", now });
+    await seedUser(client, { id: "member-2", username: "writer02", nickname: "写作者", now });
+    await insertCommentAtomically(db, {
+      id: "reply-before-snapshot", userId: "member-2", role: "member",
+      target: { type: "post", slug: "site-about" }, body: "第一条回复",
+      replyToUserId: recipient.id, now: now + 1,
+    }, { MAX_COMMENTS_PER_USER: "10", MAX_COMMENTS_PER_TARGET: "10", MAX_TOTAL_COMMENTS: "10" });
+    const feedContext = requestContext({ path: ["me", "replies"], db, currentUser: recipient });
+    const feedResponse = await onRequest(feedContext);
+    const feed = await feedResponse.json();
+    assert.equal(feed.readThrough, now + 1);
+
+    await insertCommentAtomically(db, {
+      id: "reply-after-snapshot", userId: "member-2", role: "member",
+      target: { type: "post", slug: "site-about" }, body: "稍后到达的回复",
+      replyToUserId: recipient.id, now: now + 2,
+    }, { MAX_COMMENTS_PER_USER: "10", MAX_COMMENTS_PER_TARGET: "10", MAX_TOTAL_COMMENTS: "10" });
+    const receipt = requestContext({
+      path: ["me", "notifications"], method: "PATCH", db, currentUser: recipient,
+      body: { readThrough: feed.readThrough },
+    });
+    assert.equal((await onRequest(receipt)).status, 200);
+    await receipt.settle();
+    const seenAt = (await client.execute("SELECT notifications_seen_at FROM users WHERE id = 'member-1'")).rows[0].notifications_seen_at;
+    assert.equal(seenAt, now + 1);
+    assert.equal((await client.execute({
+      sql: "SELECT COUNT(*) AS count FROM comments WHERE reply_to_user_id = ? AND created_at > ?",
+      args: [recipient.id, seenAt],
+    })).rows[0].count, 1);
   } finally {
     await client.close();
   }

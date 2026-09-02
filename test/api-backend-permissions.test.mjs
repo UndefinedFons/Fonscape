@@ -320,6 +320,7 @@ test("a member cannot delete another user's comment", async () => {
   assert.equal(response.status, 403);
   assert.equal((await response.json()).code, "not_comment_owner");
   assert.equal(fake.state.comment.status, "published");
+  assert.equal(fake.operations.some((operation) => operation.query.startsWith("INSERT INTO rate_limits")), false);
 });
 
 test("an administrator can delete any comment through the shared comment endpoint", async () => {

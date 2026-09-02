@@ -193,7 +193,7 @@ test("runtime maintenance keeps request cleanup separate from counter reconcilia
     await client.execute("CREATE TABLE sessions (id_hash TEXT PRIMARY KEY, expires_at INTEGER NOT NULL)");
     await client.execute("CREATE TABLE rate_limits (key TEXT PRIMARY KEY, updated_at INTEGER NOT NULL)");
     await client.execute("CREATE TABLE users (id TEXT PRIMARY KEY, role TEXT NOT NULL)");
-    await client.execute("CREATE TABLE comments (id TEXT PRIMARY KEY, user_id TEXT NOT NULL, content_type TEXT NOT NULL, content_slug TEXT NOT NULL, status TEXT NOT NULL)");
+    await client.execute("CREATE TABLE comments (id TEXT PRIMARY KEY, user_id TEXT NOT NULL, content_type TEXT NOT NULL, content_slug TEXT NOT NULL, parent_id TEXT, status TEXT NOT NULL)");
     await client.execute("CREATE TABLE account_usage (user_id TEXT PRIMARY KEY, comments_created INTEGER NOT NULL, updated_at INTEGER NOT NULL)");
     await client.execute("CREATE TABLE storage_counters (metric TEXT PRIMARY KEY, value INTEGER NOT NULL, updated_at INTEGER NOT NULL)");
     await client.execute("CREATE TABLE comment_target_usage (content_type TEXT NOT NULL, content_slug TEXT NOT NULL, active_comments INTEGER NOT NULL, published_comments INTEGER NOT NULL, updated_at INTEGER NOT NULL, PRIMARY KEY (content_type, content_slug))");
@@ -204,8 +204,8 @@ test("runtime maintenance keeps request cleanup separate from counter reconcilia
       { sql: "INSERT INTO rate_limits VALUES (?, ?)", args: ["stale", 1_000 - 9 * 86_400_000] },
       { sql: "INSERT INTO rate_limits VALUES (?, ?)", args: ["fresh", 1_000] },
       { sql: "INSERT INTO users VALUES (?, ?)", args: ["member-1", "member"] },
-      { sql: "INSERT INTO comments VALUES (?, ?, ?, ?, ?)", args: ["published", "member-1", "post", "example", "published"] },
-      { sql: "INSERT INTO comments VALUES (?, ?, ?, ?, ?)", args: ["deleted", "member-1", "post", "example", "deleted"] },
+      { sql: "INSERT INTO comments VALUES (?, ?, ?, ?, ?, ?)", args: ["published", "member-1", "post", "example", null, "published"] },
+      { sql: "INSERT INTO comments VALUES (?, ?, ?, ?, ?, ?)", args: ["deleted", "member-1", "post", "example", null, "deleted"] },
       { sql: "INSERT INTO account_usage VALUES (?, ?, ?)", args: ["member-1", 99, 0] },
     ], "write");
     const db = createTursoD1Database({ client });

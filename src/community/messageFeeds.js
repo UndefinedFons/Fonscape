@@ -1,15 +1,19 @@
 /**
- * Load a message feed independently from its best-effort read receipt. A
- * failed receipt must never reject or replace an already available feed.
+ * Load a message snapshot before advancing its best-effort read receipt. A
+ * failed feed never sends a receipt, and a failed receipt never rejects or
+ * replaces an already available feed.
  *
- * @template T
- * @param {() => Promise<T>} loadFeed
- * @param {() => Promise<unknown>} markRead
+ * @template {object} T
+ * @param {() => Promise<T & {readThrough?: number}>} loadFeed
+ * @param {(readThrough: number) => Promise<unknown>} markRead
  * @param {number} unreadCount
- * @returns {Promise<T>}
+ * @returns {Promise<T & {readThrough?: number}>}
  */
-export function loadFeedWithBestEffortReceipt(loadFeed, markRead, unreadCount) {
-  const feed = loadFeed();
-  if (unreadCount > 0) Promise.resolve().then(markRead).catch(() => {});
+export async function loadFeedWithBestEffortReceipt(loadFeed, markRead, unreadCount) {
+  const feed = await loadFeed();
+  const readThrough = Number(feed?.readThrough || 0);
+  if (unreadCount > 0 && readThrough > 0) {
+    Promise.resolve().then(() => markRead(readThrough)).catch(() => {});
+  }
   return feed;
 }
