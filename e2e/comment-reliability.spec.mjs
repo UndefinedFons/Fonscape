@@ -28,7 +28,7 @@ function comment(id, body, createdAt) {
   };
 }
 
-test("a lost comment response can be retried once and older comments remain reachable", async ({ page }) => {
+test("a lost comment response can be retried once and older comments remain reachable through pagination", async ({ page }) => {
   const recent = comment("recent-comment", "较新的既有评论", 200);
   const older = comment("older-comment", "分页加载出的更早评论", 100);
   const created = comment("created-comment", "网络重试评论", 300);
@@ -43,14 +43,16 @@ test("a lost comment response can be retried once and older comments remain reac
     if (path === "/api/site/runtime") return route.fulfill({ json: { launchedAt: 1 } });
     if (path === "/api/content/stats") return route.fulfill({ json: { stats: {} } });
     if (path === "/api/comments" && request.method() === "GET") {
-      if (url.searchParams.has("cursor")) {
-        return route.fulfill({ json: { comments: [older], total: 201, nextCursor: null } });
+      if (url.searchParams.get("page") === "2") {
+        return route.fulfill({ json: { comments: [older], total: 201, page: 2, pageSize: 20, totalPages: 11 } });
       }
       return route.fulfill({
         json: {
           comments: writeCompleted ? [created, recent] : [recent],
           total: writeCompleted ? 201 : 200,
-          nextCursor: "older-page",
+          page: 1,
+          pageSize: 20,
+          totalPages: 11,
         },
       });
     }
@@ -77,6 +79,6 @@ test("a lost comment response can be retried once and older comments remain reac
   expect(mutationIds).toHaveLength(2);
   expect(mutationIds[1]).toBe(mutationIds[0]);
 
-  await page.getByRole("button", { name: "加载更早评论" }).click();
+  await page.getByRole("button", { name: "第 2 页" }).click();
   await expect(page.getByText("分页加载出的更早评论")).toBeVisible();
 });
