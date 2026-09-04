@@ -1,0 +1,226 @@
+
+/* Article filter closes by reversing the exact opening animation */
+.article-filter-backdrop {
+  background:rgba(43,23,52,.48);
+  -webkit-backdrop-filter:none;
+  backdrop-filter:none;
+  animation:article-filter-backdrop-motion .32s cubic-bezier(.22,1,.36,1) normal both;
+  will-change:opacity;
+}
+.article-filter-backdrop .article-filter-dialog {
+  animation:article-filter-panel-motion .32s cubic-bezier(.22,1,.36,1) normal both;
+  will-change:opacity,transform;
+  transform:translateZ(0);
+  backface-visibility:hidden;
+}
+.article-filter-backdrop.is-closing,
+.article-filter-backdrop.is-closing .article-filter-dialog { animation-direction:reverse; }
+@keyframes article-filter-backdrop-motion { from { opacity:0; } to { opacity:1; } }
+@keyframes article-filter-panel-motion {
+  from { opacity:0; transform:translate3d(0,8px,0) scale(.99); }
+  to { opacity:1; transform:translate3d(0,0,0) scale(1); }
+}
+
+/* Keep comment layout stable without toggling page-wide paint containment. */
+.comments-section,
+.comment-list {
+  overflow-anchor:none;
+}
+.comment-reply-editor {
+  position:relative;
+  height:0;
+  overflow:clip;
+  contain:layout style;
+  transition:height .32s cubic-bezier(.25,.1,.25,1);
+}
+.comment-reply-editor>div {
+  position:relative;
+  z-index:1;
+  padding:12px 1px 2px;
+  opacity:0;
+  transform:translate3d(0,-6px,0);
+  transform-origin:50% 0;
+  transition:opacity .3s ease-out,transform .3s cubic-bezier(.25,.1,.25,1);
+  will-change:opacity,transform;
+  backface-visibility:hidden;
+}
+.comment-reply-editor .comment-composer--reply { margin-top:0; }
+.comment-reply-editor.is-open {
+  height:var(--reply-editor-height,0);
+}
+.comment-reply-editor.is-revealed>div {
+  opacity:1;
+  transform:translate3d(0,0,0);
+}
+.comment-reply-editor.is-closing {
+  pointer-events:none;
+}
+
+/* Search: full-width segmented scope and compact result-count badge */
+.search-input-wrap { grid-template-columns:28px minmax(0,1fr) 30px 36px; }
+.search-input-wrap input::-webkit-search-cancel-button { display:none; -webkit-appearance:none; }
+.search-count-badge {
+  width:28px;
+  height:28px;
+  display:grid;
+  place-items:center;
+  border-radius:50%;
+  background:var(--accent-soft);
+  color:var(--accent);
+  font-size:10px;
+  font-weight:700;
+  font-variant-numeric:tabular-nums;
+}
+.search-toolbar { display:block; margin:12px 0 8px; }
+.search-scopes {
+  position:relative;
+  isolation:isolate;
+  display:grid;
+  grid-template-columns:repeat(var(--search-scope-count),minmax(0,1fr));
+  width:100%;
+  gap:0;
+  padding:3px;
+  border-radius:12px;
+  background:var(--surface-soft);
+}
+.search-scopes::before {
+  content:"";
+  position:absolute;
+  z-index:-1;
+  top:3px;
+  bottom:3px;
+  left:3px;
+  width:calc((100% - 6px)/var(--search-scope-count));
+  border-radius:9px;
+  background:var(--surface);
+  box-shadow:0 5px 16px color-mix(in srgb,var(--text) 10%,transparent);
+  transform:translateX(var(--search-scope-offset));
+  transition:transform .32s cubic-bezier(.22,1,.36,1);
+}
+.search-scopes button {
+  min-height:34px;
+  padding:0 8px;
+  border:0;
+  border-radius:9px;
+  background:transparent;
+}
+.search-scopes button:hover,
+.search-scopes button.active { border:0; background:transparent; color:var(--accent); }
+.account-dialog { background-color:var(--surface); background-image:none; }
+
+@media (max-width:960px) {
+}
+
+@media (max-width:760px) {
+}
+
+@media (max-width:420px) {
+}
+
+/* Search stays inside the viewport; result count is intentionally quiet */
+.dialog-backdrop {
+  max-width:100vw;
+  overflow-x:hidden;
+}
+.search-backdrop {
+  height:100vh;
+  height:100dvh;
+  min-height:0;
+  overflow:hidden;
+  overscroll-behavior:none;
+}
+.search-dialog {
+  min-width:0;
+  max-width:100%;
+  box-sizing:border-box;
+  overflow:hidden;
+  min-height:0;
+  max-height:calc(100dvh - 140px);
+  display:flex;
+  flex-direction:column;
+}
+.search-input-wrap { min-width:0; }
+.search-input-wrap input { min-width:0; }
+.search-count-badge {
+  width:24px;
+  height:24px;
+  border:1px solid color-mix(in srgb,var(--line) 78%,transparent);
+  background:transparent;
+  color:var(--muted);
+  box-shadow:none;
+  font-size:9px;
+  font-weight:650;
+}
+.search-toolbar,
+.search-scopes,
+.search-results { min-width:0; max-width:100%; }
+.search-scopes {
+  overflow:hidden;
+  contain:paint;
+}
+.search-results {
+  overflow-x:hidden;
+  min-height:0;
+  flex:1 1 auto;
+  max-height:none;
+  padding-inline:4px;
+  overscroll-behavior:none;
+  touch-action:pan-y;
+}
+.search-result {
+  min-width:0;
+  grid-template-columns:38px minmax(0,1fr);
+  padding-right:12px;
+}
+.search-result:hover,
+.search-result:focus-visible { transform:none; }
+
+/* Article filter uses one reversible transition, never a restarted keyframe */
+.article-filter-backdrop,
+.article-filter-backdrop.is-entering,
+.article-filter-backdrop.is-open,
+.article-filter-backdrop.is-closing {
+  opacity:0;
+  pointer-events:none;
+  animation:none!important;
+  transition:opacity .30s cubic-bezier(.22,1,.36,1);
+}
+.article-filter-backdrop .article-filter-dialog,
+.article-filter-backdrop.is-entering .article-filter-dialog,
+.article-filter-backdrop.is-open .article-filter-dialog,
+.article-filter-backdrop.is-closing .article-filter-dialog {
+  opacity:0;
+  transform:translate3d(0,9px,0) scale(.988);
+  animation:none!important;
+  transition:opacity .30s cubic-bezier(.22,1,.36,1),transform .30s cubic-bezier(.22,1,.36,1);
+}
+.article-filter-backdrop.is-open {
+  opacity:1;
+  pointer-events:auto;
+}
+.article-filter-backdrop.is-open .article-filter-dialog {
+  opacity:1;
+  transform:translate3d(0,0,0) scale(1);
+}
+.article-filter-backdrop.is-closing {
+  transition-duration:.44s;
+  transition-timing-function:cubic-bezier(.4,0,.2,1);
+}
+.article-filter-backdrop.is-closing .article-filter-dialog {
+  transition-duration:.44s;
+  transition-timing-function:cubic-bezier(.4,0,.2,1);
+}
+
+@media (max-width:960px) {
+}
+
+@media (max-width:760px) {
+}
+
+@media (max-width:420px) {
+}
+
+@media (prefers-reduced-motion:reduce) {
+  .article-filter-backdrop,
+  .article-filter-backdrop .article-filter-dialog { transition:none; }
+}

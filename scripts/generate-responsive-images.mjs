@@ -152,14 +152,13 @@ async function referencedLocalImages() {
       const post = parsePostMetadata(sourcePath, source);
       const { content } = parseMarkdownSource(sourcePath, source);
       posts.push(post);
-      addTarget(targets, post.cardImage || post.image, "card");
+      addTarget(targets, post.image, "card");
       if (post.coverMode !== "none") addTarget(targets, post.image, "detail");
       addTarget(targets, post.music?.cover, "thumbnail");
       for (const track of Array.isArray(post.musicBlocks) ? post.musicBlocks : []) addTarget(targets, track?.cover, "thumbnail");
       addMarkdownTargets(targets, content);
     } else if (sourcePath.startsWith("src/content/music/")) {
       const entry = parseMusicReviewMetadata(sourcePath, source);
-      addTarget(targets, entry.cardImage || entry.image, "thumbnail");
       addTarget(targets, entry.image, "thumbnail");
       if (!entry.url) addTarget(targets, entry.image, "detail");
       addMarkdownTargets(targets, parseMarkdownSource(sourcePath, source).content);
@@ -167,7 +166,7 @@ async function referencedLocalImages() {
   }
   const { featuredPosts, recentPosts } = getHomeContent(posts, [], {});
   for (const post of new Set([...featuredPosts, ...recentPosts])) {
-    const source = post.cardImage || post.image;
+    const source = post.image;
     if (isLocalRasterSource(source)) criticalSources.add(source);
   }
   return { criticalSources, targets };

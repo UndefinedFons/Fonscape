@@ -15,7 +15,7 @@ test("administrator setup keeps the bootstrap token empty and visible", async ()
   assert.doesNotMatch(source, /令牌保持可见/u);
   assert.match(source, /typeof result\.initialized !== "boolean"/u);
   assert.match(source, /暂时无法检查初始化状态/u);
-  assert.match(source, /window\.location\.replace\("#\/"\)/u);
+  assert.match(source, /window\.location\.replace\(routeHref\("\/"\)\)/u);
 });
 
 test("administrator setup collects a nickname and can reveal the password", async () => {
@@ -40,12 +40,15 @@ test("administrator setup is a focused route without site navigation", async (co
 });
 
 test("direct and retired administrator routes return to their canonical destinations", async () => {
-  const [appSource, mainSource] = await Promise.all([
+  const [appSource, mainSource, routingSource] = await Promise.all([
     readFile(appUrl, "utf8"),
     readFile(mainUrl, "utf8"),
+    readFile(new URL("../src/useAppRouting.js", import.meta.url), "utf8"),
   ]);
-  assert.match(mainSource, /directPath === "\/admin\/setup"[\s\S]*replace\("\/#\/admin\/setup"\)/u);
-  assert.match(mainSource, /directPath === "\/admin"[\s\S]*replace\("\/#\/"\)/u);
-  assert.match(appSource, /route === "\/admin" \|\| (?:\(route\.startsWith\("\/admin\/"\) && !isSetupRoute\)|route\.startsWith\("\/admin\/"\))/u);
-  assert.match(appSource, /isRetiredAdminRoute\) window\.location\.replace\("#\/"\)/u);
+  assert.match(mainSource, /legacyHashRoute\(window\.location\.hash\)/u);
+  assert.match(mainSource, /parseRoutePath\(\)/u);
+  assert.match(mainSource, /preloadRoute\(initialRoute\)/u);
+  assert.match(appSource, /const isSetupRoute = route === "\/admin\/setup"/u);
+  assert.match(routingSource, /function isRetiredAdminRoute\(path\)/u);
+  assert.match(routingSource, /replaceRouteWithHome\(\)/u);
 });

@@ -2,6 +2,7 @@ import friends from "./friends.json" with { type: "json" };
 import { authorProfile, navItems, siteConfig } from "../siteConfig.js";
 import { parseMusicReview, parsePoem, parsePost, sortNewestFirst } from "./frontmatter.js";
 import { contentManifest } from "../../functions/_generated/content-metadata.js";
+import { contentRoute as buildContentRoute } from "../routes.js";
 
 const descriptors = contentManifest?.collections && typeof contentManifest.collections === "object"
   ? contentManifest.collections
@@ -166,10 +167,7 @@ export const homeContent = Object.freeze({
 });
 
 export function contentRoute(type, entry) {
-  if (type === "post") return `#/post/${entry.slug || entry.key}`;
-  if (type === "poem") return `#/poem/${entry.slug || entry.key}`;
-  if (type === "music") return `#/music/${entry.key || `${entry.section}/${entry.slug}`}`;
-  return "#/";
+  return buildContentRoute(type, entry);
 }
 
 const friendLinks = friends;

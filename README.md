@@ -69,7 +69,7 @@ showMusic: false,
 
 各板块开关可按需自由组合。
 
-在 `fonscape.config.js` 中填写正式站点地址 `siteUrl`（例如 `https://example.com`）后，构建会生成 `/feed.xml` 并添加 RSS 发现链接。`siteUrl` 留空时不生成订阅源。
+在 `fonscape.config.js` 中填写正式站点地址 `siteUrl`（例如 `https://example.com`）后，构建会生成 RSS 订阅源 `/feed.xml` 与站点地图 `/sitemap.xml`。`siteUrl` 留空时不生成这两项文件。
 
 文章默认提供随笔、评谈、记录、笔记与指南五个分类；名称、数量和顺序可通过 `postCategories` 自定义。
 

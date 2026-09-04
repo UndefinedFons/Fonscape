@@ -57,8 +57,7 @@ function audioAssetsBinding(assets) {
 function adminRouteRedirect(request) {
   const url = new URL(request.url);
   const pathname = url.pathname.replace(/\/+$/u, "") || "/";
-  if (pathname === "/admin/setup") return Response.redirect(new URL("/#/admin/setup", url), 302);
-  if (pathname === "/admin" || pathname.startsWith("/admin/")) return Response.redirect(new URL("/#/", url), 302);
+  if (pathname === "/admin") return Response.redirect(new URL("/", url), 302);
   return null;
 }
 

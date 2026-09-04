@@ -10,13 +10,14 @@ import { WarningCircle } from "@phosphor-icons/react/WarningCircle";
 import { useEffect, useState } from "react";
 import { api, ApiClientError } from "../community/api.js";
 import { useCommunity } from "../community/CommunityProvider.jsx";
+import { routeHref } from "../routes.js";
 
 function readableSetupError(error, fallback) {
   return error instanceof ApiClientError ? error.message : fallback;
 }
 
 function returnHome() {
-  window.location.replace("#/");
+  window.location.replace(routeHref("/"));
 }
 
 export function AdminSetupPage() {
@@ -61,7 +62,7 @@ export function AdminSetupPage() {
   if (state.loading) {
     content = <div className="admin-setup-status" role="status" aria-live="polite"><span className="admin-setup-pulse" aria-hidden="true" /><p>正在检查初始化状态…</p></div>;
   } else if (state.initialized) {
-    content = <div className="admin-setup-status"><CheckCircle size={42} weight="duotone" aria-hidden="true" /><h1>{state.completed ? "管理员创建成功" : "管理员已完成初始化"}</h1><p>{state.completed ? "一次性初始化令牌现已失效，你可以使用刚创建的账户管理评论。" : "这个页面无需再次操作。一次性初始化令牌已经失效。"}</p><a className="community-primary-button" href="#/">返回首页<ArrowRight size={17} /></a></div>;
+    content = <div className="admin-setup-status"><CheckCircle size={42} weight="duotone" aria-hidden="true" /><h1>{state.completed ? "管理员创建成功" : "管理员已完成初始化"}</h1><p>{state.completed ? "一次性初始化令牌现已失效，你可以使用刚创建的账户管理评论。" : "这个页面无需再次操作。一次性初始化令牌已经失效。"}</p><a className="community-primary-button" href={routeHref("/")}>返回首页<ArrowRight size={17} /></a></div>;
   } else {
     content = <>
       <header className="admin-setup-heading">

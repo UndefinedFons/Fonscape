@@ -116,7 +116,6 @@ function homeEntry(type, entry) {
     ...(entry.firstParagraph ? { firstParagraph: String(entry.firstParagraph) } : {}),
     wordCount: Number(entry.wordCount) || 0,
     ...(entry.image ? { image: String(entry.image) } : {}),
-    ...(entry.cardImage ? { cardImage: String(entry.cardImage) } : {}),
     ...(entry.cardPosition ? { cardPosition: String(entry.cardPosition) } : {}),
   };
   if (type === "poem") return {

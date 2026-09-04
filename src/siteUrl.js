@@ -19,3 +19,17 @@ export function normalizeSiteUrl(value) {
   url.pathname = url.pathname.replace(/\/+$/u, "") || "/";
   return url.toString().replace(/\/$/u, "");
 }
+
+/**
+ * Resolve a canonical application or feed path below the configured public
+ * site URL, preserving an optional pathname prefix in siteUrl.
+ * @param {unknown} siteUrl
+ * @param {unknown} path
+ * @returns {string}
+ */
+export function siteUrlForPath(siteUrl, path) {
+  const base = normalizeSiteUrl(siteUrl);
+  if (!base) return "";
+  const value = String(path || "/").replace(/^\/+/u, "");
+  return new URL(value, `${base}/`).toString();
+}

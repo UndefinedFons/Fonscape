@@ -1,5 +1,2 @@
-/admin/setup /#/admin/setup 302
-/admin/setup/ /#/admin/setup 302
 /admin / 302
 /admin/ / 302
-/admin/* / 302

@@ -18,6 +18,7 @@ public/fonscape/google-fonts-full.css
 public/fonscape/generated-images/
 public/fonscape/content/
 public/feed.xml
+public/sitemap.xml
 worker-configuration.d.ts
 playwright-report/
 test-results/

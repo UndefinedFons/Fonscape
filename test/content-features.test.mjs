@@ -5,6 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 import { buildRssFeed, parseRssDate, readRssPosts } from "../scripts/generate-rss.mjs";
+import { buildSitemap } from "../scripts/generate-sitemap.mjs";
 import { hasMathSyntax, parseAlertMarker, protectCurrencySyntax } from "../src/content/richFeatures.js";
 import { normalizeSiteUrl } from "../src/siteUrl.js";
 
@@ -27,13 +28,28 @@ test("RSS generation uses parsed posts, stable links, and deterministic UTC date
     const feed = buildRssFeed(posts, "https://blog.example/base/", { title: "我的博客", description: "简介" });
     assert.equal(posts.length, 1);
     assert.match(feed, /<title>Hello &amp; 世界<\/title>/u);
-    assert.match(feed, /https:\/\/blog\.example\/base\/#\/post\/hello/u);
-    assert.match(feed, /<guid isPermaLink="true">https:\/\/blog\.example\/base\/#\/post\/hello<\/guid>/u);
+    assert.match(feed, /https:\/\/blog\.example\/base\/post\/hello/u);
+    assert.match(feed, /<guid isPermaLink="true">https:\/\/blog\.example\/base\/post\/hello<\/guid>/u);
     assert.match(feed, /<pubDate>Fri, 02 Jan 2026 03:04:00 GMT<\/pubDate>/u);
     assert.match(feed, /<description>摘要 &lt;安全&gt;<\/description>/u);
   } finally {
     await rm(fixtureRoot, { recursive: true, force: true });
   }
+});
+
+test("sitemap generation uses real pathname routes and published sections", () => {
+  const sitemap = buildSitemap({
+    post: [{ slug: "hello/world", date: "2026-01-02T03:04", title: "Hello" }],
+    poem: [{ slug: "quiet", date: "2026-01-01", title: "Quiet" }],
+    music: [{ section: "artists", slug: "fons", date: "2025-12-31", title: "Fons" }],
+  }, "https://blog.example/base/", { showPoems: true, showMusic: true });
+
+  assert.match(sitemap, /<loc>https:\/\/blog\.example\/base\/post\/hello\/world<\/loc>/u);
+  assert.match(sitemap, /<loc>https:\/\/blog\.example\/base\/poem\/quiet<\/loc>/u);
+  assert.match(sitemap, /<loc>https:\/\/blog\.example\/base\/music\/artists\/fons<\/loc>/u);
+  assert.match(sitemap, /<loc>https:\/\/blog\.example\/base\/posts<\/loc>/u);
+  assert.doesNotMatch(sitemap, /#\//u);
+  assert.doesNotMatch(buildSitemap({ post: [] }, "", {}), /<url>/u);
 });
 
 test("empty siteUrl disables feed links and dates without timezone are UTC", () => {

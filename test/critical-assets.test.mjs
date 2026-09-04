@@ -4,10 +4,10 @@ import test from "node:test";
 
 test("homepage fonts are inlined while the complete catalog loads only on demand", async () => {
   const index = await readFile("index.html", "utf8");
-  const [fontCss, fullFontCss, app, { localizeGoogleFontStylesheet }] = await Promise.all([
+  const [fontCss, fullFontCss, routes, { localizeGoogleFontStylesheet }] = await Promise.all([
     readFile("public/fonscape/google-fonts.css", "utf8"),
     readFile("public/fonscape/google-fonts-full.css", "utf8"),
-    readFile("src/App.jsx", "utf8"),
+    readFile("src/appRoutes.jsx", "utf8"),
     import("../vite.config.mjs"),
   ]);
   const transformed = localizeGoogleFontStylesheet(index);
@@ -20,8 +20,8 @@ test("homepage fonts are inlined while the complete catalog loads only on demand
   assert.match(fullFontCss, /font-weight:\s*400/u);
   assert.match(fullFontCss, /font-weight:\s*500/u);
   assert.match(fullFontCss, /font-weight:\s*700/u);
-  assert.match(app, /document\.createElement\("link"\)/u);
-  assert.match(app, /href:\s*"\/fonscape\/google-fonts-full\.css"/u);
+  assert.match(routes, /document\.createElement\("link"\)/u);
+  assert.match(routes, /href:\s*"\/fonscape\/google-fonts-full\.css"/u);
   assert.match(fontCss, /font-display:\s*swap/iu);
   assert.ok(fontCss.length < fullFontCss.length / 2, "首屏字体声明应明显小于完整字符目录");
 });
@@ -53,12 +53,12 @@ test("homepage and detail images use shared responsive candidates while retainin
   ]);
 
   assert.match(config, /homeFeaturedImage/u);
-  assert.match(config, /post\?\.cardImage \|\| post\?\.image/u);
+  assert.match(config, /post\?\.image/u);
   assert.match(config, /imagesrcset=/u);
   assert.match(config, /if \(desktopImage && mobileImage\) \{\s*preloads\.push\(preloadImage\(mobileImage, \{ media: "\(max-width: 760px\)", intendedWidth: 960/u);
   assert.match(config, /preloads\.push\(preloadImage\(desktopImage, \{ media: "\(min-width: 761px\)", intendedWidth: 1600/u);
   assert.match(cards, /responsiveImageProps\(imageSource, sizes\)/u);
-  assert.match(home, /responsiveImageProps\(post\.cardImage \|\| post\.image/u);
+  assert.match(home, /responsiveImageProps\(post\.image/u);
   assert.match(home, /responsiveImageProps\(authorProfile\.avatarSmall \|\| authorProfile\.avatar/u);
   assert.match(responsive, /srcSet:/u);
   assert.match(responsive, /candidates\.at\(-1\)\?\.src \|\| source/u);

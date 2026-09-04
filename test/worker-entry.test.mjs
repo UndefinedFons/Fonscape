@@ -94,18 +94,30 @@ test("Worker delegates non-dynamic paths to Static Assets unchanged", async () =
   assert.equal(await response.text(), "spa-shell");
 });
 
-test("Worker canonicalizes direct administrator browser routes", async () => {
-  const environment = { ASSETS: { fetch: () => Promise.reject(new Error("administrator routes must redirect before assets")) } };
+test("Worker serves the setup pathname while redirecting the retired admin route", async () => {
+  const assetRequests = [];
+  const environment = {
+    ASSETS: {
+      fetch: async (request) => {
+        assetRequests.push(request);
+        return new Response("spa-shell", { headers: { "Content-Type": "text/html" } });
+      },
+    },
+  };
   const setup = await worker.fetch(new Request("https://example.com/admin/setup"), environment, executionContext());
   const setupSlash = await worker.fetch(new Request("https://example.com/admin/setup/"), environment, executionContext());
-  const retired = await worker.fetch(new Request("https://example.com/admin"), environment, executionContext());
+  const retired = await worker.fetch(new Request("https://example.com/admin"), { ASSETS: { fetch: () => Promise.reject(new Error("retired admin must redirect")) } }, executionContext());
   const retiredChild = await worker.fetch(new Request("https://example.com/admin/comments"), environment, executionContext());
 
-  assert.equal(setup.status, 302);
-  assert.equal(setup.headers.get("Location"), "https://example.com/#/admin/setup");
-  assert.equal(setupSlash.headers.get("Location"), "https://example.com/#/admin/setup");
-  assert.equal(retired.headers.get("Location"), "https://example.com/#/");
-  assert.equal(retiredChild.headers.get("Location"), "https://example.com/#/");
+  assert.equal(setup.status, 200);
+  assert.equal(await setup.text(), "spa-shell");
+  assert.equal(setupSlash.status, 200);
+  assert.equal(await setupSlash.text(), "spa-shell");
+  assert.equal(retired.status, 302);
+  assert.equal(retired.headers.get("Location"), "https://example.com/");
+  assert.equal(retiredChild.status, 200);
+  assert.equal(assetRequests.length, 3);
+  assert.deepEqual(assetRequests.map((request) => new URL(request.url).pathname), ["/admin/setup", "/admin/setup/", "/admin/comments"]);
 });
 
 test("Worker runs database hygiene through its scheduled handler", async () => {

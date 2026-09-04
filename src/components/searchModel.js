@@ -1,4 +1,5 @@
 import { sortNewestFirst } from "../content/frontmatter.js";
+import { contentRoute } from "../routes.js";
 import { getEnabledCollectionTypes, getSectionAvailability } from "../sectionAvailability.js";
 
 /**
@@ -26,9 +27,9 @@ export function searchScopeOptions(config) {
  */
 export function buildSearchItems(entries) {
   return entries.map((entry) => {
-    if (entry.type === "post") return { id: `post-${entry.key}`, slug: entry.key, kind: "post", type: "文章", title: entry.title, meta: entry.category, date: entry.date, href: `#/post/${entry.key}` };
-    if (entry.type === "poem") return { id: `poem-${entry.key}`, slug: entry.key, kind: "poem", type: "小诗", title: entry.title, meta: "", date: entry.date, href: `#/poem/${entry.key}` };
-    return { id: `music-${entry.key}`, slug: entry.key, kind: "music", type: "音乐", title: entry.title, meta: entry.kind, date: entry.date, href: `#/music/${entry.key}` };
+    if (entry.type === "post") return { id: `post-${entry.key}`, slug: entry.key, kind: "post", type: "文章", title: entry.title, meta: entry.category, date: entry.date, href: contentRoute("post", entry) };
+    if (entry.type === "poem") return { id: `poem-${entry.key}`, slug: entry.key, kind: "poem", type: "小诗", title: entry.title, meta: "", date: entry.date, href: contentRoute("poem", entry) };
+    return { id: `music-${entry.key}`, slug: entry.key, kind: "music", type: "音乐", title: entry.title, meta: entry.kind, date: entry.date, href: contentRoute("music", entry) };
   }).sort(sortNewestFirst);
 }
 

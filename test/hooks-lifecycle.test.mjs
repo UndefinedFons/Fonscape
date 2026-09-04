@@ -5,7 +5,7 @@ import test from "node:test";
 const read = (path) => readFile(new URL(`../${path}`, import.meta.url), "utf8");
 
 test("crop preview redraws for rotation and aspect changes, not crop-box movement", async () => {
-  const source = await read("src/community/AccountDialog.jsx");
+  const source = await read("src/community/AvatarCropper.jsx");
   const start = source.indexOf("  const cropUrl =");
   const end = source.indexOf("  const imageBounds =", start);
   assert.ok(start >= 0 && end > start);
@@ -60,8 +60,7 @@ test("pagination scroll honors the reduced-motion preference", async () => {
 });
 
 test("image crop and reply transitions react only to their lifecycle inputs", async () => {
-  const comments = await read("src/community/CommentsSection.jsx");
-  const replyEditor = comments.slice(comments.indexOf("function ReplyEditor"), comments.indexOf("function CommentItemImpl"));
+  const replyEditor = await read("src/community/ReplyEditor.jsx");
 
   assert.match(replyEditor, /if \(immediateOpen\) editorNode\.classList\.add\("is-open"\)/u);
   assert.match(replyEditor, /\}, \[immediateOpen\]\);/u);

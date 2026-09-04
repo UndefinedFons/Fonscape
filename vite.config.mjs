@@ -9,7 +9,8 @@ import { generateFontStylesheets } from "./scripts/generate-font-css.mjs";
 import { generateResponsiveImages } from "./scripts/generate-responsive-images.mjs";
 import { responsiveImageCandidates, responsiveImageUrl } from "./src/responsiveImages.ts";
 import { generateRssFeed } from "./scripts/generate-rss.mjs";
-import { normalizeSiteUrl } from "./src/siteUrl.js";
+import { generateSitemap } from "./scripts/generate-sitemap.mjs";
+import { normalizeSiteUrl, siteUrlForPath } from "./src/siteUrl.js";
 
 function escapeAttribute(value) {
   return String(value).replaceAll("&", "&amp;").replaceAll('"', "&quot;").replaceAll("<", "&lt;");
@@ -36,7 +37,7 @@ export function localizeGoogleFontStylesheet(html) {
 export function applyRssMetadata(html, config = siteConfig) {
   const siteUrl = normalizeSiteUrl(config.siteUrl);
   if (!siteUrl || /rel="alternate"[^>]+type="application\/rss\+xml"/iu.test(html)) return html;
-  const link = `<link rel="alternate" type="application/rss+xml" title="${escapeAttribute(`${config.title || "博客"} RSS`)}" href="${escapeAttribute(`${siteUrl}/feed.xml`)}" />`;
+  const link = `<link rel="alternate" type="application/rss+xml" title="${escapeAttribute(`${config.title || "博客"} RSS`)}" href="${escapeAttribute(siteUrlForPath(siteUrl, "/feed.xml"))}" />`;
   return html.replace("</head>", `    ${link}\n  </head>`);
 }
 
@@ -62,7 +63,7 @@ function homeFeaturedImage() {
     .sort((left, right) => (left.featuredOrder ?? Number.MAX_SAFE_INTEGER) - (right.featuredOrder ?? Number.MAX_SAFE_INTEGER)
       || new Date(left.date).getTime() - new Date(right.date).getTime());
   const post = posts[0];
-  return post?.cardImage || post?.image || "";
+  return post?.image || "";
 }
 
 function preloadImage(source, { media = "", sizes = "", intendedWidth = 0, includeCandidates = true } = {}) {
@@ -115,7 +116,7 @@ function contentMetadataPlugin() {
   const metadataPath = resolve(process.cwd(), "functions/_generated/content-metadata.js");
   let generation = Promise.resolve();
   const regenerate = () => {
-    generation = generation.then(() => Promise.all([generateContentArtifacts(), generateFontStylesheets(), generateResponsiveImages(), generateRssFeed()]));
+    generation = generation.then(() => Promise.all([generateContentArtifacts(), generateFontStylesheets(), generateResponsiveImages(), generateRssFeed(), generateSitemap()]));
     return generation;
   };
   return {

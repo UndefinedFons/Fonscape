@@ -10,10 +10,11 @@ import { use, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ArticleCard } from "../components/Cards.jsx";
 import { Pagination } from "../components/Pagination.jsx";
 import { PageHero } from "../components/PageHero.jsx";
-import { loadCollection, siteConfig } from "../content/index.js";
+import { contentRoute, loadCollection, siteConfig } from "../content/index.js";
 import { usePagination, useResponsivePageSize } from "../hooks.js";
 import { lockPageScroll } from "../lockPageScroll.js";
-import { ARTICLE_INDEX_DEFAULTS, articleIndexState, parseHash, parseHashQuery, updateArticleIndexState } from "../routeState.js";
+import { ARTICLE_INDEX_DEFAULTS, articleIndexState, parseRoutePath, parseRouteQuery, replaceRoute, updateArticleIndexState } from "../routeState.js";
+import { routeHref } from "../routes.js";
 import { getPostCategories } from "../siteConfig.js";
 
 export function PostsPage({ query, stats, onStatsTargets }) {
@@ -69,11 +70,11 @@ export function PostsPage({ query, stats, onStatsTargets }) {
   }, [onStatsTargets, pageStatsTargets, view]);
   const activeCategoryIndex = Math.max(0, categories.indexOf(category));
   const replaceFilterQuery = (tag, series) => {
-    const currentParameters = new URLSearchParams(parseHashQuery());
+    const currentParameters = new URLSearchParams(parseRouteQuery());
     if (tag) currentParameters.set("tag", tag); else currentParameters.delete("tag");
     if (series) currentParameters.set("series", series); else currentParameters.delete("series");
     const nextQuery = currentParameters.toString();
-    history.replaceState(history.state, "", `${location.pathname}${location.search}#/posts${nextQuery ? `?${nextQuery}` : ""}`);
+    replaceRoute(routeHref("/posts", nextQuery));
   };
   const selectTag = (value) => { setFilterSummaryClosing(false); setFilterResultsLeaving(false); setSelectedTag(value); if (value) setSelectedSeries(""); replaceFilterQuery(value, ""); };
   const selectSeries = (value) => { setFilterSummaryClosing(false); setFilterResultsLeaving(false); setSelectedSeries(value); if (value) setSelectedTag(""); replaceFilterQuery("", value); };
@@ -97,11 +98,11 @@ export function PostsPage({ query, stats, onStatsTargets }) {
   };
   const closeFilter = () => {
     setFilterOpen(false);
-    const currentParameters = new URLSearchParams(parseHashQuery());
+    const currentParameters = new URLSearchParams(parseRouteQuery());
     if (!currentParameters.has("filter")) return;
     currentParameters.delete("filter");
     const nextQuery = currentParameters.toString();
-    history.replaceState(null, "", `${location.pathname}${location.search}#${parseHash()}${nextQuery ? `?${nextQuery}` : ""}`);
+    replaceRoute(routeHref(parseRoutePath(), nextQuery));
   };
   const toggleArchive = () => {
     if (viewSwitching) return;
@@ -239,5 +240,5 @@ function ArticleArchive({ posts: filteredPosts, stats = {}, onBack, onStatsTarge
   );
   useEffect(() => { onStatsTargets(visibleStatsTargets); }, [onStatsTargets, visibleStatsTargets]);
   if (!filteredPosts.length) return <div className="article-archive"><div className="archive-controls archive-controls--empty"><button type="button" className="archive-return" onClick={onBack}><ArrowLeft size={17} />返回文章</button></div><div className="section-empty"><FolderOpen size={34} weight="duotone" /><h2>归档中没有匹配项</h2></div></div>;
-  return <div className="article-archive"><div className="archive-controls"><div className="archive-control-groups"><div><span>年份</span>{years.map((item) => <button className={year === item ? "active" : ""} key={item} onClick={() => selectArchive(item, "")}>{item}</button>)}</div><div><span>月份</span><button className={!month ? "active" : ""} onClick={() => selectArchive(year, "")}>全年</button>{months.map((item) => <button className={month === item ? "active" : ""} key={item} onClick={() => selectArchive(year, item)}>{item} 月</button>)}</div></div><button type="button" className="archive-return" onClick={onBack}><ArrowLeft size={17} />返回文章</button></div><div className="archive-timeline-wrap" ref={archiveWrapRef} style={wrapHeight == null ? undefined : { height: wrapHeight }}><div className={`archive-timeline${switching === "leaving" ? " is-leaving" : ""}${switching === "entering" ? " is-entering" : ""}`} key={`${year}-${month}`}>{visible.map((post) => <a href={`#/post/${post.slug}`} key={post.slug}><time>{post.date.slice(0, 10)}</time><i aria-hidden="true" /><div><span>{post.category}{post.series ? ` · ${post.series}` : ""}</span><strong>{post.title}</strong></div><small><Eye size={14} />{stats[post.slug]?.views || 0}<ChatCircleDots size={14} />{stats[post.slug]?.comments || 0}</small></a>)}</div></div></div>;
+  return <div className="article-archive"><div className="archive-controls"><div className="archive-control-groups"><div><span>年份</span>{years.map((item) => <button className={year === item ? "active" : ""} key={item} onClick={() => selectArchive(item, "")}>{item}</button>)}</div><div><span>月份</span><button className={!month ? "active" : ""} onClick={() => selectArchive(year, "")}>全年</button>{months.map((item) => <button className={month === item ? "active" : ""} key={item} onClick={() => selectArchive(year, item)}>{item} 月</button>)}</div></div><button type="button" className="archive-return" onClick={onBack}><ArrowLeft size={17} />返回文章</button></div><div className="archive-timeline-wrap" ref={archiveWrapRef} style={wrapHeight == null ? undefined : { height: wrapHeight }}><div className={`archive-timeline${switching === "leaving" ? " is-leaving" : ""}${switching === "entering" ? " is-entering" : ""}`} key={`${year}-${month}`}>{visible.map((post) => <a href={contentRoute("post", post)} key={post.slug}><time>{post.date.slice(0, 10)}</time><i aria-hidden="true" /><div><span>{post.category}{post.series ? ` · ${post.series}` : ""}</span><strong>{post.title}</strong></div><small><Eye size={14} />{stats[post.slug]?.views || 0}<ChatCircleDots size={14} />{stats[post.slug]?.comments || 0}</small></a>)}</div></div></div>;
 }
