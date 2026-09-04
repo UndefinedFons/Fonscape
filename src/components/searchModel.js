@@ -1,21 +1,23 @@
 import { sortNewestFirst } from "../content/frontmatter.js";
+import { getEnabledCollectionTypes, getSectionAvailability } from "../sectionAvailability.js";
 
 /**
  * @param {{ showPoems?: boolean, showMusic?: boolean }} config
  */
 export function enabledSearchTypes(config) {
-  return ["post", config.showPoems === true && "poem", config.showMusic === true && "music"].filter(Boolean);
+  return getEnabledCollectionTypes(config);
 }
 
 /**
  * @param {{ showPoems?: boolean, showMusic?: boolean }} config
  */
 export function searchScopeOptions(config) {
+  const availability = getSectionAvailability(config);
   return [
     ["all", "全部"],
     ["post", "文章"],
-    ...(config.showPoems === true ? [["poem", "小诗"]] : []),
-    ...(config.showMusic === true ? [["music", "音乐"]] : []),
+    ...(availability.poems ? [["poem", "小诗"]] : []),
+    ...(availability.music ? [["music", "音乐"]] : []),
   ];
 }
 

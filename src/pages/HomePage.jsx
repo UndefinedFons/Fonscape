@@ -14,10 +14,12 @@ import { useHorizontalScroller } from "../hooks.js";
 import { getMusicSectionIcon } from "../musicSections.js";
 import { getPostFirstParagraph } from "../richContent.js";
 import { responsiveImageProps, responsiveImageUrl } from "../responsiveImages.ts";
+import { getSectionAvailability } from "../sectionAvailability.js";
 import { formatContentDate, getPostWordCount } from "../siteUtils.js";
 const { recentPosts, latestPoems, latestMusic } = homeContent;
-const showPoems = siteConfig.showPoems === true;
-const showMusic = siteConfig.showMusic === true;
+const sectionState = getSectionAvailability(siteConfig);
+const showPoems = sectionState.poems;
+const showMusic = sectionState.music;
 const homeStatsCount = 1 + Number(showPoems) + Number(showMusic);
 
 function applyFeaturedTone(image) {

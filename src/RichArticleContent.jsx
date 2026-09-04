@@ -1,10 +1,12 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Check } from "@phosphor-icons/react/Check";
 import { CopySimple } from "@phosphor-icons/react/CopySimple";
-import { Quotes } from "@phosphor-icons/react/Quotes";
 import { Highlight, themes } from "prism-react-renderer";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { ArticleBlockquote, MermaidDiagram } from "./components/ArticleBodyFeatures.jsx";
+import "./components/ArticleBodyFeatures.css";
+import { hasMathSyntax, isMermaidLanguage, protectCurrencySyntax } from "./content/richFeatures.js";
 import { detailImageSizes } from "./responsiveImages.ts";
 import { getPostMarkdown, getPostOutline } from "./richContent.js";
 import { ZoomableImage } from "./ZoomableImage.jsx";
@@ -74,19 +76,58 @@ function RichImage({ src, alt = "", title }) {
   return <ZoomableImage src={src} alt={alt} caption={title} sizes={detailImageSizes} triggerClassName="article-inline-image" />;
 }
 
+function MarkdownPre({ children }) {
+  const codeElement = Array.isArray(children) ? children[0] : children;
+  const className = codeElement?.props?.className || "";
+  const language = className.match(/language-([\w-]+)/)?.[1] || "text";
+  if (isMermaidLanguage(language)) {
+    return <MermaidDiagram source={String(codeElement?.props?.children ?? "").replace(/\n$/u, "")} />;
+  }
+  return <CodeWindow>{children}</CodeWindow>;
+}
+
 const components = {
-  pre: CodeWindow,
+  pre: MarkdownPre,
   code: ({ className, children }) => <code className={className}>{children}</code>,
   img: RichImage,
   table: ({ children }) => <div className="article-table-wrap" tabIndex="0"><table>{children}</table></div>,
-  blockquote: ({ children }) => <blockquote><Quotes size={23} weight="duotone" aria-hidden="true" /><div>{children}</div></blockquote>,
+  blockquote: ArticleBlockquote,
   a: ({ href, children }) => <a href={href} target={href?.startsWith("http") ? "_blank" : undefined} rel={href?.startsWith("http") ? "noreferrer" : undefined}>{children}</a>,
 };
+
+let mathPluginsPromise;
+
+function loadMathPlugins() {
+  if (!mathPluginsPromise) {
+    mathPluginsPromise = Promise.all([
+      import("remark-math").then((module) => module.default || module),
+      import("rehype-katex").then((module) => module.default || module),
+      import("katex/dist/katex.min.css"),
+    ]).then(([remarkMath, rehypeKatex]) => ({ remarkMath, rehypeKatex }));
+    mathPluginsPromise = mathPluginsPromise.catch((error) => {
+      mathPluginsPromise = undefined;
+      throw error;
+    });
+  }
+  return mathPluginsPromise;
+}
 
 export function RichArticleContent({ post, inlineMusicPlayer = null, inlineMusicPlayers = {} }) {
   const markdown = getPostMarkdown(post);
   const outline = useMemo(() => getPostOutline(post), [post]);
   const headings = useMemo(() => outline.filter((item) => !item.prologue), [outline]);
+  const mathInMarkdown = useMemo(() => hasMathSyntax(markdown), [markdown]);
+  const [mathPlugins, setMathPlugins] = useState(null);
+  useEffect(() => {
+    if (!mathInMarkdown) return undefined;
+    let active = true;
+    loadMathPlugins().then((plugins) => {
+      if (active) setMathPlugins(plugins);
+    }).catch(() => {
+      if (active) setMathPlugins(null);
+    });
+    return () => { active = false; };
+  }, [mathInMarkdown]);
   const articleComponents = useMemo(() => ({
     ...components,
     h2: ({ children, node }) => {
@@ -101,7 +142,10 @@ export function RichArticleContent({ post, inlineMusicPlayer = null, inlineMusic
       return <p>{children}</p>;
     },
   }), [headings, inlineMusicPlayer, inlineMusicPlayers]);
+  const remarkPlugins = useMemo(() => mathInMarkdown && mathPlugins ? [remarkGfm, mathPlugins.remarkMath] : [remarkGfm], [mathInMarkdown, mathPlugins]);
+  const rehypePlugins = useMemo(() => mathInMarkdown && mathPlugins ? [mathPlugins.rehypeKatex] : undefined, [mathInMarkdown, mathPlugins]);
+  const renderedMarkdown = mathInMarkdown && mathPlugins ? protectCurrencySyntax(markdown) : markdown;
   return <div className={`article-body rich-article${headings.length > 1 ? " has-outline" : ""}`}>
-    <div className="article-prose">{outline[0]?.prologue && <span id="article-prologue" className="article-prologue-anchor" aria-hidden="true" />}<ReactMarkdown remarkPlugins={[remarkGfm]} components={articleComponents}>{markdown}</ReactMarkdown></div>
+    <div className="article-prose">{outline[0]?.prologue && <span id="article-prologue" className="article-prologue-anchor" aria-hidden="true" />}<ReactMarkdown remarkPlugins={remarkPlugins} rehypePlugins={rehypePlugins} components={articleComponents}>{renderedMarkdown}</ReactMarkdown></div>
   </div>;
 }

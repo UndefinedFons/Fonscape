@@ -42,6 +42,7 @@ export interface SiteConfig {
   language: string;
   title: string;
   description: string;
+  siteUrl: string;
   postCategories?: string[];
   showPoems?: boolean;
   showMusic?: boolean;

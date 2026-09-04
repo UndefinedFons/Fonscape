@@ -6,9 +6,10 @@ import { lazy, use, useEffect, useMemo } from "react";
 import { ArticleMusicPlayer } from "../ArticleMusicPlayer.jsx";
 import { CommentsSection } from "../community/CommentsSection.jsx";
 import { PostMeta } from "../components/Cards.jsx";
-import { loadCollectionFacets, loadPost } from "../content/index.js";
+import { loadCollectionFacets, loadPost, siteConfig } from "../content/index.js";
 import { detailImageSizes } from "../responsiveImages.ts";
-import { go } from "../routeState.js";
+import { returnFromDetail } from "../routeState.js";
+import { setDocumentTitle } from "../navigation.js";
 import { getPostOutline } from "../richContent.js";
 import { ZoomableImage } from "../ZoomableImage.jsx";
 import { NotFound } from "./NotFound.jsx";
@@ -22,6 +23,7 @@ export function ArticlePage({ slug, stats, onView, onOutline, onStatsTargets }) 
   const inlineMusicPlayers = useMemo(() => Object.fromEntries((post?.musicBlocks || []).map((track) => [track.id, <ArticleMusicPlayer key={track.id} track={track} autoplay={Boolean(track.autoplay)} />])), [post]);
   useEffect(() => { if (post?.slug) onView("post", post.slug); }, [post?.slug, onView]);
   useEffect(() => { if (post?.slug) onStatsTargets([{ type: "post", slug: post.slug }]); }, [post?.slug, onStatsTargets]);
+  useEffect(() => { setDocumentTitle(post?.title || "页面不存在", siteConfig.title); }, [post?.title]);
   useEffect(() => {
     onOutline(getPostOutline(post));
     return () => onOutline([]);
@@ -33,7 +35,7 @@ export function ArticlePage({ slug, stats, onView, onOutline, onStatsTargets }) 
   const seriesIndex = seriesPosts.findIndex((item) => item.slug === post.slug);
   const previousChapter = seriesIndex > 0 ? seriesPosts[seriesIndex - 1] : null;
   const nextChapter = seriesIndex >= 0 && seriesIndex < seriesPosts.length - 1 ? seriesPosts[seriesIndex + 1] : null;
-  return <main className="article-page material-panel page-width"><button className="back-button" onClick={() => history.length > 1 ? history.back() : go("/posts")}><ArrowLeft size={17} />返回</button><article className={`article-detail article-detail--${coverMode}`}>
+  return <main className="article-page material-panel page-width"><button className="back-button" onClick={() => returnFromDetail(`/post/${slug}`)}><ArrowLeft size={17} />返回</button><article className={`article-detail article-detail--${coverMode}`}>
     <div className={`article-intro article-intro--${coverMode}`}>
       <div className="article-intro-copy"><div className="article-detail-kickers"><span className="category">{post.category}</span></div><h1>{post.title}</h1>{post.excerpt && <p className="article-lede">{post.excerpt}</p>}{(post.series || post.tags.length > 0) && <div className="article-tags article-tags--intro">{post.series && <a className="article-series-link" href={`#/posts?series=${encodeURIComponent(post.series)}`}><FolderOpen size={15} />{post.series}</a>}{post.tags.map((tag) => <a href={`#/posts?tag=${encodeURIComponent(tag)}`} key={tag}><Hash size={15} />{tag}</a>)}</div>}<PostMeta post={post} showTags={false} stats={stats?.[post.slug]} /></div>
       {showDetailCover && <ZoomableImage src={post.image} alt={`${post.title}的文章封面`} showLightboxCaption={false} sizes={detailImageSizes} className="article-cover" triggerClassName="article-cover-frame" loading="eager" />}

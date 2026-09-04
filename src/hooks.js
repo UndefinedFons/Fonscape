@@ -98,7 +98,8 @@ function usePagination(items, pageSize, resetKey, family) {
       setPage(next);
       paginationPositions.set(storageKey, next);
       setLeaving(false);
-      window.requestAnimationFrame(() => topRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }));
+      const reducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
+      window.requestAnimationFrame(() => topRef.current?.scrollIntoView({ behavior: reducedMotion ? "auto" : "smooth", block: "start" }));
     }, 150);
   };
   return { page: safePage, pageItems, totalPages, leaving, topRef, changePage };

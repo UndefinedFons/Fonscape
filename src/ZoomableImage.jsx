@@ -29,13 +29,14 @@ export function ZoomableImage({
     if (!openRef.current || closingRef.current) return;
     closingRef.current = true;
     setClosing(true);
+    const reducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
     closeTimerRef.current = window.setTimeout(() => {
       openRef.current = false;
       closingRef.current = false;
       setOpen(false);
       setClosing(false);
       requestAnimationFrame(() => triggerRef.current?.focus());
-    }, 280);
+    }, reducedMotion ? 0 : 280);
   }, []);
   useEffect(() => { setFailed(false); }, [src]);
 
