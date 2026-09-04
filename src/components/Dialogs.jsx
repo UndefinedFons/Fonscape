@@ -7,6 +7,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { loadSearchIndex, siteConfig } from "../content/index.js";
 import { lockPageScroll } from "../lockPageScroll.js";
 import { go } from "../routeState.js";
+import { getSectionAvailability } from "../sectionAvailability.js";
 import { formatContentDate } from "../siteUtils.js";
 import { buildSearchItems, enabledSearchTypes, filterSearchItems, searchScopeOptions, searchScopeStyle } from "./searchModel.js";
 
@@ -34,8 +35,9 @@ export function SearchDialog({ onClose }) {
   }, [requestClose]);
   useEffect(() => () => window.clearTimeout(closeTimer.current), []);
   useEffect(() => lockPageScroll(), []);
-  const showPoems = siteConfig.showPoems === true;
-  const showMusic = siteConfig.showMusic === true;
+  const availability = getSectionAvailability(siteConfig);
+  const showPoems = availability.poems;
+  const showMusic = availability.music;
   const enabledTypes = useMemo(() => enabledSearchTypes({ showPoems, showMusic }), [showMusic, showPoems]);
   const [searchIndex, setSearchIndex] = useState({ entries: [], loading: true, error: "" });
   useEffect(() => {

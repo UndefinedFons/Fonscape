@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "version": "1.13.7",
+  "version": "1.14.0",
   "ownership": {
     "user": [
       ".env",
@@ -55,6 +55,7 @@
       "public/fonscape/**",
       "public/_headers",
       "public/_redirects",
+      "public/robots.txt",
       "scripts/**",
       "server/**",
       "src/**",

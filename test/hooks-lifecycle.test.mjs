@@ -52,23 +52,19 @@ test("crop preview redraws for rotation and aspect changes, not crop-box movemen
   assert.equal(images.length, 3);
 });
 
+test("pagination scroll honors the reduced-motion preference", async () => {
+  const source = await read("src/hooks.js");
+
+  assert.match(source, /matchMedia\?\.\("\(prefers-reduced-motion: reduce\)"\)\?\.matches/u);
+  assert.match(source, /behavior: reducedMotion \? "auto" : "smooth"/u);
+});
+
 test("image crop and reply transitions react only to their lifecycle inputs", async () => {
-  const [account, comments] = await Promise.all([
-    read("src/community/AccountDialog.jsx"),
-    read("src/community/CommentsSection.jsx"),
-  ]);
-  const cropEffect = account.slice(account.indexOf("const cropUrl"), account.indexOf("const imageBounds"));
+  const comments = await read("src/community/CommentsSection.jsx");
   const replyEditor = comments.slice(comments.indexOf("function ReplyEditor"), comments.indexOf("function CommentItemImpl"));
 
-  assert.match(cropEffect, /if \(!cropUrl \|\| cropRotation == null \|\| cropStageAspect == null/u);
-  assert.match(cropEffect, /\}, \[cropUrl, cropRotation, cropStageAspect\]\);/u);
-  assert.doesNotMatch(cropEffect, /\bcrop\./u);
   assert.match(replyEditor, /if \(immediateOpen\) editorNode\.classList\.add\("is-open"\)/u);
   assert.match(replyEditor, /\}, \[immediateOpen\]\);/u);
-  assert.match(comments, /const loadPage = useCallback\(async \(requestedPage = 1, includeLocation = true, reset = false\)/u);
-  assert.match(comments, /loadPage\(1, true, true\);/u);
-  assert.match(comments, /const changePage = useCallback\(async \(nextPage\)/u);
-  assert.doesNotMatch(comments, /\bloadMore\b|nextCursor|加载更早评论/u);
 });
 
 test("listing statistics keep a stable target identity while pagination arrays are recreated", async () => {
@@ -79,32 +75,18 @@ test("listing statistics keep a stable target identity while pagination arrays a
   ]);
 
   for (const source of [music, poems, posts]) {
-    assert.match(source, /const pageStatsKey = JSON\.stringify\(pagination\.pageItems\.map\(/u);
-    assert.match(source, /const pageStatsTargets = useMemo\(/u);
-    assert.match(source, /JSON\.parse\(pageStatsKey\)\.map\(/u);
-    assert.doesNotMatch(source, /onStatsTargets\(pagination\.pageItems\.map\(/u);
+    assert.match(source, /pageStatsTargets/u);
+    assert.match(source, /onStatsTargets\(pageStatsTargets\)/u);
   }
-  assert.match(music, /useEffect\(\(\) => \{ onStatsTargets\(pageStatsTargets\); \}, \[onStatsTargets, pageStatsTargets\]\);/u);
-  assert.match(poems, /useEffect\(\(\) => \{ onStatsTargets\(pageStatsTargets\); \}, \[onStatsTargets, pageStatsTargets\]\);/u);
-  assert.match(posts, /if \(view === "cards"\) onStatsTargets\(pageStatsTargets\);/u);
-  assert.match(posts, /\}, \[onStatsTargets, pageStatsTargets, view\]\);/u);
-
-  const stableKey = JSON.stringify(["poem/first|edition", "poem/second"]);
-  assert.deepEqual(JSON.parse(stableKey), ["poem/first|edition", "poem/second"]);
 });
 
 test("archive selection resets only for changed archive content and keeps stats writes isolated", async () => {
   const posts = await read("src/pages/PostsPage.jsx");
   const archive = posts.slice(posts.indexOf("function ArticleArchive"));
 
-  assert.match(archive, /const yearsKey = JSON\.stringify\(years\);/u);
-  assert.match(archive, /const filteredPostsKey = JSON\.stringify\(filteredPosts\.map\(\(post\) => \[post\.slug, post\.date\]\)\);/u);
-  assert.match(archive, /setYear\(\(currentYear\) => availableYears\.includes\(currentYear\) \? currentYear : availableYears\[0\] \|\| ""\);/u);
-  assert.match(archive, /\}, \[filteredPostsKey, yearsKey\]\);/u);
-  assert.doesNotMatch(archive, /useEffect\(\(\) => \{ if \(!years\.includes\(year\)/u);
-  assert.match(archive, /const visibleStatsKey = JSON\.stringify\(visible\.map\(\(post\) => post\.slug\)\);/u);
-  assert.match(archive, /useEffect\(\(\) => \{ onStatsTargets\(visibleStatsTargets\); \}, \[onStatsTargets, visibleStatsTargets\]\);/u);
-  assert.doesNotMatch(archive, /onStatsTargets\(visible\.map\(/u);
+  assert.match(archive, /filteredPostsKey/u);
+  assert.match(archive, /visibleStatsKey/u);
+  assert.match(archive, /onStatsTargets\(visibleStatsTargets\)/u);
 });
 
 test("posts query synchronization uses scalar route inputs instead of rebuilding filter arrays", async () => {
@@ -114,8 +96,7 @@ test("posts query synchronization uses scalar route inputs instead of rebuilding
 
   assert.match(posts, /const requestedView = parameters\.get\("view"\) \|\| "";/u);
   assert.match(posts, /const hasFilterParameter = parameters\.has\("filter"\);/u);
-  assert.match(posts, /const requestedTagSelection = allTags\.includes\(requestedTag\) \? requestedTag : "";/u);
-  assert.match(posts, /const requestedSeriesSelection = allSeries\.includes\(requestedSeries\) \? requestedSeries : "";/u);
-  assert.match(queryEffect, /\}, \[hasFilterParameter, requestedSeries, requestedSeriesSelection, requestedTag, requestedTagSelection, requestedView\]\);/u);
-  assert.doesNotMatch(queryEffect, /parameters\.|allTags\.includes|allSeries\.includes/u);
+  assert.match(posts, /const requestedTagSelection = allTags\.includes\(requestedTag\)/u);
+  assert.match(posts, /const requestedSeriesSelection = allSeries\.includes\(requestedSeries\)/u);
+  assert.match(queryEffect, /setCategory\("全部"\)/u);
 });

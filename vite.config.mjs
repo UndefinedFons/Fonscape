@@ -8,6 +8,8 @@ import { generateContentArtifacts } from "./scripts/generate-content-targets.mjs
 import { generateFontStylesheets } from "./scripts/generate-font-css.mjs";
 import { generateResponsiveImages } from "./scripts/generate-responsive-images.mjs";
 import { responsiveImageCandidates, responsiveImageUrl } from "./src/responsiveImages.ts";
+import { generateRssFeed } from "./scripts/generate-rss.mjs";
+import { normalizeSiteUrl } from "./src/siteUrl.js";
 
 function escapeAttribute(value) {
   return String(value).replaceAll("&", "&amp;").replaceAll('"', "&quot;").replaceAll("<", "&lt;");
@@ -29,6 +31,13 @@ export function localizeGoogleFontStylesheet(html) {
   return html
     .replace(/\s*<link\s+rel="preconnect"\s+href="https:\/\/fonts\.googleapis\.com"\s*\/?>/u, "")
     .replace(/([ \t]*)<link\s+rel="stylesheet"\s+href="https:\/\/fonts\.googleapis\.com\/css2\?[^"]+"\s*\/?>/u, (_match, indent) => `${indent}<style data-fonscape-critical-fonts>${criticalFontCss}</style>`);
+}
+
+export function applyRssMetadata(html, config = siteConfig) {
+  const siteUrl = normalizeSiteUrl(config.siteUrl);
+  if (!siteUrl || /rel="alternate"[^>]+type="application\/rss\+xml"/iu.test(html)) return html;
+  const link = `<link rel="alternate" type="application/rss+xml" title="${escapeAttribute(`${config.title || "博客"} RSS`)}" href="${escapeAttribute(`${siteUrl}/feed.xml`)}" />`;
+  return html.replace("</head>", `    ${link}\n  </head>`);
 }
 
 function markdownFiles(directory) {
@@ -76,7 +85,7 @@ function heroPreloadPlugin() {
   return {
     name: "fonscape-hero-preload",
     transformIndexHtml(html) {
-      const optimizedHtml = applySiteMetadata(localizeGoogleFontStylesheet(html));
+      const optimizedHtml = applyRssMetadata(applySiteMetadata(localizeGoogleFontStylesheet(html)));
       const homeHero = siteConfig.heroes?.home || {};
       const desktopImage = homeHero.image;
       const mobileImage = homeHero.mobileImage || desktopImage;
@@ -106,7 +115,7 @@ function contentMetadataPlugin() {
   const metadataPath = resolve(process.cwd(), "functions/_generated/content-metadata.js");
   let generation = Promise.resolve();
   const regenerate = () => {
-    generation = generation.then(() => Promise.all([generateContentArtifacts(), generateFontStylesheets(), generateResponsiveImages()]));
+    generation = generation.then(() => Promise.all([generateContentArtifacts(), generateFontStylesheets(), generateResponsiveImages(), generateRssFeed()]));
     return generation;
   };
   return {
@@ -139,9 +148,20 @@ export default defineConfig({
   },
   plugins: [contentMetadataPlugin(), react(), heroPreloadPlugin()],
   build: {
+    manifest: true,
     rollupOptions: {
       input: {
         main: resolve(process.cwd(), "index.html"),
+      },
+      output: {
+        onlyExplicitManualChunks: true,
+        manualChunks(id) {
+          const path = id.replaceAll("\\", "/");
+          const shared = path.match(/\/mermaid\/dist\/chunks\/mermaid\.core\/(chunk-[^/]+)\.mjs$/u);
+          if (shared) return `mermaid-${shared[1]}`;
+          if (path.includes("/@mermaid-js/parser/dist/")) return `mermaid-parser-${path.split("/").at(-1).replace(/\.mjs$/u, "")}`;
+          if (path.endsWith("/cytoscape/dist/cytoscape.esm.mjs")) return "mermaid-cytoscape";
+        },
       },
     },
   },

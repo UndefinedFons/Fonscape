@@ -14,6 +14,7 @@
   },
   "include": [
     "src/content/frontmatter.js",
+    "src/content/richFeatures.js",
     "src/components/searchModel.js",
     "src/heroImages.js",
     "src/pages/homeContent.js",
@@ -21,6 +22,7 @@
     "src/richContent.js",
     "src/responsiveImages.ts",
     "src/siteConfig.js",
+    "src/siteUrl.js",
     "src/siteUtils.js",
     "src/types.d.ts"
   ]

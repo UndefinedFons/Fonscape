@@ -4,12 +4,14 @@ import { useCommunity } from "./community/CommunityProvider.jsx";
 import { stopArticleAudio } from "./articleAudio.js";
 import { ArticleOutlinePopover, Header } from "./components/Header.jsx";
 import { Footer } from "./components/Footer.jsx";
-import { loadCollection, loadMusicReview, loadPoem, loadPost } from "./content/index.js";
+import { loadCollection, loadMusicReview, loadPoem, loadPost, siteConfig } from "./content/index.js";
 import { HomePage } from "./pages/HomePage.jsx";
 import { NotFound } from "./pages/NotFound.jsx";
 import { getGlassBackground, preloadHeroAssets, PRIMARY_HERO_PATHS } from "./heroImages.js";
-import { clearArticleIndexState, clearPaginationFamily, markPopNavigation, markPushNavigation, paginationFamily, parseHash, parseHashQuery, readNavigationType, routeScrollPositions } from "./routeState.js";
+import { clearArticleIndexState, clearPaginationFamily, consumeDetailSource, consumeNavigationType, formatRouteLocation, markPopNavigation, markPushNavigation, paginationFamily, parseHash, parseHashQuery, rememberDetailSource, replaceHashWithHome, routeScrollPositions } from "./routeState.js";
 import { ensureFullResponsiveImages } from "./responsiveImages.ts";
+import { getScrollBehavior, prefersReducedMotion, setRouteDocumentTitle } from "./navigation.js";
+import { isSiteRouteEnabled, normalizeRouteLocation, normalizeRoutePath } from "./sectionAvailability.js";
 
 const withFullFonts = (loader) => Promise.all([loader(), ensureFullFontStylesheet()]).then(([module]) => module);
 const withFullAssets = (loader) => Promise.all([loader(), ensureFullFontStylesheet(), ensureFullResponsiveImages()]).then(([module]) => module);
@@ -62,7 +64,8 @@ function ensureFullFontStylesheet() {
 }
 
 function routeModuleLoader(path) {
-  const routePath = String(path || "/").split("?")[0];
+  const routePath = normalizeRoutePath(path);
+  if (!isSiteRouteEnabled(routePath, siteConfig)) return null;
   if (routePath.startsWith("/post/")) return loadArticleModule;
   if (routePath.startsWith("/poem/")) return loadPoemModule;
   if (routePath.startsWith("/music/")) return loadMusicDetailModule;
@@ -83,7 +86,8 @@ function preloadRouteModule(path) {
 }
 
 function preloadRouteContent(path) {
-  const routePath = String(path || "/").split("?")[0];
+  const routePath = normalizeRoutePath(path);
+  if (!isSiteRouteEnabled(routePath, siteConfig)) return Promise.resolve(null);
   const decode = (value) => {
     try { return decodeURIComponent(value); } catch { return value; }
   };
@@ -104,6 +108,13 @@ function preloadRouteContent(path) {
 }
 
 export function preloadRoute(path) {
+  const routePath = normalizeRoutePath(path);
+  if (!isSiteRouteEnabled(routePath, siteConfig)) {
+    replaceHashWithHome();
+    setRouteDocumentTitle("/", siteConfig.title);
+    return Promise.resolve([null, null]);
+  }
+  setRouteDocumentTitle(routePath, siteConfig.title);
   const loader = routeModuleLoader(path);
   return Promise.all([loader ? loader() : null, preloadRouteContent(path)]);
 }
@@ -112,7 +123,7 @@ export function App() {
   const { viewer, openAccount, accountOpen, accountNotice, dismissAccountNotice } = useCommunity();
   const [route, setRoute] = useState(parseHash);
   const [routeQuery, setRouteQuery] = useState(parseHashQuery);
-  const routeRef = useRef(route);
+  const routeRef = useRef({ path: route, query: routeQuery });
   const pendingScrollRef = useRef(0);
   const [theme, setTheme] = useState(() => localStorage.getItem("theme") || "light");
   const [themeChanging, setThemeChanging] = useState(false);
@@ -185,13 +196,28 @@ export function App() {
       const anchor = event.target.closest?.('a[href^="#/"]');
       if (anchor?.hasAttribute("data-horizontal-drag")) return;
       if (anchor && !anchor.target) {
+        const sourceRoute = parseHash();
+        const sourceQuery = parseHashQuery();
+        const sourceLocation = formatRouteLocation(sourceRoute, sourceQuery);
+        const destinationLocation = normalizeRouteLocation(anchor.getAttribute("href")?.slice(1));
+        if (destinationLocation === sourceLocation) return;
+        routeRef.current = { path: sourceRoute, query: sourceQuery };
+        routeScrollPositions.set(sourceLocation, window.scrollY);
+        rememberDetailSource(destinationLocation, sourceLocation);
         markPushNavigation();
       }
     };
     const onHash = () => {
-      routeScrollPositions.set(routeRef.current, window.scrollY);
-      const nextRoute = parseHash();
-      const previousPaginationFamily = paginationFamily(routeRef.current);
+      const previousLocation = formatRouteLocation(routeRef.current.path, routeRef.current.query);
+      routeScrollPositions.set(previousLocation, window.scrollY);
+      const parsedRoute = parseHash();
+      const parsedQuery = parseHashQuery();
+      const enabled = isSiteRouteEnabled(parsedRoute, siteConfig);
+      const nextRoute = enabled ? parsedRoute : replaceHashWithHome();
+      const nextQuery = enabled ? parsedQuery : "";
+      const navigationType = consumeNavigationType();
+      consumeDetailSource(nextRoute, { preserveExisting: navigationType === "pop" });
+      const previousPaginationFamily = paginationFamily(routeRef.current.path);
       const nextPaginationFamily = paginationFamily(nextRoute);
       if (previousPaginationFamily !== nextPaginationFamily) {
         // Crossing between content families starts the destination listing fresh.
@@ -201,24 +227,32 @@ export function App() {
         if (nextPaginationFamily) clearPaginationFamily(nextPaginationFamily);
         if (previousPaginationFamily === "posts" || nextPaginationFamily === "posts") clearArticleIndexState();
       }
-      if (routeRef.current.startsWith("/post/") && !nextRoute.startsWith("/post/")) stopArticleAudio();
-      pendingScrollRef.current = readNavigationType() === "pop" ? (routeScrollPositions.get(nextRoute) || 0) : 0;
-      markPopNavigation();
-      routeRef.current = nextRoute;
+      if (routeRef.current.path.startsWith("/post/") && !nextRoute.startsWith("/post/")) stopArticleAudio();
+      const nextLocation = formatRouteLocation(nextRoute, nextQuery);
+      pendingScrollRef.current = navigationType === "pop" || navigationType === "restore"
+        ? (routeScrollPositions.get(nextLocation) || 0)
+        : 0;
+      routeRef.current = { path: nextRoute, query: nextQuery };
+      setRouteDocumentTitle(nextRoute, siteConfig.title);
       startTransition(() => {
         setRoute(nextRoute);
-        setRouteQuery(parseHashQuery());
+        setRouteQuery(nextQuery);
       });
       setMenuOpen(false);
     };
     document.addEventListener("click", markLinkNavigation, true);
     window.addEventListener("hashchange", onHash);
+    window.addEventListener("popstate", markPopNavigation);
     return () => {
       document.removeEventListener("click", markLinkNavigation, true);
       window.removeEventListener("hashchange", onHash);
+      window.removeEventListener("popstate", markPopNavigation);
       history.scrollRestoration = previousScrollRestoration;
     };
   }, []);
+  useLayoutEffect(() => {
+    setRouteDocumentTitle(route, siteConfig.title);
+  }, [route]);
   useLayoutEffect(() => {
     const top = pendingScrollRef.current;
     let frame = 0;
@@ -286,12 +320,13 @@ export function App() {
     let idleId = null;
     let timerId = null;
     const compact = window.matchMedia("(max-width:760px)").matches;
-    const pendingPaths = PRIMARY_HERO_PATHS.filter((path) => path !== routeRef.current);
+    const pendingPaths = PRIMARY_HERO_PATHS.filter((path) => isSiteRouteEnabled(path, siteConfig) && path !== routeRef.current.path);
     const preloadLinkedRoute = (event) => {
       const anchor = event.target.closest?.('a[href^="#/"]');
       if (!anchor) return;
       const path = anchor.getAttribute("href")?.slice(1);
       if (!path) return;
+      if (!isSiteRouteEnabled(path, siteConfig)) return;
       preloadHeroAssets(path, compact);
       preloadRouteModule(path);
       preloadRouteContent(path);
@@ -327,10 +362,19 @@ export function App() {
   }, []);
   const isSetupRoute = route === "/admin/setup";
   const isRetiredAdminRoute = route === "/admin" || (route.startsWith("/admin/") && !isSetupRoute);
+  const routeEnabled = isSiteRouteEnabled(route, siteConfig);
+  useEffect(() => {
+    if (routeEnabled) return;
+    replaceHashWithHome();
+    routeRef.current = { path: "/", query: "" };
+    setRoute("/");
+    setRouteQuery("");
+  }, [routeEnabled]);
   useEffect(() => {
     if (isRetiredAdminRoute) window.location.replace("#/");
   }, [isRetiredAdminRoute]);
   const content = useMemo(() => {
+    if (!routeEnabled) return <HomePage stats={contentStats.post || {}} onStatsTargets={requestContentStats} />;
     if (route.startsWith("/post/")) return <ArticlePage slug={route.replace("/post/", "")} stats={contentStats.post || {}} onView={recordContentView} onOutline={setActivePostOutline} onStatsTargets={requestContentStats} />;
     if (route.startsWith("/poem/")) return <PoemPage slug={route.replace("/poem/", "")} stats={contentStats.poem || {}} onView={recordContentView} onStatsTargets={requestContentStats} />;
     if (route.startsWith("/music/")) return <MusicDetailPage path={route.replace("/music/", "")} stats={contentStats.music || {}} onView={recordContentView} onStatsTargets={requestContentStats} />;
@@ -343,7 +387,7 @@ export function App() {
     if (route === "/admin/setup") return <AdminSetupPage />;
     if (isRetiredAdminRoute) return <HomePage stats={contentStats.post} />;
     return <NotFound />;
-  }, [route, routeQuery, contentStats, recordContentView, requestContentStats, isRetiredAdminRoute]);
+  }, [route, routeQuery, contentStats, recordContentView, requestContentStats, isRetiredAdminRoute, routeEnabled]);
   const isDetailRoute = route.startsWith("/post/") || route.startsWith("/poem/") || route.startsWith("/music/");
   const hasArticleOutline = activePostOutline.length > 1;
   useEffect(() => {
@@ -407,7 +451,7 @@ export function App() {
     <span className="global-glass-backdrop" aria-hidden="true" />
     <span className="global-glass-veil" aria-hidden="true" />
     {!isSetupRoute && <Header route={route} theme={theme} menuOpen={menuOpen} onMenu={() => { setArticleOutlineOpen(false); setMenuOpen((value) => !value); }} onTheme={toggleTheme} onSearch={() => { preloadDialogs(); setSearchOpen(true); }} onSearchIntent={preloadDialogs} onSettings={() => { preloadDialogs(); setSettingsOpen(true); }} onSettingsIntent={preloadDialogs} viewer={viewer} onAccount={() => requestAccount(viewer ? "profile" : "login")} onAccountIntent={preloadAccount} hasArticleOutline={hasArticleOutline} articleOutlineOpen={articleOutlineOpen} onArticleOutline={() => { setMenuOpen(false); setArticleOutlineOpen((value) => !value); }} onCloseArticleOutline={() => setArticleOutlineOpen(false)} />}
-    {!isSetupRoute && hasArticleOutline && <ArticleOutlinePopover items={activePostOutline} open={articleOutlineOpen} activeId={activeOutlineId || activePostOutline[0]?.id} onClose={() => setArticleOutlineOpen(false)} onSelect={(item) => { document.getElementById(item.id)?.scrollIntoView({ behavior: "smooth", block: "start" }); setActiveOutlineId(item.id); setArticleOutlineOpen(false); }} />}
+    {!isSetupRoute && hasArticleOutline && <ArticleOutlinePopover items={activePostOutline} open={articleOutlineOpen} activeId={activeOutlineId || activePostOutline[0]?.id} onClose={() => setArticleOutlineOpen(false)} onSelect={(item) => { document.getElementById(item.id)?.scrollIntoView({ behavior: getScrollBehavior(prefersReducedMotion()), block: "start" }); setActiveOutlineId(item.id); setArticleOutlineOpen(false); }} />}
     <div className={isDetailRoute ? "route-view route-view--detail" : "route-view"} key={route}>{content}</div>{!isSetupRoute && <><Footer />{searchOpen && <Suspense fallback={null}><SearchDialog onClose={() => setSearchOpen(false)} /></Suspense>}{settingsOpen && <Suspense fallback={null}><SettingsDialog glassEnabled={glassEnabled} onGlassChange={handleGlassChange} onClose={() => setSettingsOpen(false)} /></Suspense>}{(accountDialogRequested || accountOpen) && <Suspense fallback={null}><AccountDialog /></Suspense>}{accountNotice && <aside className="community-account-notice" role="alert"><div><strong>账户通知</strong><p>{accountNotice}</p></div><button type="button" onClick={dismissAccountNotice}>知道了</button></aside>}</>}
   </div>;
 }

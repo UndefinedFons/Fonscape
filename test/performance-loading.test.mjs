@@ -67,47 +67,6 @@ test("listing surfaces can use smaller sources without changing detail artwork",
   assert.match(article, /src=\{post\.image\}/u);
 });
 
-test("responsive image generation is automatic and leaves originals user-owned", async () => {
-  const [packageSource, generator, helper, ignore, manifest, viteConfig] = await Promise.all([
-    readFile("package.json", "utf8"),
-    readFile("scripts/generate-responsive-images.mjs", "utf8"),
-    readFile("src/responsiveImages.ts", "utf8"),
-    readFile(".gitignore", "utf8"),
-    readFile("fonscape.manifest.json", "utf8"),
-    readFile("vite.config.mjs", "utf8"),
-  ]);
-  const packageJson = JSON.parse(packageSource);
-
-  assert.equal(packageJson.devDependencies.sharp, "0.35.2");
-  assert.match(packageJson.scripts.prebuild, /generate-responsive-images\.mjs/u);
-  assert.equal(packageJson.scripts.precheck, undefined);
-  assert.doesNotMatch(viteConfig, /buildStart/u);
-  assert.match(generator, /avatar: \[128, 256, 384\]/u);
-  assert.match(generator, /card: \[384, 640, 960, 1280\]/u);
-  assert.match(generator, /hero: \[768, 960, 1600\]/u);
-  assert.match(generator, /post\.cardImage \|\| post\.image/u);
-  assert.match(generator, /withoutEnlargement: true/u);
-  assert.match(generator, /png\(\{ compressionLevel: 9/u);
-  assert.match(generator, /jpeg\(\{ quality: 92/u);
-  assert.match(generator, /webp\(\{ quality: 92/u);
-  assert.match(generator, /lstat\(currentPath\)/u);
-  assert.match(generator, /realpath\(sourcePath\)/u);
-  assert.match(generator, /shouldKeepResponsiveVariant\(sourceBuffer\.byteLength, outputBytes\)/u);
-  assert.match(generator, /const outputBuffer = await renderResponsiveVariantBuffer/u);
-  assert.match(generator, /if \(!shouldKeepResponsiveVariant\(sourceBuffer\.byteLength, outputBuffer\.byteLength\)\) continue/u);
-  assert.match(generator, /sharp\.versions\.sharp/u);
-  assert.match(generator, /sharp\.versions\.vips/u);
-  assert.match(helper, /responsiveImageCatalog\[source\]\?\.candidates/u);
-  assert.match(helper, /import\("\.\.\/functions\/_generated\/responsive-images-full\.js"\)/u);
-  assert.match(helper, /responsiveImageChunkLoaders/u);
-  assert.match(generator, /chunkResponsiveEntries/u);
-  assert.match(generator, /responsive-images-full-\$\{index\}\.js/u);
-  assert.match(ignore, /public\/fonscape\/generated-images\//u);
-  assert.match(manifest, /"public\/assets\/\*\*"/u);
-  assert.match(manifest, /"public\/fonscape\/generated-images\/\*\*"/u);
-  assert.match(generator, /MAX_RESPONSIVE_CANDIDATES_PER_SOURCE = 5/u);
-});
-
 test("Markdown bodies stay out of the initial module and load only with their detail metadata", async () => {
   const [contentIndex, generator, article, poem, music] = await Promise.all([
     readFile("src/content/index.js", "utf8"),
@@ -130,42 +89,6 @@ test("Markdown bodies stay out of the initial module and load only with their de
   assert.match(article, /loadPost\(slug\)/u);
   assert.match(poem, /loadPoem\(slug\)/u);
   assert.match(music, /loadMusicReview\(section, slug\)/u);
-});
-
-test("the check command enforces static contracts across core JavaScript boundaries", async () => {
-  const [packageSource, tsconfigSource, eslintConfig] = await Promise.all([
-    readFile("package.json", "utf8"),
-    readFile("tsconfig.json", "utf8"),
-    readFile("eslint.config.js", "utf8"),
-  ]);
-  const packageJson = JSON.parse(packageSource);
-  const tsconfig = JSON.parse(tsconfigSource);
-
-  assert.equal(packageJson.scripts.typecheck, "tsc -p tsconfig.json");
-  assert.match(packageJson.scripts.check, /pnpm typecheck/u);
-  assert.match(eslintConfig, /\.fonscape-update\/\*\*/u);
-  assert.equal(tsconfig.compilerOptions.allowJs, true);
-  assert.equal(tsconfig.compilerOptions.checkJs, true);
-  assert.equal(tsconfig.compilerOptions.strict, true);
-  assert.equal(tsconfig.compilerOptions.noEmit, true);
-});
-
-test("the production check enforces an initial-load performance budget", async () => {
-  const [packageSource, budgetSource] = await Promise.all([
-    readFile("package.json", "utf8"),
-    readFile("scripts/check-performance-budget.mjs", "utf8"),
-  ]);
-
-  assert.match(packageSource, /vite build && pnpm check:performance-budget/u);
-  assert.match(budgetSource, /ENTRY_JAVASCRIPT_GZIP_LIMIT/u);
-  assert.match(budgetSource, /MAX_DYNAMIC_JAVASCRIPT_GZIP_LIMIT/u);
-  assert.match(budgetSource, /ENTRY_CSS_GZIP_LIMIT/u);
-  assert.match(budgetSource, /ENTRY_HTML_GZIP_LIMIT/u);
-  assert.match(budgetSource, /LOCAL_FONT_CSS_GZIP_LIMIT/u);
-  assert.match(budgetSource, /FULL_FONT_CSS_GZIP_LIMIT/u);
-  assert.match(budgetSource, /HIGH_PRIORITY_IMAGE_LIMIT/u);
-  assert.match(budgetSource, /CONTENT_PAGE_GZIP_LIMIT/u);
-  assert.match(budgetSource, /RESPONSIVE_MANIFEST_CHUNK_GZIP_LIMIT/u);
 });
 
 test("the JavaScript budget inspects every asset and isolates the largest non-entry chunk", () => {

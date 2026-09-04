@@ -1,0 +1,52 @@
+.rich-article blockquote.article-callout {
+  display:grid;
+  grid-template-columns:minmax(0,1fr);
+  gap:5px;
+  margin:1.45em 0;
+  padding:11px 15px 12px 16px;
+  overflow:hidden;
+  border:0;
+  border-left:3px solid var(--callout-color,var(--accent));
+  border-radius:0 10px 10px 0;
+  background:var(--callout-background,var(--surface-soft));
+  color:var(--text);
+}
+.rich-article blockquote.article-callout>header { display:flex; align-items:center; gap:7px; color:color-mix(in srgb,var(--callout-color,var(--accent)) 45%,var(--text)); font-size:.9em; letter-spacing:.06em; line-height:1.4; }
+.rich-article blockquote.article-callout>header svg { flex:none; }
+.rich-article blockquote.article-callout>header strong { color:inherit; font-weight:700; }
+.rich-article blockquote.article-callout>div { min-width:0; color:var(--text); font-size:.94em; line-height:1.75; }
+.rich-article blockquote.article-callout>div>p { margin:.2em 0; }
+.rich-article blockquote.article-callout>div>p:first-child { margin-top:0; }
+.rich-article blockquote.article-callout>div>p:last-child { margin-bottom:0; }
+.rich-article blockquote.article-callout--note { --callout-color:var(--blue); --callout-background:color-mix(in srgb,var(--blue) 10%,var(--surface)); }
+.rich-article blockquote.article-callout--tip { --callout-color:color-mix(in srgb,#5caeb0 72%,var(--accent) 28%); --callout-background:color-mix(in srgb,var(--callout-color) 9%,var(--surface)); }
+.rich-article blockquote.article-callout--important { --callout-color:color-mix(in srgb,#d43f72 74%,var(--accent) 26%); --callout-background:color-mix(in srgb,var(--callout-color) 9%,var(--surface)); }
+.rich-article blockquote.article-callout--warning { --callout-color:color-mix(in srgb,#d68a59 72%,var(--accent) 28%); --callout-background:color-mix(in srgb,var(--callout-color) 10%,var(--surface)); }
+.rich-article blockquote.article-callout--caution { --callout-color:color-mix(in srgb,#d08b58 60%,var(--accent) 40%); --callout-background:color-mix(in srgb,var(--callout-color) 9%,var(--surface)); }
+
+.rich-article blockquote.article-quote {
+  --callout-color:#92929c;
+  --callout-background:color-mix(in srgb,var(--callout-color) 10%,var(--surface));
+}
+
+.mermaid-diagram { width:100%; min-width:0; margin:2.3em 0; }
+.mermaid-diagram--ready { overflow-x:auto; overscroll-behavior-inline:contain; padding:4px 0; scrollbar-width:thin; scrollbar-color:color-mix(in srgb,var(--accent) 48%,var(--line)) transparent; }
+.mermaid-diagram--ready::-webkit-scrollbar { height:6px; }
+.mermaid-diagram--ready::-webkit-scrollbar-track { background:transparent; }
+.mermaid-diagram--ready::-webkit-scrollbar-thumb { border-radius:999px; background:color-mix(in srgb,var(--accent) 48%,var(--line)); }
+.mermaid-diagram--ready::-webkit-scrollbar-thumb:hover { background:var(--accent); }
+.mermaid-diagram--ready svg { display:block; min-width:0; max-width:none; height:auto; margin:0 auto; }
+.mermaid-diagram--ready:focus-visible { outline:2px solid var(--accent); outline-offset:4px; border-radius:8px; }
+.mermaid-diagram--loading,.mermaid-diagram--error { display:grid; gap:8px; }
+.mermaid-diagram--loading figcaption,.mermaid-diagram--error figcaption { color:var(--muted); font-size:11px; text-align:center; }
+.mermaid-source { max-width:100%; margin:0; overflow:auto; padding:16px 18px; border:1px dashed color-mix(in srgb,var(--accent) 35%,var(--line)); border-radius:14px; background:var(--surface-soft); color:var(--muted); font:400 12px/1.7 ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace; white-space:pre; }
+.mermaid-source code { font:inherit; }
+
+.rich-article .katex { font-size:1.04em; }
+.rich-article .katex-display { max-width:100%; margin:2em 0; overflow-x:auto; overflow-y:hidden; padding:4px 0 8px; overscroll-behavior-inline:contain; scrollbar-width:thin; }
+.rich-article .katex-display>.katex { min-width:max-content; }
+
+@media (max-width:760px) {
+  .rich-article blockquote.article-callout { margin-block:1.25em; padding:10px 13px 11px 14px; }
+  .mermaid-diagram,.rich-article .katex-display { margin-block:1.8em; }
+}

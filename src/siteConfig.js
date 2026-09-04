@@ -1,4 +1,5 @@
 import configuredSite from "../fonscape.config.js";
+import { isSiteRouteEnabled as isConfiguredSiteRouteEnabled } from "./sectionAvailability.js";
 
 export const DEFAULT_POST_CATEGORIES = Object.freeze(["随笔", "评谈", "记录", "笔记", "指南"]);
 
@@ -67,14 +68,20 @@ const allNavItems = [
 ];
 
 /**
+ * @param {string} path
+ * @param {Partial<import("./types.js").SiteConfig>} [config]
+ * @returns {boolean}
+ */
+export function isSiteRouteEnabled(path, config = siteConfig) {
+  return isConfiguredSiteRouteEnabled(path, config);
+}
+
+/**
  * @param {Partial<import("./types.js").SiteConfig>} [config]
  * @returns {Array<[string, string]>}
  */
 export function getNavItems(config = siteConfig) {
-  return allNavItems.filter(([path]) => (
-    (path !== "/poems" || config.showPoems === true)
-    && (path !== "/music" || config.showMusic === true)
-  ));
+  return allNavItems.filter(([path]) => isSiteRouteEnabled(path, config));
 }
 
 export const navItems = getNavItems();

@@ -8,6 +8,9 @@ const DIST_ROOT = resolve(process.cwd(), "dist");
 const ENTRY_HTML = resolve(DIST_ROOT, "index.html");
 const ENTRY_JAVASCRIPT_GZIP_LIMIT = 112 * 1024;
 const MAX_DYNAMIC_JAVASCRIPT_GZIP_LIMIT = 96 * 1024;
+// Mermaid ships its parser and graph engine as indivisible vendor modules.
+// Only these lazy chunks have a separate cap; application chunks retain 96 KiB.
+const MERMAID_ENGINE_GZIP_LIMIT = 160 * 1024;
 const ENTRY_CSS_GZIP_LIMIT = 42 * 1024;
 const ENTRY_HTML_GZIP_LIMIT = 52 * 1024;
 const LOCAL_FONT_CSS_GZIP_LIMIT = 48 * 1024;
@@ -68,6 +71,13 @@ function formatAssetPath(path) {
   return relative(DIST_ROOT, path).split("\\").join("/");
 }
 
+function dynamicJavaScriptLimit(path) {
+  const name = path.split(/[\\/]/u).at(-1) || "";
+  return /^mermaid-(?:cytoscape|parser-chunk-[A-Z0-9]+)-[\w-]+\.js$/u.test(name)
+    ? MERMAID_ENGINE_GZIP_LIMIT
+    : MAX_DYNAMIC_JAVASCRIPT_GZIP_LIMIT;
+}
+
 export function checkPerformanceBudget() {
   if (!existsSync(ENTRY_HTML)) throw new Error("缺少 dist/index.html，请先运行生产构建。");
   const html = readFileSync(ENTRY_HTML, "utf8");
@@ -104,8 +114,24 @@ export function checkPerformanceBudget() {
   const failures = [];
   if (htmlGzip > ENTRY_HTML_GZIP_LIMIT) failures.push(`首页 HTML gzip ${formatKiB(htmlGzip)} 超过 ${formatKiB(ENTRY_HTML_GZIP_LIMIT)}`);
   if (scriptGzip > ENTRY_JAVASCRIPT_GZIP_LIMIT) failures.push(`首页 JS gzip ${formatKiB(scriptGzip)} 超过 ${formatKiB(ENTRY_JAVASCRIPT_GZIP_LIMIT)}`);
-  if (largestDynamic && largestDynamic.gzip > MAX_DYNAMIC_JAVASCRIPT_GZIP_LIMIT) {
-    failures.push(`最大非入口动态 JS ${formatAssetPath(largestDynamic.path)} gzip ${formatKiB(largestDynamic.gzip)} 超过 ${formatKiB(MAX_DYNAMIC_JAVASCRIPT_GZIP_LIMIT)} 长期预算`);
+  for (const asset of javascriptAssets.filter(({ path }) => path !== scriptPath)) {
+    const limit = dynamicJavaScriptLimit(asset.path);
+    if (asset.gzip > limit) failures.push(`非入口动态 JS ${formatAssetPath(asset.path)} gzip ${formatKiB(asset.gzip)} 超过 ${formatKiB(limit)} 预算`);
+  }
+  const manifestPath = resolve(DIST_ROOT, ".vite/manifest.json");
+  if (!existsSync(manifestPath)) failures.push("缺少构建 manifest，无法核对首页静态依赖。");
+  else {
+    const manifest = JSON.parse(readFileSync(manifestPath, "utf8"));
+    const visited = new Set();
+    const visit = (key) => {
+      if (visited.has(key)) return;
+      visited.add(key);
+      const chunk = manifest[key];
+      if (!chunk) return;
+      if (/(?:^|\/)mermaid-/u.test(chunk.file)) failures.push(`Mermaid 资源进入首页静态依赖：${chunk.file}`);
+      for (const dependency of chunk.imports || []) visit(dependency);
+    };
+    for (const [key, chunk] of Object.entries(manifest)) if (chunk.isEntry) visit(key);
   }
   if (styleGzip > ENTRY_CSS_GZIP_LIMIT) failures.push(`首页 CSS gzip ${formatKiB(styleGzip)} 超过 ${formatKiB(ENTRY_CSS_GZIP_LIMIT)}`);
   if (fontStyleGzip > LOCAL_FONT_CSS_GZIP_LIMIT) failures.push(`本地字体 CSS gzip ${formatKiB(fontStyleGzip)} 超过 ${formatKiB(LOCAL_FONT_CSS_GZIP_LIMIT)}`);
