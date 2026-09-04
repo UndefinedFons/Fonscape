@@ -10,7 +10,7 @@
 
 ## 示例界面
 
-以下截图来自 [Fonstage](https://fonstage.space/)，一个基于 Fonscape 构建的实际个人博客。桌面首页集中展示头图、导航、作者信息与置顶内容。
+以下截图来自 Fonstage，一个基于 Fonscape 构建的实际个人博客。桌面首页集中展示头图、导航、作者信息与置顶内容。
 
 <p align="center">
   <a href="https://fonstage.space/"><img src="./.github/assets/fonstage-desktop.webp" width="100%" alt="Fonstage 的 Fonscape 桌面首页，展示头图导航、作者卡与置顶文章"></a>
@@ -48,7 +48,7 @@ Fonscape 把公开内容与运行时数据分开管理：
 
 只需要一个 GitHub 账号即可跑通部署全流程：Cloudflare 与 Vercel 都支持使用 GitHub 登录，点击按钮后可依次完成授权、项目创建和首次部署，不必预先准备另一套平台登录信息。
 
-两种部署方式的表单都只要求填写自行生成的 `ADMIN_BOOTSTRAP_TOKEN`。部署完成后，打开 `/admin/setup` 并使用同一令牌创建首位管理员；初始化成功后，该令牌将永久失效。平台差异和部署后检查见 [使用指南](./GUIDE.md#部署)。
+两种部署方式的表单都只要求填写自行生成的 `ADMIN_BOOTSTRAP_TOKEN`。部署完成后，打开 `/admin/setup` 并使用同一令牌创建首位管理员；初始化成功后，该令牌将永久失效。
 
 ### 本地运行
 
@@ -60,18 +60,18 @@ pnpm install --frozen-lockfile
 pnpm dev
 ```
 
-站点资料、作者信息、页面文案、内容板块显示开关和头图从 [`fonscape.config.js`](./fonscape.config.js) 读取。小诗与音乐默认隐藏；如需显示，可在仓库根目录配置：
+站点资料、作者信息、页面文案、内容板块显示开关和头图从 `fonscape.config.js` 读取。小诗与音乐默认隐藏；如需显示，可在仓库根目录配置：
 
 ```js
 showPoems: true,
 showMusic: false,
 ```
 
-各板块开关可按需自由组合，显示范围见 [使用指南](./GUIDE.md#小诗与音乐板块显示开关)。
+各板块开关可按需自由组合。
 
-在 `fonscape.config.js` 中填写正式站点地址 `siteUrl`（例如 `https://example.com`）后，构建会生成 `/feed.xml` 并添加 RSS 发现链接。`siteUrl` 留空时不生成订阅源。正文的[提示块](./GUIDE.md#提示块)、[数学公式](./GUIDE.md#数学公式)和 [Mermaid 图表](./GUIDE.md#mermaid-图表)写法见使用指南。
+在 `fonscape.config.js` 中填写正式站点地址 `siteUrl`（例如 `https://example.com`）后，构建会生成 `/feed.xml` 并添加 RSS 发现链接。`siteUrl` 留空时不生成订阅源。
 
-文章默认提供随笔、评谈、记录、笔记与指南五个分类；名称、数量和顺序可通过 `postCategories` 自定义。配置方法与文章 `category` 的对应规则见 [文章分类](./GUIDE.md#文章分类)。
+文章默认提供随笔、评谈、记录、笔记与指南五个分类；名称、数量和顺序可通过 `postCategories` 自定义。
 
 完成基础配置后，在 `src/content/posts/hello-world.md` 创建第一篇文章：
 
@@ -91,9 +91,9 @@ date: "2026-01-01T12:00"
 pnpm check
 ```
 
-文章、小诗与音乐手记的字段、站点资料、资源路径和环境变量统一收录在 [使用指南](./GUIDE.md)。
+配置说明、内容字段、正文语法与部署步骤统一收录在 [使用指南](./GUIDE.md)。
 
-开发新板块、设置项或图片入口时，请同时遵守 [维护与功能扩展约束](./GUIDE.md#维护与功能扩展约束)，让功能接入统一内容分块、性能预算与共享组件体系，避免形成平行架构和重复逻辑。
+开发新板块、设置项或图片入口时，请同时遵守 使用指南中的维护与功能扩展约束，让功能接入统一内容分块、性能预算与共享组件体系，避免形成平行架构和重复逻辑。
 
 <details>
 <summary>常用命令</summary>
@@ -122,7 +122,7 @@ pnpm fonscape update --apply
 pnpm check
 ```
 
-它会区分用户文件、主题文件、合并文件与迁移历史，并在应用前生成本地备份。完整流程见 [使用指南](./GUIDE.md#升级)；版本变化与特殊注意事项见 [Releases](https://github.com/UndefinedFons/Fonscape/releases)。
+它会区分用户文件、主题文件、合并文件与迁移历史，并在应用前生成本地备份。完整流程见使用指南；版本变化见 [更新说明](https://github.com/UndefinedFons/Fonscape/releases)。
 
 ## 鸣谢
 
