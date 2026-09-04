@@ -232,7 +232,6 @@ export function App() {
       pendingScrollRef.current = navigationType === "pop" || navigationType === "restore"
         ? (routeScrollPositions.get(nextLocation) || 0)
         : 0;
-      markPopNavigation();
       routeRef.current = { path: nextRoute, query: nextQuery };
       setRouteDocumentTitle(nextRoute, siteConfig.title);
       startTransition(() => {

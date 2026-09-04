@@ -55,11 +55,24 @@ const paginationPositions = new Map();
 const ARTICLE_INDEX_DEFAULTS = { category: "全部", tag: "", series: "", view: "cards" };
 let articleIndexState = { ...ARTICLE_INDEX_DEFAULTS };
 /** @type {"push" | "pop" | "restore"} */
-let nextRouteNavigationType = "pop";
+let nextRouteNavigationType = "push";
 // A hash assignment can emit popstate in some environments. Keep the
 // explicit click/back marker until hashchange consumes it so that such a
 // popstate cannot turn a push or restore into a scroll-restoring navigation.
 let programmaticNavigationPending = false;
+const HISTORY_ENTRY_KEY = "fonscapeRouteEntry";
+let historyEntrySequence = 0;
+let currentHistoryEntry = "";
+
+function recordHistoryEntry(preserveExisting = false) {
+  if (typeof window === "undefined" || typeof window.history?.replaceState !== "function") return;
+  const state = window.history.state || {};
+  currentHistoryEntry = preserveExisting && typeof state[HISTORY_ENTRY_KEY] === "string"
+    ? state[HISTORY_ENTRY_KEY]
+    : `${Date.now()}-${++historyEntrySequence}`;
+  window.history.replaceState({ ...state, [HISTORY_ENTRY_KEY]: currentHistoryEntry }, "");
+}
+recordHistoryEntry(true);
 /** @param {string} path */
 function paginationFamily(path) {
   const route = normalizeRoutePath(path);
@@ -137,7 +150,7 @@ function go(path, options = {}) {
     nextRouteNavigationType = "push";
     programmaticNavigationPending = true;
     replaceHashWithHome({ notify: true });
-    nextRouteNavigationType = "pop";
+    nextRouteNavigationType = "push";
     programmaticNavigationPending = false;
     return;
   }
@@ -162,14 +175,21 @@ function markPushNavigation() {
   nextRouteNavigationType = "push";
   programmaticNavigationPending = true;
 }
-function markPopNavigation() {
+/** @param {PopStateEvent} [event] */
+function markPopNavigation(event) {
   if (programmaticNavigationPending) return;
-  nextRouteNavigationType = "pop";
+  // A new hash entry can also emit popstate. Only an existing, different
+  // history entry confirms Back/Forward traversal.
+  const entry = event?.state?.[HISTORY_ENTRY_KEY];
+  nextRouteNavigationType = !event || (typeof entry === "string" && entry !== currentHistoryEntry)
+    ? "pop" : "push";
 }
 function readNavigationType() { return nextRouteNavigationType; }
 function consumeNavigationType() {
   const navigationType = nextRouteNavigationType;
   programmaticNavigationPending = false;
+  nextRouteNavigationType = "push";
+  recordHistoryEntry(navigationType === "pop");
   return navigationType;
 }
 

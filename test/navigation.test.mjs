@@ -104,3 +104,18 @@ test("popstate cannot override explicit push or restore markers before hashchang
     else globalThis.window = previousWindow;
   }
 });
+
+
+test("direct hash entries discard stale detail sources after history traversal", () => {
+  rememberDetailSource("/post/revisited", "/posts?tag=reading");
+  consumeDetailSource("/post/revisited");
+  markPopNavigation();
+  assert.equal(consumeNavigationType(), "pop");
+  assert.equal(consumeNavigationType(), "push");
+  // Browsers can emit popstate with null state for a newly assigned hash.
+  markPopNavigation(/** @type {PopStateEvent} */ ({ state: null }));
+  const navigationType = consumeNavigationType();
+  assert.equal(navigationType, "push");
+  consumeDetailSource("/post/revisited", { preserveExisting: navigationType === "pop" });
+  assert.equal(getDetailReturnRoute("/post/revisited"), null);
+});
