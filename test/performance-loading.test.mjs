@@ -37,11 +37,12 @@ test("route and feature surfaces stay out of the initial module", async () => {
   assert.doesNotMatch(app, /import .*pages\/(?:ArticlePage|PostsPage|PoemsPage|PoemPage|MusicPage|AboutPage|FriendsPage|AdminSetupPage)\.jsx/u);
   assert.doesNotMatch(app, /import .*community\/AccountDialog\.jsx/u);
   assert.doesNotMatch(app, /import .*components\/Dialogs\.jsx/u);
-  assert.match(routing, /useTransition\(\)/u);
-  assert.match(routing, /startNavigation\(\(\) =>/u);
-  assert.match(app, /route-loading-indicator/u);
-  assert.match(app, /DialogLoading/u);
-  assert.match(main, /React\.Suspense fallback=\{<InitialRouteLoading \/>\}/u);
+  assert.match(routing, /startTransition\(\(\) =>/u);
+  assert.doesNotMatch(routing, /useTransition\(\)|navigationPending/u);
+  assert.doesNotMatch(app, /route-loading-indicator|DialogLoading|正在打开/u);
+  assert.match(app, /<Suspense fallback=\{null\}>/u);
+  assert.match(main, /React\.Suspense fallback=\{null\}/u);
+  assert.doesNotMatch(main, /InitialRouteLoading|正在打开/u);
   assert.match(main, /preloadRoute\(initialRoute\)/u);
   assert.match(main, /render\(\);/u);
 });
@@ -72,6 +73,8 @@ test("navigation intent preloads the matching route module", async () => {
   assert.match(routes, /loadPost\(decodeRoutePath\(routePath\.slice\("\/post\/"\.length\)\)\)\.catch/u);
   assert.match(app, /document\.addEventListener\("focusin", preloadLinkedRoute\)/u);
   assert.match(app, /document\.addEventListener\("touchstart", preloadLinkedRoute/u);
+  assert.match(app, /for \(const path of PRIMARY_HERO_PATHS\)/u);
+  assert.match(app, /preloadRouteModule\(path\);\s*preloadRouteContent\(path\);/u);
 });
 
 test("listing and detail images wait for source-specific responsive metadata", async () => {

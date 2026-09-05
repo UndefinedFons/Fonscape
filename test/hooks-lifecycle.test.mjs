@@ -59,17 +59,37 @@ test("pagination scroll honors the reduced-motion preference", async () => {
   assert.match(source, /behavior: reducedMotion \? "auto" : "smooth"/u);
 });
 
-test("pagination and article index selections update without exit-animation timers", async () => {
+test("pagination and article index keep the established exit animations", async () => {
   const [hooks, posts] = await Promise.all([
     read("src/hooks.js"),
     read("src/pages/PostsPage.jsx"),
   ]);
   const pagination = hooks.slice(hooks.indexOf("function usePagination"));
 
-  assert.doesNotMatch(pagination, /setTimeout/u);
-  assert.doesNotMatch(posts, /setTimeout\(clear, 260\)|setTimeout\(\(\) => \{\s*if \(nextView/u);
-  assert.match(posts, /setView\(nextView\);/u);
-  assert.match(posts, /setYear\(nextYear\);\s*setMonth\(nextMonth\);/u);
+  assert.match(pagination, /setLeaving\(true\);/u);
+  assert.match(pagination, /window\.setTimeout\(\(\) => \{[\s\S]*?\}, 150\);/u);
+  assert.match(posts, /setFilterSummaryClosing\(true\);[\s\S]*?window\.setTimeout\(clear, 260\)/u);
+  assert.match(posts, /setViewSwitching\(true\);[\s\S]*?\}, 280\);/u);
+  assert.match(posts, /setSwitching\("leaving"\);[\s\S]*?\}, 190\);/u);
+  assert.match(posts, /article-index--archive[\s\S]*?is-view-switching/u);
+  assert.match(posts, /pagination\.leaving[\s\S]*?is-filter-leaving/u);
+});
+
+test("the established transition selectors and timings remain intact", async () => {
+  const [base, index, interactions, materials] = await Promise.all([
+    read("src/styles/base.css"),
+    read("src/styles/article-index.css"),
+    read("src/styles/interactions.css"),
+    read("src/styles/materials.css"),
+  ]);
+
+  assert.match(base, /\.paginated-view \{[^}]*transition:opacity \.15s ease,transform \.15s ease/u);
+  assert.match(base, /\.paginated-view\.is-leaving \{ opacity:0; transform:translateY\(8px\); \}/u);
+  assert.match(index, /\.archive-timeline\.is-leaving/u);
+  assert.match(index, /\.article-index\.is-view-switching>/u);
+  assert.match(index, /\.active-filter-summary\.is-leaving/u);
+  assert.match(interactions, /\.article-filter-backdrop\.is-closing \{\s*transition-duration:\.44s/u);
+  assert.match(materials, /\.article-index--archive\.is-view-switching::before/u);
 });
 
 test("image crop and reply transitions react only to their lifecycle inputs", async () => {

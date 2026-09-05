@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useTransition } from "react";
+import { startTransition, useEffect, useLayoutEffect, useRef } from "react";
 import { stopArticleAudio } from "./articleAudio.js";
 import {
   clearArticleIndexState,
@@ -46,7 +46,6 @@ function sameOriginRoute(anchor) {
 export function useAppRouting({ route, routeQuery, setRoute, setRouteQuery, setMenuOpen }) {
   const routeRef = useRef({ path: route, query: routeQuery });
   const pendingScrollRef = useRef(0);
-  const [navigationPending, startNavigation] = useTransition();
 
   useEffect(() => {
     if (isSiteRouteEnabled(route, siteConfig) && !isRetiredAdminRoute(route)) return;
@@ -90,7 +89,7 @@ export function useAppRouting({ route, routeQuery, setRoute, setRouteQuery, setM
         : 0;
       routeRef.current = { path: nextRoute, query: nextQuery };
       setRouteDocumentTitle(nextRoute, siteConfig.title);
-      startNavigation(() => {
+      startTransition(() => {
         setRoute(nextRoute);
         setRouteQuery(nextQuery);
       });
@@ -124,7 +123,7 @@ export function useAppRouting({ route, routeQuery, setRoute, setRouteQuery, setM
       window.removeEventListener("fonscape:navigate", handleAppNavigation);
       history.scrollRestoration = previousScrollRestoration;
     };
-  }, [setMenuOpen, setRoute, setRouteQuery, startNavigation]);
+  }, [setMenuOpen, setRoute, setRouteQuery]);
 
   useLayoutEffect(() => {
     const top = pendingScrollRef.current;
@@ -156,7 +155,7 @@ export function useAppRouting({ route, routeQuery, setRoute, setRouteQuery, setM
     return cleanup;
   }, [route, routeQuery]);
 
-  return { routeRef, pendingScrollRef, navigationPending };
+  return { routeRef, pendingScrollRef };
 }
 
 export { isRetiredAdminRoute };
