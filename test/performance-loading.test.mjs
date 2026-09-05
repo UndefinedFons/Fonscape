@@ -25,9 +25,9 @@ test("route and feature surfaces stay out of the initial module", async () => {
   assert.match(routes, /import\("\.\/pages\/ArticlePage\.jsx"\)/u);
   assert.match(routes, /loadRichArticleModule/u);
   assert.match(routes, /ensureFullFontStylesheet\(\)/u);
-  assert.match(routes, /ensureFullResponsiveImages\(\)/u);
-  assert.match(routes, /const withFullFonts = \(loader\) => Promise\.all/u);
-  assert.match(routes, /const withFullAssets = \(loader\) => Promise\.all/u);
+  assert.match(routes, /preloadResponsiveImageIndex\(\)/u);
+  assert.match(routes, /void ensureFullFontStylesheet\(\);/u);
+  assert.match(routes, /void preloadResponsiveImageIndex\(\)\.catch/u);
   assert.match(routes, /const loadPostsModule = \(\) => withFullAssets\(\(\) => import\("\.\/pages\/PostsPage\.jsx"\)\)/u);
   assert.match(routes, /const loadDialogsModule = \(\) => withFullFonts\(\(\) => import\("\.\/components\/Dialogs\.jsx"\)\)/u);
   assert.match(routes, /const loadAccountModule = \(\) => withFullFonts\(\(\) => import\("\.\/community\/AccountDialog\.jsx"\)\)/u);
@@ -37,10 +37,25 @@ test("route and feature surfaces stay out of the initial module", async () => {
   assert.doesNotMatch(app, /import .*pages\/(?:ArticlePage|PostsPage|PoemsPage|PoemPage|MusicPage|AboutPage|FriendsPage|AdminSetupPage)\.jsx/u);
   assert.doesNotMatch(app, /import .*community\/AccountDialog\.jsx/u);
   assert.doesNotMatch(app, /import .*components\/Dialogs\.jsx/u);
-  assert.match(routing, /startTransition\(\(\) =>/u);
-  assert.doesNotMatch(app, /route-chunk-loading/u);
-  assert.match(main, /React\.Suspense fallback=\{null\}/u);
+  assert.match(routing, /useTransition\(\)/u);
+  assert.match(routing, /startNavigation\(\(\) =>/u);
+  assert.match(app, /route-loading-indicator/u);
+  assert.match(app, /DialogLoading/u);
+  assert.match(main, /React\.Suspense fallback=\{<InitialRouteLoading \/>\}/u);
   assert.match(main, /preloadRoute\(initialRoute\)/u);
+  assert.match(main, /render\(\);/u);
+});
+
+test("route assets warm in parallel without delaying the page module", async () => {
+  const routes = await readFile("src/appRoutes.jsx", "utf8");
+  const helperStart = routes.indexOf("const withFullFonts");
+  const helperEnd = routes.indexOf("const loadAboutModule", helperStart);
+  const helpers = routes.slice(helperStart, helperEnd);
+
+  assert.match(helpers, /void ensureFullFontStylesheet\(\);/u);
+  assert.match(helpers, /void preloadResponsiveImageIndex\(\)\.catch/u);
+  assert.match(helpers, /return loader\(\);/u);
+  assert.doesNotMatch(helpers, /Promise\.all/u);
 });
 
 test("navigation intent preloads the matching route module", async () => {
@@ -59,17 +74,23 @@ test("navigation intent preloads the matching route module", async () => {
   assert.match(app, /document\.addEventListener\("touchstart", preloadLinkedRoute/u);
 });
 
-test("listing surfaces can use smaller sources without changing detail artwork", async () => {
-  const [cards, home, article] = await Promise.all([
+test("listing and detail images wait for source-specific responsive metadata", async () => {
+  const [cards, home, article, hook, responsiveImages] = await Promise.all([
     readFile("src/components/Cards.jsx", "utf8"),
     readFile("src/pages/HomePage.jsx", "utf8"),
     readFile("src/pages/ArticlePage.jsx", "utf8"),
+    readFile("src/useResponsiveImage.js", "utf8"),
+    readFile("src/responsiveImages.ts", "utf8"),
   ]);
 
-  assert.match(cards, /responsiveImageProps\(imageSource, sizes\)/u);
+  assert.match(cards, /useResponsiveImage\(imageSource, sizes\)/u);
   assert.match(home, /responsiveImageProps\(post\.image/u);
   assert.match(home, /authorProfile\.avatarSmall \|\| authorProfile\.avatar/u);
   assert.match(article, /src=\{post\.image\}/u);
+  assert.match(hook, /loadResponsiveImage\(source\)/u);
+  assert.match(hook, /src: undefined/u);
+  assert.match(responsiveImages, /responsiveImageSourceChunks as Readonly<Record<string, number>>\)\[source\]/u);
+  assert.doesNotMatch(responsiveImages, /Promise\.all\(responsiveImageChunkLoaders/u);
 });
 
 test("Markdown bodies stay out of the initial module and load only with their detail metadata", async () => {

@@ -48,7 +48,7 @@ function pathVariant(path) {
 function resolveGlassBackground(hero) {
   const glassImage = typeof hero.glassImage === "string" ? hero.glassImage.trim() : "";
   return {
-    image: glassImage || hero.image,
+    image: responsiveImageUrl(glassImage || hero.image, 1280),
     needsSoftening: !glassImage,
   };
 }

@@ -13,8 +13,11 @@ if (legacyRoute) window.history.replaceState(window.history.state || {}, "", leg
 
 const initialRoute = parseRoutePath();
 const render = () => createRoot(document.getElementById("root")).render(
-  <React.StrictMode><AppErrorBoundary><React.Suspense fallback={null}><CommunityProvider><App /></CommunityProvider></React.Suspense></AppErrorBoundary></React.StrictMode>,
+  <React.StrictMode><AppErrorBoundary><React.Suspense fallback={<InitialRouteLoading />}><CommunityProvider><App /></CommunityProvider></React.Suspense></AppErrorBoundary></React.StrictMode>,
 );
-const initialLoader = initialRoute === "/" ? null : preloadRoute(initialRoute);
-if (initialLoader) initialLoader.then(render, render);
-else render();
+if (initialRoute !== "/") preloadRoute(initialRoute).catch(() => {});
+render();
+
+function InitialRouteLoading() {
+  return <main className="initial-route-loading" role="status" aria-live="polite"><span />正在打开页面…</main>;
+}

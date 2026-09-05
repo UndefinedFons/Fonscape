@@ -6,25 +6,40 @@ type ResponsiveImage = { width: number; height: number; candidates: ResponsiveIm
 export const detailImageSizes = "(max-width: 760px) calc(100vw - 68px), min(calc(100vw - 116px), 790px)";
 
 const responsiveImageCatalog = responsiveImages as Record<string, ResponsiveImage>;
-let fullResponsiveImageCatalog: Record<string, ResponsiveImage> | null = null;
-let fullResponsiveImageCatalogPromise: Promise<void> | undefined;
+const loadedResponsiveImages: Record<string, ResponsiveImage> = {};
+let fullManifestIndexPromise: Promise<typeof import("../functions/_generated/responsive-images-full.js")> | undefined;
+const responsiveImageChunkPromises = new Map<number, Promise<void>>();
 
-export function ensureFullResponsiveImages() {
-  if (!fullResponsiveImageCatalogPromise) {
-    fullResponsiveImageCatalogPromise = import("../functions/_generated/responsive-images-full.js")
-      .then(({ responsiveImageChunkLoaders }) => Promise.all(responsiveImageChunkLoaders.map((loadChunk) => loadChunk())))
-      .then((modules) => {
-        fullResponsiveImageCatalog = Object.assign(
-          {},
-          ...modules.map(({ responsiveImageChunk }) => responsiveImageChunk as Record<string, ResponsiveImage>),
-        );
-      });
+function isLocalRasterSource(source: string) {
+  return /^\/(?:assets|fonscape)\/[^?#]+\.(?:avif|jpe?g|png|webp)(?:[?#].*)?$/iu.test(source);
+}
+
+export function preloadResponsiveImageIndex() {
+  fullManifestIndexPromise ||= import("../functions/_generated/responsive-images-full.js");
+  return fullManifestIndexPromise.then(() => undefined);
+}
+
+export async function loadResponsiveImage(source: string) {
+  if (!isLocalRasterSource(source) || responsiveImageCatalog[source] || loadedResponsiveImages[source]) return;
+  const { responsiveImageChunkLoaders, responsiveImageSourceChunks } = await (fullManifestIndexPromise ||= import("../functions/_generated/responsive-images-full.js"));
+  const chunkIndex = (responsiveImageSourceChunks as Readonly<Record<string, number>>)[source];
+  if (!Number.isInteger(chunkIndex)) return;
+  let chunkPromise = responsiveImageChunkPromises.get(chunkIndex);
+  if (!chunkPromise) {
+    chunkPromise = responsiveImageChunkLoaders[chunkIndex]().then(({ responsiveImageChunk }) => {
+      Object.assign(loadedResponsiveImages, responsiveImageChunk as Record<string, ResponsiveImage>);
+    });
+    responsiveImageChunkPromises.set(chunkIndex, chunkPromise);
   }
-  return fullResponsiveImageCatalogPromise;
+  await chunkPromise;
+}
+
+export function responsiveImageMetadataLoaded(source: string) {
+  return !isLocalRasterSource(source) || Boolean(responsiveImageCatalog[source] || loadedResponsiveImages[source]);
 }
 
 export function responsiveImageCandidates(source: string) {
-  return fullResponsiveImageCatalog?.[source]?.candidates || responsiveImageCatalog[source]?.candidates || [];
+  return loadedResponsiveImages[source]?.candidates || responsiveImageCatalog[source]?.candidates || [];
 }
 
 export function responsiveImageProps(source: string, sizes: string) {

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { X } from "@phosphor-icons/react/X";
-import { responsiveImageProps } from "./responsiveImages.ts";
+import { useResponsiveImage } from "./useResponsiveImage.js";
 
 export function ZoomableImage({
   src,
@@ -19,6 +19,7 @@ export function ZoomableImage({
   const [open, setOpen] = useState(false);
   const [closing, setClosing] = useState(false);
   const [failed, setFailed] = useState(false);
+  const responsiveImage = useResponsiveImage(src, sizes);
   const closeRef = useRef(null);
   const triggerRef = useRef(null);
   const closeTimerRef = useRef(null);
@@ -65,7 +66,7 @@ export function ZoomableImage({
       disabled={failed}
       aria-label={triggerAriaLabel || `放大查看${alt ? `：${alt}` : "图片"}`}
     >
-      {triggerContent || (failed ? <span className="article-image-error">图片地址无效，请返回编辑区重新插入图片。</span> : <img className={className} src={src} {...(sizes ? responsiveImageProps(src, sizes) : {})} alt={alt} style={style} loading={loading} decoding="async" onError={() => setFailed(true)} />)}
+      {triggerContent || (failed ? <span className="article-image-error">图片地址无效，请返回编辑区重新插入图片。</span> : <img className={className} {...responsiveImage} alt={alt} style={style} loading={loading} decoding="async" onError={() => setFailed(true)} />)}
       {caption && <span className="article-image-caption">{caption}</span>}
     </button>
     {open && createPortal(

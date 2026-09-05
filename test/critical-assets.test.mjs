@@ -39,11 +39,12 @@ test("site metadata configuration is applied to the generated HTML", async () =>
 });
 
 test("homepage and detail images use shared responsive candidates while retaining original fallbacks", async () => {
-  const [config, cards, home, responsive, zoomable, richArticle, article, music, generator, player] = await Promise.all([
+  const [config, cards, home, responsive, responsiveHook, zoomable, richArticle, article, music, generator, player] = await Promise.all([
     readFile("vite.config.mjs", "utf8"),
     readFile("src/components/Cards.jsx", "utf8"),
     readFile("src/pages/HomePage.jsx", "utf8"),
     readFile("src/responsiveImages.ts", "utf8"),
+    readFile("src/useResponsiveImage.js", "utf8"),
     readFile("src/ZoomableImage.jsx", "utf8"),
     readFile("src/RichArticleContent.jsx", "utf8"),
     readFile("src/pages/ArticlePage.jsx", "utf8"),
@@ -55,24 +56,25 @@ test("homepage and detail images use shared responsive candidates while retainin
   assert.match(config, /homeFeaturedImage/u);
   assert.match(config, /post\?\.image/u);
   assert.match(config, /imagesrcset=/u);
-  assert.match(config, /if \(desktopImage && mobileImage\) \{\s*preloads\.push\(preloadImage\(mobileImage, \{ media: "\(max-width: 760px\)", intendedWidth: 960/u);
-  assert.match(config, /preloads\.push\(preloadImage\(desktopImage, \{ media: "\(min-width: 761px\)", intendedWidth: 1600/u);
-  assert.match(cards, /responsiveImageProps\(imageSource, sizes\)/u);
+  assert.match(config, /preloadImage\(mobileImage, \{ media: "\(max-width: 760px\)", sizes: "100vw", intendedWidth: 960/u);
+  assert.match(config, /preloadImage\(desktopImage, \{ media: "\(min-width: 761px\)", sizes: "100vw", intendedWidth: 1600/u);
+  assert.match(cards, /useResponsiveImage\(imageSource, sizes\)/u);
   assert.match(home, /responsiveImageProps\(post\.image/u);
   assert.match(home, /responsiveImageProps\(authorProfile\.avatarSmall \|\| authorProfile\.avatar/u);
   assert.match(responsive, /srcSet:/u);
   assert.match(responsive, /candidates\.at\(-1\)\?\.src \|\| source/u);
-  assert.match(zoomable, /responsiveImageProps\(src, sizes\)/u);
+  assert.match(responsiveHook, /loadResponsiveImage\(source\)/u);
+  assert.match(zoomable, /useResponsiveImage\(src, sizes\)/u);
   assert.match(zoomable, /<img src=\{src\} alt=\{alt\} \/>/u);
   assert.match(responsive, /detailImageSizes = "\(max-width: 760px\) calc\(100vw - 68px\), min\(calc\(100vw - 116px\), 790px\)"/u);
   assert.match(richArticle, /sizes=\{detailImageSizes\}/u);
   assert.match(article, /sizes=\{detailImageSizes\}/u);
-  assert.match(music, /responsiveImageProps\(review\.image,/u);
+  assert.match(music, /useResponsiveImage\(review\?\.image \|\| "",/u);
   assert.match(generator, /detail: \[384, 640, 960, 1280, 1600\]/u);
   assert.match(generator, /extractLocalRasterSources/u);
   assert.match(generator, /addTarget\(targets, post\.image, "detail"\)/u);
   assert.match(generator, /post\.musicBlocks/iu);
   assert.match(generator, /track\?\.cover/iu);
   assert.match(generator, /addTarget\(targets, entry\.image, "thumbnail"\)/u);
-  assert.match(player, /responsiveImageProps\(track\.cover,/u);
+  assert.match(player, /useResponsiveImage\(track\.cover,/u);
 });

@@ -16,7 +16,8 @@ import { musicSections } from "../musicSections.js";
 import { parseRouteQuery, replaceRoute, returnFromDetail } from "../routeState.js";
 import { musicRoute, routeHref } from "../routes.js";
 import { setDocumentTitle } from "../navigation.js";
-import { detailImageSizes, responsiveImageProps } from "../responsiveImages.ts";
+import { detailImageSizes } from "../responsiveImages.ts";
+import { useResponsiveImage } from "../useResponsiveImage.js";
 import { formatContentDate, getPostWordCount } from "../siteUtils.js";
 import { NotFound } from "./NotFound.jsx";
 
@@ -44,7 +45,7 @@ export function MusicPage({ stats, onStatsTargets }) {
   return <main><PageHero kicker="MUSIC NOTES" title="音乐" description={siteConfig.pages.musicDescription} icon={MusicNotes} variant="music" />
     <section className="music-library page-width">
       <div className="music-tabs" role="tablist" aria-label="音乐分类" data-active-index={activeIndex}><span className="music-tab-indicator" aria-hidden="true" />{musicSections.map(({ id, label, icon: Icon }) => <button key={id} role="tab" aria-selected={section === id} className={section === id ? "active" : ""} onClick={() => selectSection(id)}><Icon size={23} weight="duotone" /><strong>{label}</strong></button>)}</div>
-      <div ref={pagination.topRef} className={`music-panel paginated-view${pagination.leaving ? " is-leaving" : ""}`} role="tabpanel" key={section}>{activeEntries.length ? <div className="music-review-grid">{pagination.pageItems.map((entry) => <MusicReviewCard entry={entry} section={section} stats={stats[`${section}/${entry.slug}`]} key={entry.slug} />)}</div> : <div className="music-empty"><ActiveSectionIcon size={36} weight="duotone" /><h2>{section === "songs" ? "暂无歌曲" : section === "artists" ? "暂无音乐人" : "暂无专辑"}</h2></div>}</div><Pagination page={pagination.page} totalPages={pagination.totalPages} onChange={pagination.changePage} />
+      <div ref={pagination.topRef} className="music-panel paginated-view" role="tabpanel" key={section}>{activeEntries.length ? <div className="music-review-grid">{pagination.pageItems.map((entry, index) => <MusicReviewCard entry={entry} section={section} stats={stats[`${section}/${entry.slug}`]} imageLoading={index === 0 ? "eager" : "lazy"} key={entry.slug} />)}</div> : <div className="music-empty"><ActiveSectionIcon size={36} weight="duotone" /><h2>{section === "songs" ? "暂无歌曲" : section === "artists" ? "暂无音乐人" : "暂无专辑"}</h2></div>}</div><Pagination page={pagination.page} totalPages={pagination.totalPages} onChange={pagination.changePage} />
     </section>
   </main>;
 }
@@ -52,6 +53,8 @@ export function MusicPage({ stats, onStatsTargets }) {
 export function MusicDetailPage({ path, stats, onView, onStatsTargets }) {
   const [section, slug] = path.split("/");
   const review = section && slug ? use(loadMusicReview(section, slug)) : null;
+  const sourceCardImage = useResponsiveImage(review?.image || "", "(max-width: 760px) 88px, 104px");
+  const detailCoverImage = useResponsiveImage(review?.image || "", detailImageSizes);
   const detailReview = review;
   const statsSlug = review ? `${section}/${review.slug}` : "";
   useEffect(() => { if (statsSlug) onView("music", statsSlug); }, [statsSlug, onView]);
@@ -60,8 +63,8 @@ export function MusicDetailPage({ path, stats, onView, onStatsTargets }) {
   if (!review) return <NotFound />;
   return <main className="article-page music-detail-page material-panel page-width"><button className="back-button" onClick={() => returnFromDetail(musicRoute(section, slug))}><ArrowLeft size={17} />返回</button><article className="article-detail article-detail--music">
     <div className="article-intro-copy"><span className="category">MUSIC NOTE</span><h1>{review.title}</h1>{review.excerpt && <p className="article-lede">{review.excerpt}</p>}<div className="post-meta"><span><TextAa size={16} />{getPostWordCount(review)} 字</span><span><CalendarBlank size={16} />{formatContentDate(review.date)}</span><span><Eye size={16} />{stats[statsSlug]?.views || 0}</span><span><ChatCircleDots size={16} />{stats[statsSlug]?.comments || 0}</span></div></div>
-    {review.url && <a className="music-source-card music-source-card--lead" href={review.url} target="_blank" rel="noreferrer">{review.image && <img src={review.image} {...responsiveImageProps(review.image, "(max-width: 760px) 88px, 104px")} alt={`${review.sourceTitle || review.title}专辑封面`} decoding="async" />}<span><small>网易云音乐 · {review.kind}</small><strong>{review.sourceTitle || review.title}</strong><em>{review.sourceMeta || review.kind}</em></span><b>{review.action || "前往收听"}<ArrowRight size={17} /></b></a>}
-    {!review.url && review.image && <img className="music-detail-cover" src={review.image} {...responsiveImageProps(review.image, detailImageSizes)} alt={`${review.title}的封面`} decoding="async" />}
+    {review.url && <a className="music-source-card music-source-card--lead" href={review.url} target="_blank" rel="noreferrer">{review.image && <img {...sourceCardImage} alt={`${review.sourceTitle || review.title}专辑封面`} decoding="async" />}<span><small>网易云音乐 · {review.kind}</small><strong>{review.sourceTitle || review.title}</strong><em>{review.sourceMeta || review.kind}</em></span><b>{review.action || "前往收听"}<ArrowRight size={17} /></b></a>}
+    {!review.url && review.image && <img className="music-detail-cover" {...detailCoverImage} alt={`${review.title}的封面`} decoding="async" />}
     {detailReview?.content && <RichArticleContent post={detailReview} />}
   </article><CommentsSection targetType="music" slug={`${section}/${review.slug}`} /></main>;
 }

@@ -3,14 +3,15 @@ import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { relative, resolve } from "node:path";
 import { gzipSync } from "node:zlib";
 import { fileURLToPath } from "node:url";
+import { isMermaidEngineChunkName } from "./chunk-size-warning.mjs";
 
 const DIST_ROOT = resolve(process.cwd(), "dist");
 const ENTRY_HTML = resolve(DIST_ROOT, "index.html");
-const ENTRY_JAVASCRIPT_GZIP_LIMIT = 112 * 1024;
-const MAX_DYNAMIC_JAVASCRIPT_GZIP_LIMIT = 96 * 1024;
+export const ENTRY_JAVASCRIPT_GZIP_LIMIT = 112 * 1024;
+export const MAX_DYNAMIC_JAVASCRIPT_GZIP_LIMIT = 96 * 1024;
 // Mermaid ships its parser and graph engine as indivisible vendor modules.
 // Only these lazy chunks have a separate cap; application chunks retain 96 KiB.
-const MERMAID_ENGINE_GZIP_LIMIT = 160 * 1024;
+export const MERMAID_ENGINE_GZIP_LIMIT = 160 * 1024;
 const ENTRY_CSS_GZIP_LIMIT = 42 * 1024;
 const ENTRY_HTML_GZIP_LIMIT = 52 * 1024;
 const LOCAL_FONT_CSS_GZIP_LIMIT = 48 * 1024;
@@ -71,9 +72,9 @@ function formatAssetPath(path) {
   return relative(DIST_ROOT, path).split("\\").join("/");
 }
 
-function dynamicJavaScriptLimit(path) {
+export function dynamicJavaScriptLimit(path) {
   const name = path.split(/[\\/]/u).at(-1) || "";
-  return /^mermaid-(?:cytoscape|parser-chunk-[A-Z0-9]+)-[\w-]+\.js$/u.test(name)
+  return isMermaidEngineChunkName(name)
     ? MERMAID_ENGINE_GZIP_LIMIT
     : MAX_DYNAMIC_JAVASCRIPT_GZIP_LIMIT;
 }

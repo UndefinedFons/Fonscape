@@ -1,23 +1,30 @@
 import { lazy } from "react";
 import { loadCollection, loadMusicReview, loadPoem, loadPost, siteConfig } from "./content/index.js";
-import { ensureFullResponsiveImages } from "./responsiveImages.ts";
+import { preloadResponsiveImageIndex } from "./responsiveImages.ts";
 import { replaceRouteWithHome } from "./routeState.js";
 import { setRouteDocumentTitle } from "./navigation.js";
 import { isSiteRouteEnabled, normalizeRoutePath } from "./sectionAvailability.js";
 import { HomePage } from "./pages/HomePage.jsx";
 import { NotFound } from "./pages/NotFound.jsx";
 
-const withFullFonts = (loader) => Promise.all([loader(), ensureFullFontStylesheet()]).then(([module]) => module);
-const withFullAssets = (loader) => Promise.all([loader(), ensureFullFontStylesheet(), ensureFullResponsiveImages()]).then(([module]) => module);
+const withFullFonts = (loader) => {
+  void ensureFullFontStylesheet();
+  return loader();
+};
+const withFullAssets = (loader) => {
+  void ensureFullFontStylesheet();
+  void preloadResponsiveImageIndex().catch(() => {});
+  return loader();
+};
 const loadAboutModule = () => withFullAssets(() => import("./pages/AboutPage.jsx"));
 const loadAdminSetupModule = () => withFullFonts(() => import("./pages/AdminSetupPage.jsx"));
 const loadRichArticleModule = () => import("./RichArticleContent.jsx");
-const loadArticleModule = () => Promise.all([import("./pages/ArticlePage.jsx"), loadRichArticleModule(), ensureFullFontStylesheet(), ensureFullResponsiveImages()]).then(([module]) => module);
+const loadArticleModule = () => withFullAssets(() => Promise.all([import("./pages/ArticlePage.jsx"), loadRichArticleModule()]).then(([module]) => module));
 const loadDialogsModule = () => withFullFonts(() => import("./components/Dialogs.jsx"));
 const loadFriendsModule = () => withFullAssets(() => import("./pages/FriendsPage.jsx"));
 const loadMusicModule = () => withFullAssets(() => import("./pages/MusicPage.jsx"));
-const loadMusicDetailModule = () => Promise.all([loadMusicModule(), loadRichArticleModule(), ensureFullFontStylesheet()]).then(([module]) => module);
-const loadPoemModule = () => Promise.all([import("./pages/PoemPage.jsx"), ensureFullFontStylesheet(), ensureFullResponsiveImages()]).then(([module]) => module);
+const loadMusicDetailModule = () => withFullFonts(() => Promise.all([loadMusicModule(), loadRichArticleModule()]).then(([module]) => module));
+const loadPoemModule = () => withFullAssets(() => import("./pages/PoemPage.jsx"));
 const loadPoemsModule = () => withFullAssets(() => import("./pages/PoemsPage.jsx"));
 const loadPostsModule = () => withFullAssets(() => import("./pages/PostsPage.jsx"));
 const loadAccountModule = () => withFullFonts(() => import("./community/AccountDialog.jsx"));
