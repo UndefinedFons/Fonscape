@@ -9,7 +9,7 @@ import "./components/ArticleBodyFeatures.css";
 import { hasMathSyntax, isMermaidLanguage, protectCurrencySyntax } from "./content/richFeatures.js";
 import { detailImageSizes } from "./responsiveImages.ts";
 import { getPostMarkdown, getPostOutline } from "./richContent.js";
-import { isApplicationRoute, legacyHashRoute, routeHref } from "./routes.js";
+import { legacyHashRoute } from "./routes.js";
 import { ZoomableImage } from "./ZoomableImage.jsx";
 
 const languageNames = {
@@ -97,16 +97,7 @@ function MarkdownPre({ children }) {
 function markdownHref(href) {
   if (href == null) return undefined;
   const value = String(href);
-  const legacy = legacyHashRoute(value);
-  if (legacy) return legacy;
-  if (!value.startsWith("/") || value.startsWith("//")) return value;
-  try {
-    const url = new URL(value, typeof window === "undefined" ? "https://fonscape.invalid" : window.location.origin);
-    if (!isApplicationRoute(url.pathname)) return value;
-    return routeHref(url.pathname, url.search);
-  } catch {
-    return value;
-  }
+  return legacyHashRoute(value) || value;
 }
 
 const components = {
