@@ -203,11 +203,11 @@
   transform:translate3d(0,0,0) scale(1);
 }
 .article-filter-backdrop.is-closing {
-  transition-duration:.44s;
+  transition-duration:.2s;
   transition-timing-function:cubic-bezier(.4,0,.2,1);
 }
 .article-filter-backdrop.is-closing .article-filter-dialog {
-  transition-duration:.44s;
+  transition-duration:.2s;
   transition-timing-function:cubic-bezier(.4,0,.2,1);
 }
 

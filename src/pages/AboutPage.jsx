@@ -6,7 +6,7 @@ import { XLogo } from "@phosphor-icons/react/XLogo";
 import { CommentsSection } from "../community/CommentsSection.jsx";
 import { PageHero } from "../components/PageHero.jsx";
 import { authorProfile, siteConfig } from "../content/index.js";
-import { responsiveImageProps } from "../responsiveImages.ts";
+import { useResponsiveImage } from "../useResponsiveImage.js";
 
 function BilibiliLogo({ size = 24 }) {
   return <svg width={size} height={size} viewBox="0 0 256 256" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
@@ -40,11 +40,12 @@ export function resolveChannels(author) {
 
 export function AboutPage() {
   const channels = resolveChannels(authorProfile);
+  const portraitImage = useResponsiveImage(authorProfile.avatar, "(max-width: 760px) min(70vw, 320px), 320px");
   return <main className="about-page">
     <PageHero kicker="HELLO" title="关于我" description={siteConfig.about.heroDescription} icon={UserCircle} variant="about" />
     <section className="about-layout material-panel page-width">
       <aside className="about-profile">
-        <div className="about-portrait">{authorProfile.avatar ? <img src={authorProfile.avatar} {...responsiveImageProps(authorProfile.avatar, "(max-width: 760px) min(70vw, 320px), 320px")} alt={authorProfile.avatarAlt} loading="lazy" decoding="async" /> : <span className="about-portrait-placeholder" role="img" aria-label={authorProfile.avatarAlt}><UserCircle size={112} weight="duotone" /></span>}</div>
+        <div className="about-portrait">{authorProfile.avatar ? <img {...portraitImage} alt={authorProfile.avatarAlt} loading="lazy" decoding="async" /> : <span className="about-portrait-placeholder" role="img" aria-label={authorProfile.avatarAlt}><UserCircle size={112} weight="duotone" /></span>}</div>
         <div className="about-profile-copy">
           <span className="eyebrow">ABOUT ME</span>
           <h2>{authorProfile.name}</h2>

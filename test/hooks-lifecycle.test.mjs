@@ -59,6 +59,19 @@ test("pagination scroll honors the reduced-motion preference", async () => {
   assert.match(source, /behavior: reducedMotion \? "auto" : "smooth"/u);
 });
 
+test("pagination and article index selections update without exit-animation timers", async () => {
+  const [hooks, posts] = await Promise.all([
+    read("src/hooks.js"),
+    read("src/pages/PostsPage.jsx"),
+  ]);
+  const pagination = hooks.slice(hooks.indexOf("function usePagination"));
+
+  assert.doesNotMatch(pagination, /setTimeout/u);
+  assert.doesNotMatch(posts, /setTimeout\(clear, 260\)|setTimeout\(\(\) => \{\s*if \(nextView/u);
+  assert.match(posts, /setView\(nextView\);/u);
+  assert.match(posts, /setYear\(nextYear\);\s*setMonth\(nextMonth\);/u);
+});
+
 test("image crop and reply transitions react only to their lifecycle inputs", async () => {
   const replyEditor = await read("src/community/ReplyEditor.jsx");
 

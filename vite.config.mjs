@@ -10,6 +10,7 @@ import { generateResponsiveImages } from "./scripts/generate-responsive-images.m
 import { responsiveImageCandidates, responsiveImageUrl } from "./src/responsiveImages.ts";
 import { generateRssFeed } from "./scripts/generate-rss.mjs";
 import { generateSitemap } from "./scripts/generate-sitemap.mjs";
+import { isKnownMermaidCircularChunkWarning, MERMAID_CHUNK_WARNING_LIMIT_KB, mermaidChunkWarningPlugin } from "./scripts/chunk-size-warning.mjs";
 import { normalizeSiteUrl, siteUrlForPath } from "./src/siteUrl.js";
 
 function escapeAttribute(value) {
@@ -92,13 +93,13 @@ function heroPreloadPlugin() {
       const mobileImage = homeHero.mobileImage || desktopImage;
       const preloads = [];
       if (desktopImage && mobileImage) {
-        preloads.push(preloadImage(mobileImage, { media: "(max-width: 760px)", intendedWidth: 960, includeCandidates: false }));
-        preloads.push(preloadImage(desktopImage, { media: "(min-width: 761px)", intendedWidth: 1600, includeCandidates: false }));
+        preloads.push(preloadImage(mobileImage, { media: "(max-width: 760px)", sizes: "100vw", intendedWidth: 960 }));
+        preloads.push(preloadImage(desktopImage, { media: "(min-width: 761px)", sizes: "100vw", intendedWidth: 1600 }));
       } else if (desktopImage) {
-        preloads.push(preloadImage(desktopImage, { intendedWidth: 1600, includeCandidates: false }));
+        preloads.push(preloadImage(desktopImage, { sizes: "100vw", intendedWidth: 1600 }));
       }
       if (homeHero.glassImage) {
-        preloads.push(preloadImage(homeHero.glassImage, { intendedWidth: 1280, includeCandidates: false }));
+        preloads.push(preloadImage(homeHero.glassImage, { sizes: "100vw", intendedWidth: 1280 }));
       }
       const featuredImage = homeFeaturedImage();
       if (featuredImage && !preloads.some((preload) => preload.includes(`href="${escapeAttribute(featuredImage)}"`))) {
@@ -147,10 +148,14 @@ export default defineConfig({
       clientFiles: ["./src/main.jsx"],
     },
   },
-  plugins: [contentMetadataPlugin(), react(), heroPreloadPlugin()],
+  plugins: [contentMetadataPlugin(), mermaidChunkWarningPlugin(), react(), heroPreloadPlugin()],
   build: {
+    chunkSizeWarningLimit: MERMAID_CHUNK_WARNING_LIMIT_KB,
     manifest: true,
     rollupOptions: {
+      onwarn(warning, warn) {
+        if (!isKnownMermaidCircularChunkWarning(warning)) warn(warning);
+      },
       input: {
         main: resolve(process.cwd(), "index.html"),
       },

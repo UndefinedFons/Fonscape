@@ -259,7 +259,6 @@
 .archive-return:focus-visible { background:transparent!important; box-shadow:none!important; outline:2px solid var(--accent); outline-offset:3px; }
 .archive-timeline-wrap { overflow:hidden; transition:height .3s cubic-bezier(.22,1,.36,1); }
 .archive-timeline { display:grid; gap:7px; padding-left:0; transition:opacity .19s ease,transform .22s cubic-bezier(.22,1,.36,1); }
-.archive-timeline.is-leaving { opacity:0; transform:translateY(8px); pointer-events:none; }
 .archive-timeline.is-entering { animation:archive-timeline-in .32s cubic-bezier(.22,1,.36,1) both; }
 @keyframes archive-timeline-in { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
 .archive-timeline::before { content:none; }
@@ -418,11 +417,6 @@
 .article-index> * {
   transition:opacity .32s ease,transform .42s cubic-bezier(.22,1,.36,1);
 }
-.article-index.is-view-switching> * {
-  opacity:0;
-  transform:translateY(9px);
-  pointer-events:none;
-}
 .article-type-tabs {
   width:100%;
   min-height:70px;
@@ -471,7 +465,6 @@
 @media (min-width:961px) {
 }
 .active-filter-summary { min-height:58px; max-height:80px; display:flex; align-items:center; justify-content:space-between; gap:18px; margin:-3px 0 26px; padding:10px 4px 12px; overflow:hidden; border:0; border-bottom:1px solid var(--line); border-radius:0; background:transparent; opacity:1; transform:translateY(0); transition:min-height .26s cubic-bezier(.4,0,.2,1),max-height .26s cubic-bezier(.4,0,.2,1),margin .26s cubic-bezier(.4,0,.2,1),padding .26s cubic-bezier(.4,0,.2,1),border-color .18s ease,opacity .18s ease,transform .26s cubic-bezier(.4,0,.2,1); }
-.active-filter-summary.is-leaving { min-height:0; max-height:0; margin-top:0; margin-bottom:0; padding-top:0; padding-bottom:0; border-color:transparent; opacity:0; transform:translateY(-8px) scale(.985); pointer-events:none; }
 .active-filter-current { min-width:0; display:flex; align-items:center; gap:10px; }
 .active-filter-current>svg { flex:none; color:var(--accent); }
 .active-filter-current>span { min-width:0; display:grid; gap:2px; }

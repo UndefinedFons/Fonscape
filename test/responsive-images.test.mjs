@@ -12,6 +12,7 @@ import {
   loadResponsiveImageCache,
   renderResponsiveVariant,
   renderResponsiveVariantBuffer,
+  responsiveImageChunkMap,
   RESPONSIVE_IMAGE_CACHE_VERSION,
   saveResponsiveImageCache,
   safeLocalSourcePath,
@@ -98,6 +99,18 @@ test("responsive width selection stays deterministic and caps each source at fiv
   assert.deepEqual(selectResponsiveWidths([128, 256, 384, 640, 960, 1280, 1600], { preferSmall: true }), [128, 384, 640, 960, 1600]);
   assert.deepEqual(selectResponsiveWidths([384, 640, 768, 960, 1280, 1600]), [384, 640, 960, 1280, 1600]);
   assert.deepEqual(selectResponsiveWidths([384, 640, 960]), [384, 640, 960]);
+});
+
+test("full responsive metadata maps each source to only its owning chunk", () => {
+  const chunks = [
+    { "/assets/first.webp": {}, "/assets/second.webp": {} },
+    { "/assets/third.webp": {} },
+  ];
+  assert.deepEqual(responsiveImageChunkMap(chunks), {
+    "/assets/first.webp": 0,
+    "/assets/second.webp": 0,
+    "/assets/third.webp": 1,
+  });
 });
 
 test("read-only checks can size a missing candidate without writing it", async () => {

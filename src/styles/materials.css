@@ -141,7 +141,6 @@
   transform:translateY(0) scale(1);
   transition:opacity .34s ease,transform .42s cubic-bezier(.22,1,.36,1);
 }
-:root[data-glass="on"] .article-index--archive.is-view-switching::before { opacity:0; transform:translateY(10px) scale(.992); }
 :root[data-glass="on"] .article-index-actions button::before {
   background:linear-gradient(120deg,color-mix(in srgb,var(--accent-soft) 66%,transparent),color-mix(in srgb,#e5c9ff 52%,transparent) 56%,color-mix(in srgb,var(--surface) 64%,transparent))!important;
 }

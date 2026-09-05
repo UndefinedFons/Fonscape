@@ -76,9 +76,7 @@ function usePagination(items, pageSize, resetKey, family) {
   const storageKey = `${family}:${resetKey}:${pageSize}`;
   const storageKeyRef = useRef(storageKey);
   const [page, setPage] = useState(() => paginationPositions.get(storageKey) || 1);
-  const [leaving, setLeaving] = useState(false);
   const topRef = useRef(null);
-  const timerRef = useRef(null);
   const totalPages = Math.max(1, Math.ceil(items.length / pageSize));
   const safePage = Math.min(page, totalPages);
   const pageItems = items.slice((safePage - 1) * pageSize, safePage * pageSize);
@@ -86,23 +84,17 @@ function usePagination(items, pageSize, resetKey, family) {
     if (storageKeyRef.current === storageKey) return;
     storageKeyRef.current = storageKey;
     setPage(paginationPositions.get(storageKey) || 1);
-    setLeaving(false);
   }, [storageKey]);
   useEffect(() => { paginationPositions.set(storageKey, safePage); }, [storageKey, safePage]);
-  useEffect(() => () => window.clearTimeout(timerRef.current), []);
   const changePage = (nextPage) => {
     const next = Math.max(1, Math.min(totalPages, nextPage));
-    if (next === safePage || leaving) return;
-    setLeaving(true);
-    timerRef.current = window.setTimeout(() => {
-      setPage(next);
-      paginationPositions.set(storageKey, next);
-      setLeaving(false);
-      const reducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
-      window.requestAnimationFrame(() => topRef.current?.scrollIntoView({ behavior: reducedMotion ? "auto" : "smooth", block: "start" }));
-    }, 150);
+    if (next === safePage) return;
+    setPage(next);
+    paginationPositions.set(storageKey, next);
+    const reducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
+    window.requestAnimationFrame(() => topRef.current?.scrollIntoView({ behavior: reducedMotion ? "auto" : "smooth", block: "start" }));
   };
-  return { page: safePage, pageItems, totalPages, leaving, topRef, changePage };
+  return { page: safePage, pageItems, totalPages, topRef, changePage };
 }
 
 export { useHorizontalScroller, usePagination, useResponsivePageSize };

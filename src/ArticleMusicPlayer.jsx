@@ -6,7 +6,7 @@ import { Play } from "@phosphor-icons/react/Play";
 import { SpeakerHigh } from "@phosphor-icons/react/SpeakerHigh";
 import { X } from "@phosphor-icons/react/X";
 import { acquireAudio, activateAudio, deactivateAudio, releaseAudio } from "./articleAudio.js";
-import { responsiveImageProps } from "./responsiveImages.ts";
+import { useResponsiveImage } from "./useResponsiveImage.js";
 
 export { primeArticleAudio, stopArticleAudio } from "./articleAudio.js";
 
@@ -29,6 +29,7 @@ export function ArticleMusicPlayer({ track, autoplay = true }) {
   const [volumeOpen, setVolumeOpen] = useState(false);
   const [autoplayBlocked, setAutoplayBlocked] = useState(false);
   const [buffering, setBuffering] = useState(true);
+  const coverImage = useResponsiveImage(track.cover, "(max-width: 760px) 72px, 78px");
 
   useEffect(() => {
     const audio = acquireAudio({ src: trackSrc });
@@ -126,7 +127,7 @@ export function ArticleMusicPlayer({ track, autoplay = true }) {
   const volumeProgress = volume * 100;
 
   return <section className={`article-music-player${volumeOpen ? " has-volume-open" : ""}`} aria-label={`文章配乐：${track.title}`}>
-    <div className={`article-music-art${track.cover ? "" : " article-music-art--vinyl"}`}>{track.cover ? <img src={track.cover} {...responsiveImageProps(track.cover, "(max-width: 760px) 72px, 78px")} alt={`${track.title}的音乐封面`} /> : <Disc size={46} weight="duotone" aria-label="默认黑胶唱片封面" />}<button className={`article-music-toggle${playing ? " is-playing" : ""}`} type="button" onClick={togglePlayback} aria-label={playing ? "暂停文章配乐" : "播放文章配乐"} aria-pressed={playing}><span className="article-music-toggle-icon article-music-toggle-icon--play"><Play size={18} weight="fill" /></span><span className="article-music-toggle-icon article-music-toggle-icon--pause"><Pause size={18} weight="fill" /></span></button></div>
+    <div className={`article-music-art${track.cover ? "" : " article-music-art--vinyl"}`}>{track.cover ? <img {...coverImage} alt={`${track.title}的音乐封面`} /> : <Disc size={46} weight="duotone" aria-label="默认黑胶唱片封面" />}<button className={`article-music-toggle${playing ? " is-playing" : ""}`} type="button" onClick={togglePlayback} aria-label={playing ? "暂停文章配乐" : "播放文章配乐"} aria-pressed={playing}><span className="article-music-toggle-icon article-music-toggle-icon--play"><Play size={18} weight="fill" /></span><span className="article-music-toggle-icon article-music-toggle-icon--pause"><Pause size={18} weight="fill" /></span></button></div>
     <div className="article-music-copy"><span className="article-music-kicker"><MusicNotes size={14} weight="duotone" />文章配乐{autoplayBlocked ? <em>点击播放</em> : buffering && <em>正在加载</em>}</span><strong>{track.title}</strong><small>{track.artist}</small><div className="article-music-timeline"><time>{formatAudioTime(currentTime)}</time><input type="range" min="0" max={duration || 0} step="0.1" value={Math.min(currentTime, duration || 0)} onInput={seek} onChange={seek} aria-label="文章配乐播放进度" style={{ "--music-progress": `${progress}%` }} /><time>{formatAudioTime(duration)}</time></div></div>
     <div className={`article-music-volume${volumeOpen ? " is-open" : ""}`}><button type="button" onClick={() => setVolumeOpen((value) => !value)} aria-label={volumeOpen ? "收起文章配乐音量" : "调节文章配乐音量"} aria-expanded={volumeOpen}><span className="icon-swap article-music-volume-icon" key={volumeOpen ? "close" : "volume"}>{volumeOpen ? <X size={17} /> : <SpeakerHigh size={17} />}</span></button></div>
     <div className="article-music-volume-panel" aria-hidden={!volumeOpen}><SpeakerHigh size={17} /><input type="range" min="0" max="1" step="0.01" value={volume} onInput={changeVolume} onChange={changeVolume} aria-label="文章配乐音量" tabIndex={volumeOpen ? 0 : -1} style={{ "--music-volume": `${volumeProgress}%` }} /><span>{Math.round(volumeProgress)}%</span></div>
