@@ -132,6 +132,21 @@ function loadMathPlugins() {
 
 export function RichArticleContent({ post, inlineMusicPlayer = null, inlineMusicPlayers = {} }) {
   const markdown = getPostMarkdown(post);
+  useEffect(() => {
+    let id;
+    try {
+      id = decodeURIComponent(window.location.hash.slice(1));
+    } catch {
+      return undefined;
+    }
+    if (!id) return undefined;
+    // The browser may resolve the fragment before this lazy body is mounted.
+    const frame = window.requestAnimationFrame(() => {
+      const target = document.getElementById(id);
+      if (target?.closest(".article-prose")) target.scrollIntoView({ behavior: "instant", block: "start" });
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [post]);
   const outline = useMemo(() => getPostOutline(post), [post]);
   const headings = useMemo(() => outline.filter((item) => !item.prologue), [outline]);
   const mathInMarkdown = useMemo(() => hasMathSyntax(markdown), [markdown]);
