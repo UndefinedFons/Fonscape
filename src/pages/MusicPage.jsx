@@ -13,7 +13,8 @@ import { CommentsSection } from "../community/CommentsSection.jsx";
 import { loadCollection, loadMusicReview, siteConfig } from "../content/index.js";
 import { usePagination, useResponsivePageSize } from "../hooks.js";
 import { musicSections } from "../musicSections.js";
-import { parseHashQuery, returnFromDetail } from "../routeState.js";
+import { parseRouteQuery, replaceRoute, returnFromDetail } from "../routeState.js";
+import { musicRoute, routeHref } from "../routes.js";
 import { setDocumentTitle } from "../navigation.js";
 import { detailImageSizes, responsiveImageProps } from "../responsiveImages.ts";
 import { formatContentDate, getPostWordCount } from "../siteUtils.js";
@@ -23,7 +24,7 @@ const RichArticleContent = lazy(() => import("../RichArticleContent.jsx").then((
 
 export function MusicPage({ stats, onStatsTargets }) {
   const allMusicReviews = use(loadCollection("music"));
-  const requestedSection = new URLSearchParams(parseHashQuery()).get("section");
+  const requestedSection = new URLSearchParams(parseRouteQuery()).get("section");
   const [section, setSection] = useState(() => musicSections.some((item) => item.id === requestedSection) ? requestedSection : "songs");
   const activeIndex = musicSections.findIndex((item) => item.id === section);
   const activeEntries = allMusicReviews.filter((entry) => entry.section === section);
@@ -38,7 +39,7 @@ export function MusicPage({ stats, onStatsTargets }) {
   const selectSection = (nextSection) => {
     setSection(nextSection);
     const nextQuery = nextSection === "songs" ? "" : `?section=${nextSection}`;
-    window.history.replaceState(window.history.state, "", `${window.location.pathname}${window.location.search}#/music${nextQuery}`);
+    replaceRoute(routeHref("/music", nextQuery));
   };
   return <main><PageHero kicker="MUSIC NOTES" title="音乐" description={siteConfig.pages.musicDescription} icon={MusicNotes} variant="music" />
     <section className="music-library page-width">
@@ -57,7 +58,7 @@ export function MusicDetailPage({ path, stats, onView, onStatsTargets }) {
   useEffect(() => { if (statsSlug) onStatsTargets([{ type: "music", slug: statsSlug }]); }, [statsSlug, onStatsTargets]);
   useEffect(() => { setDocumentTitle(review?.title || "页面不存在", siteConfig.title); }, [review?.title]);
   if (!review) return <NotFound />;
-  return <main className="article-page music-detail-page material-panel page-width"><button className="back-button" onClick={() => returnFromDetail(`/music/${path}`)}><ArrowLeft size={17} />返回</button><article className="article-detail article-detail--music">
+  return <main className="article-page music-detail-page material-panel page-width"><button className="back-button" onClick={() => returnFromDetail(musicRoute(section, slug))}><ArrowLeft size={17} />返回</button><article className="article-detail article-detail--music">
     <div className="article-intro-copy"><span className="category">MUSIC NOTE</span><h1>{review.title}</h1>{review.excerpt && <p className="article-lede">{review.excerpt}</p>}<div className="post-meta"><span><TextAa size={16} />{getPostWordCount(review)} 字</span><span><CalendarBlank size={16} />{formatContentDate(review.date)}</span><span><Eye size={16} />{stats[statsSlug]?.views || 0}</span><span><ChatCircleDots size={16} />{stats[statsSlug]?.comments || 0}</span></div></div>
     {review.url && <a className="music-source-card music-source-card--lead" href={review.url} target="_blank" rel="noreferrer">{review.image && <img src={review.image} {...responsiveImageProps(review.image, "(max-width: 760px) 88px, 104px")} alt={`${review.sourceTitle || review.title}专辑封面`} decoding="async" />}<span><small>网易云音乐 · {review.kind}</small><strong>{review.sourceTitle || review.title}</strong><em>{review.sourceMeta || review.kind}</em></span><b>{review.action || "前往收听"}<ArrowRight size={17} /></b></a>}
     {!review.url && review.image && <img className="music-detail-cover" src={review.image} {...responsiveImageProps(review.image, detailImageSizes)} alt={`${review.title}的封面`} decoding="async" />}

@@ -2,24 +2,30 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 import { buildSearchItems, enabledSearchTypes, filterSearchItems, searchScopeOptions, searchScopeStyle } from "../src/components/searchModel.js";
+import { readThemeStyles } from "./helpers/readThemeStyles.mjs";
 
 test("all account message feeds use the same two-line body preview", async () => {
-  const [dialog, styles] = await Promise.all([
-    readFile("src/community/AccountDialog.jsx", "utf8"),
-    readFile("src/styles.css", "utf8"),
+  const [feeds, styles] = await Promise.all([
+    readFile("src/community/AccountFeeds.jsx", "utf8"),
+    readThemeStyles(),
   ]);
 
-  assert.equal(dialog.match(/<p className="account-message-body">/gu)?.length, 2);
+  assert.equal(feeds.match(/<p className="account-message-body">/gu)?.length, 2);
   assert.match(styles, /\.account-message-body\s*\{[^}]*-webkit-line-clamp:2;/u);
 });
 
 test("account notifications stay unread until an individual message is opened", async () => {
-  const dialog = await readFile("src/community/AccountDialog.jsx", "utf8");
-  assert.doesNotMatch(dialog, /loadFeedWithBestEffortReceipt|readThrough/u);
-  assert.match(dialog, /const \[tab, setTab\] = useState\("profile"\);/u);
-  assert.match(dialog, /if \(item\.unread && markRead\) Promise\.resolve\(markRead\(item\.id\)\)\.catch\(\(\) => \{\}\);/u);
-  assert.match(dialog, /commentLinkProps\(reply, closeAccount, markReplyRead\)/u);
-  assert.match(dialog, /commentLinkProps\(comment, closeAccount, markAdminCommentRead\)/u);
+  const [center, feeds, data] = await Promise.all([
+    readFile("src/community/AccountCenter.jsx", "utf8"),
+    readFile("src/community/AccountFeeds.jsx", "utf8"),
+    readFile("src/community/accountData.js", "utf8"),
+  ]);
+  const source = `${center}\n${feeds}\n${data}`;
+  assert.doesNotMatch(source, /loadFeedWithBestEffortReceipt|readThrough/u);
+  assert.match(center, /const \[tab, setTab\] = useState\("profile"\);/u);
+  assert.match(data, /if \(item\.unread && markRead\) Promise\.resolve\(markRead\(item\.id\)\)\.catch\(\(\) => \{\}\);/u);
+  assert.match(feeds, /commentLinkProps\(reply, closeAccount, markReplyRead\)/u);
+  assert.match(feeds, /commentLinkProps\(comment, closeAccount, markAdminCommentRead\)/u);
 });
 
 test("the combined search feed applies newest-first ordering with stable ties", () => {

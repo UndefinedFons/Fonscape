@@ -1,6 +1,6 @@
 {
   "name": "fonscape",
-  "version": "1.14.0",
+  "version": "1.15.0",
   "description": "Fonscape（风栖），一款清新、响应式、注重阅读体验的 React 个人博客主题模板。",
   "private": true,
   "license": "MIT",
@@ -20,7 +20,7 @@
         "description": "Stores runtime accounts, comments, sessions and rate-limit state; published blog content remains in Git."
       },
       "ADMIN_BOOTSTRAP_TOKEN": {
-        "description": "Enter a long random one-time token. Leave no default value; the first administrator enters it on /#/admin/setup."
+        "description": "Enter a long random one-time token. Leave no default value; the first administrator enters it on /admin/setup."
       }
     }
   },
@@ -28,19 +28,20 @@
     "generate:content-targets": "node scripts/generate-content-targets.mjs",
     "generate:font-css": "node scripts/generate-font-css.mjs",
     "generate:rss": "node scripts/generate-rss.mjs",
+    "generate:sitemap": "node scripts/generate-sitemap.mjs",
     "generate:responsive-images": "node scripts/generate-responsive-images.mjs",
     "check:content-targets": "node scripts/generate-content-targets.mjs --check",
     "check:font-css": "node scripts/generate-font-css.mjs --check",
     "check:responsive-images": "node scripts/generate-responsive-images.mjs --check",
     "check:performance-budget": "node scripts/check-performance-budget.mjs",
     "pnpm:devPreinstall": "node scripts/generate-content-targets.mjs && node scripts/generate-font-css.mjs && node scripts/generate-responsive-images.mjs --manifest-only",
-    "predev": "node scripts/generate-content-targets.mjs && node scripts/generate-font-css.mjs && node scripts/generate-responsive-images.mjs && node scripts/generate-rss.mjs",
+    "predev": "node scripts/generate-content-targets.mjs && node scripts/generate-font-css.mjs && node scripts/generate-responsive-images.mjs && node scripts/generate-rss.mjs && node scripts/generate-sitemap.mjs",
     "dev": "vite",
-    "prebuild": "node scripts/generate-content-targets.mjs && node scripts/generate-font-css.mjs && node scripts/generate-responsive-images.mjs && node scripts/generate-rss.mjs",
+    "prebuild": "node scripts/generate-content-targets.mjs && node scripts/generate-font-css.mjs && node scripts/generate-responsive-images.mjs && node scripts/generate-rss.mjs && node scripts/generate-sitemap.mjs",
     "build": "vite build",
     "build:vercel": "pnpm migrate:turso --apply && pnpm build",
     "preview": "vite preview",
-    "pretest": "node scripts/generate-content-targets.mjs && node scripts/generate-font-css.mjs && node scripts/generate-responsive-images.mjs && node scripts/generate-rss.mjs",
+    "pretest": "node scripts/generate-content-targets.mjs && node scripts/generate-font-css.mjs && node scripts/generate-responsive-images.mjs && node scripts/generate-rss.mjs && node scripts/generate-sitemap.mjs",
     "test": "node --test",
     "test:e2e": "playwright test",
     "lint": "eslint . --max-warnings 0",

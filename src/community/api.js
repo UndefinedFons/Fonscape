@@ -1,3 +1,5 @@
+import { contentRoute, routeHref } from "../routes.js";
+
 export class ApiClientError extends Error {
   constructor(message, status, code) {
     super(message);
@@ -110,12 +112,9 @@ export async function compressAvatar(file, crop = {}) {
 }
 
 export function contentHref(type, slug) {
-  if (type === "post" && slug === "site-friends") return "/#/friends";
-  if (type === "post" && slug === "site-about") return "/#/about";
-  if (type === "post") return `/#/post/${slug}`;
-  if (type === "poem") return `/#/poem/${slug}`;
-  if (type === "music") return `/#/music/${slug}`;
-  return "/";
+  if (type === "post" && slug === "site-friends") return routeHref("/friends");
+  if (type === "post" && slug === "site-about") return routeHref("/about");
+  return routeHref(contentRoute(type, { key: slug, slug }));
 }
 
 export function formatCommunityTime(value) {

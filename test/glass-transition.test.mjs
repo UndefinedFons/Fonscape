@@ -1,11 +1,12 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
+import { readThemeStyles } from "./helpers/readThemeStyles.mjs";
 
 test("global glass keeps backdrop sampling stable while opacity transitions", async () => {
   const [app, styles] = await Promise.all([
     readFile(new URL("../src/App.jsx", import.meta.url), "utf8"),
-    readFile(new URL("../src/styles.css", import.meta.url), "utf8"),
+    readThemeStyles(),
   ]);
   const backdropRule = styles.match(/\.global-glass-backdrop\s*\{(?<body>[^}]+)\}/u)?.groups?.body || "";
   const enabledRule = styles.match(/:root\[data-glass="on"\] \.global-glass-backdrop\s*\{(?<body>[^}]+)\}/u)?.groups?.body || "";
@@ -18,7 +19,7 @@ test("global glass keeps backdrop sampling stable while opacity transitions", as
 });
 
 test("the current home background remains an overlay during glass transitions", async () => {
-  const styles = await readFile(new URL("../src/styles.css", import.meta.url), "utf8");
+  const styles = await readThemeStyles();
   const refreshRule = styles.match(/\.home-refresh-page\s*\{(?<body>[^}]+)\}/u)?.groups?.body || "";
 
   assert.notEqual(refreshRule, "");

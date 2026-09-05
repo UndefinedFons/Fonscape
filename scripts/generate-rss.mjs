@@ -4,7 +4,8 @@ import { fileURLToPath } from "node:url";
 import siteConfig from "../fonscape.config.js";
 import { contentRepositoryConfig } from "../content-repository.config.mjs";
 import { parsePostMetadata, sortNewestFirst } from "../src/content/frontmatter.js";
-import { normalizeSiteUrl } from "../src/siteUrl.js";
+import { normalizeSiteUrl, siteUrlForPath } from "../src/siteUrl.js";
+import { postRoute } from "../src/routes.js";
 
 export { normalizeSiteUrl };
 
@@ -82,7 +83,7 @@ export function buildRssFeed(posts, siteUrl, config = {}) {
   const description = config.description || "";
   const language = config.language || "zh-CN";
   const items = posts.map((post) => {
-    const postUrl = `${base}/#/post/${String(post.slug).split("/").map(encodeURIComponent).join("/")}`;
+    const postUrl = siteUrlForPath(base, postRoute(post.slug));
     const date = parseRssDate(post.date);
     return [
       "    <item>",
@@ -104,7 +105,7 @@ export function buildRssFeed(posts, siteUrl, config = {}) {
     `    <link>${escapeXml(base)}</link>`,
     `    <description>${escapeXml(description)}</description>`,
     `    <language>${escapeXml(language)}</language>`,
-    `    <atom:link href="${escapeXml(`${base}/feed.xml`)}" rel="self" type="application/rss+xml" />`,
+    `    <atom:link href="${escapeXml(siteUrlForPath(base, "/feed.xml"))}" rel="self" type="application/rss+xml" />`,
     latestDate ? `    <lastBuildDate>${escapeXml(latestDate)}</lastBuildDate>` : "",
     items,
     "  </channel>",

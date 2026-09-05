@@ -1,0 +1,94 @@
+
+/* About editorial profile */
+.about-page .about-layout {
+  width:min(1360px,calc(100% - clamp(28px,6vw,88px)));
+  grid-template-columns:minmax(240px,.78fr) minmax(0,1.82fr);
+  justify-content:stretch;
+  align-items:start;
+  gap:clamp(36px,5vw,72px);
+  padding:clamp(48px,5vw,70px) clamp(28px,4.6vw,70px) 52px;
+}
+.about-page .about-layout>* { min-width:0; }
+.about-profile { position:static; width:100%; max-width:330px; min-width:0; justify-self:center; }
+.about-portrait { display:block; }
+.about-portrait>img { width:100%; height:auto; aspect-ratio:1; display:block; object-fit:cover; border-radius:26px; box-shadow:0 22px 60px color-mix(in srgb,var(--text) 14%,transparent); }
+.about-portrait-placeholder { width:100%; height:auto; aspect-ratio:1; border-radius:26px; box-shadow:0 22px 60px color-mix(in srgb,var(--text) 14%,transparent); }
+.about-profile-copy { padding:26px 4px 0; }
+.about-profile-copy h2 { margin:7px 0 4px; font:700 31px "Zen Maru Gothic",sans-serif; }
+.about-profile-copy>p { margin:0; color:var(--muted); font-size:12px; line-height:1.7; }
+.about-interest-list { display:flex; flex-wrap:wrap; gap:5px 0; margin-top:21px; color:var(--muted); font-size:10px; }
+.about-interest-list span { display:inline-flex; align-items:center; }
+.about-interest-list span+span::before { content:"·"; margin:0 8px; color:var(--accent); }
+.about-channel-list { margin-top:26px; border-block:1px solid var(--line); }
+.about-channel { width:100%; min-height:58px; display:grid; grid-template-columns:38px minmax(0,1fr) 18px; align-items:center; justify-items:stretch; gap:11px; padding:10px 3px; border:0; background:none; color:var(--muted); font:inherit; text-align:left; cursor:pointer; transition:color .25s ease,padding-left .35s cubic-bezier(.22,1,.36,1); }
+.about-channel+.about-channel { border-top:1px solid var(--line); }
+.about-channel:hover { padding-left:8px; color:var(--accent); }
+.about-channel:focus-visible { padding-left:8px; color:var(--accent); outline:2px solid var(--accent); outline-offset:3px; border-radius:8px; }
+.about-channel-icon { width:34px; height:34px; display:grid; place-items:center; justify-self:center; border-radius:10px; background:color-mix(in srgb,currentColor 12%,transparent); color:var(--accent); transition:color .25s ease,transform .3s cubic-bezier(.22,1,.36,1); }
+.about-channel[data-channel="github"] .about-channel-icon,.about-channel[data-channel="x"] .about-channel-icon { color:var(--text); }
+.about-channel[data-channel="bilibili"] .about-channel-icon { color:#fb7299; }
+.about-channel[data-channel="email"] .about-channel-icon { color:var(--blue); }
+.about-channel:hover .about-channel-icon,.about-channel:focus-visible .about-channel-icon { transform:scale(1.08); }
+.about-channel>span { min-width:0; display:grid; gap:2px; }
+.about-channel small { font-size:8px; font-weight:700; letter-spacing:.13em; }
+.about-channel strong { overflow:hidden; color:var(--text); font-size:11px; text-overflow:ellipsis; white-space:nowrap; }
+.about-channel>svg:last-child { justify-self:end; transition:transform .3s cubic-bezier(.22,1,.36,1); }
+.about-channel:hover>svg:last-child,.about-channel:focus-visible>svg:last-child { transform:translateX(4px); }
+.about-story { position:relative; min-width:0; padding-left:clamp(28px,3vw,44px); }
+.about-story::before {
+  content:"";
+  position:absolute;
+  inset:0 auto 0 0;
+  width:2px;
+  border-radius:999px;
+  background:linear-gradient(
+    180deg,
+    var(--accent) 0,
+    color-mix(in srgb,var(--accent) 66%,var(--line)) 88px,
+    color-mix(in srgb,var(--accent) 24%,var(--line)) 180px,
+    color-mix(in srgb,var(--line) 58%,transparent) 68%,
+    color-mix(in srgb,var(--line) 22%,transparent) 86%,
+    transparent 100%
+  );
+}
+.about-story--compact::before {
+  background:linear-gradient(
+    180deg,
+    var(--accent) 0,
+    color-mix(in srgb,var(--accent) 66%,var(--line)) 34%,
+    color-mix(in srgb,var(--accent) 24%,var(--line)) 62%,
+    color-mix(in srgb,var(--line) 42%,transparent) 82%,
+    transparent 100%
+  );
+}
+.about-story>header { padding:2px 0 27px; }
+.about-story>header h2 { max-width:720px; margin:9px 0 10px; font:700 clamp(30px,3.2vw,44px)/1.35 "Zen Maru Gothic",sans-serif; letter-spacing:-.02em; }
+.about-story>header p { margin:0; color:var(--muted); font-size:13px; letter-spacing:.03em; }
+.about-story .prose-block { max-width:720px; }
+.about-story .prose-block p { margin:0; color:var(--muted); font-size:14px; line-height:2.15; text-wrap:pretty; }
+.about-story .prose-block p+p { margin-top:22px; }
+.about-comments { max-width:900px; padding-bottom:78px; }
+.about-comments .comments-section { margin-top:18px; padding-top:0; border-top:0; }
+.about-comments .comment-login-prompt { padding:11px 0 0; border-block:0; }
+@media (max-width:960px) {
+  .about-page .about-layout { grid-template-columns:minmax(210px,.72fr) minmax(0,1.5fr); gap:clamp(28px,4.5vw,42px); padding-inline:clamp(24px,4vw,36px); }
+  .about-story { padding-left:clamp(24px,3.5vw,30px); }
+}
+
+@media (max-width:760px) {
+  .about-page .about-layout { width:calc(100% - 24px); grid-template-columns:1fr; gap:48px; padding-block:42px 36px; }
+  .about-profile { position:static; width:min(100%,320px); justify-self:center; }
+  .about-portrait>img { width:230px; margin:auto; border-radius:24px; }
+  .about-portrait-placeholder { width:230px; margin:auto; border-radius:24px; }
+  .about-profile-copy { padding-top:23px; text-align:center; }
+  .about-interest-list { justify-content:center; }
+  .about-channel-list { width:min(100%,280px); margin:24px auto 0; text-align:left; }
+  .about-story { padding:0; border-left:0; }
+  .about-story::before { position:static; display:block; width:44px; height:3px; margin-bottom:24px; background:linear-gradient(90deg,var(--accent),color-mix(in srgb,var(--accent) 12%,transparent)); }
+  .about-story>header { padding-bottom:24px; }
+  .about-story>header h2 { font-size:32px; }
+  .about-story .prose-block p { font-size:14px; line-height:2.05; }
+  .about-comments { width:calc(100% - 32px); padding-bottom:66px; }
+  .about-comments .comments-section { margin-top:22px; }
+  .about-comments .comment-login-prompt { padding-top:10px; }
+}

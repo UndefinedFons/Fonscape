@@ -7,7 +7,7 @@ import { MusicNotes } from "@phosphor-icons/react/MusicNotes";
 import { TextAa } from "@phosphor-icons/react/TextAa";
 import { UserCircle } from "@phosphor-icons/react/UserCircle";
 import { useEffect, useState } from "react";
-import { authorProfile, homeContent, loadFeaturedChunk, siteConfig } from "../content/index.js";
+import { authorProfile, contentRoute, homeContent, loadFeaturedChunk, siteConfig } from "../content/index.js";
 import { ArticleCover } from "../components/Cards.jsx";
 import { HeroShell } from "../components/PageHero.jsx";
 import { useHorizontalScroller } from "../hooks.js";
@@ -16,6 +16,7 @@ import { getPostFirstParagraph } from "../richContent.js";
 import { responsiveImageProps, responsiveImageUrl } from "../responsiveImages.ts";
 import { getSectionAvailability } from "../sectionAvailability.js";
 import { formatContentDate, getPostWordCount } from "../siteUtils.js";
+import { routeHref } from "../routes.js";
 const { recentPosts, latestPoems, latestMusic } = homeContent;
 const sectionState = getSectionAvailability(siteConfig);
 const showPoems = sectionState.poems;
@@ -85,7 +86,7 @@ export function HomePage({ stats, onStatsTargets }) {
   }, [featuredState.previous]);
   useEffect(() => {
     if (!nextFeaturedPost?.image) return;
-    const source = nextFeaturedPost.cardImage || nextFeaturedPost.image;
+    const source = nextFeaturedPost.image;
     const image = new Image();
     image.decoding = "async";
     const responsive = responsiveImageProps(source, "(max-width: 760px) calc(100vw - 24px), min(62vw, 760px)");
@@ -110,8 +111,8 @@ export function HomePage({ stats, onStatsTargets }) {
       ? { current: next, previous: null }
       : { current: next, previous: current.current });
   };
-  const renderFeaturedPost = (post, phase) => <a key={post.slug} className={`home-refresh-feature is-${phase}`} href={`#/post/${post.slug}`} aria-hidden={phase === "outgoing" ? "true" : undefined} tabIndex={phase === "outgoing" ? -1 : undefined}>
-    {post.image ? <img src={post.cardImage || post.image} {...responsiveImageProps(post.cardImage || post.image, "(max-width: 760px) calc(100vw - 24px), min(62vw, 760px)")} alt="" loading={phase === "current" ? "eager" : "lazy"} decoding="async" fetchPriority={phase === "current" ? "high" : "low"} onLoad={(event) => applyFeaturedTone(event.currentTarget)} style={{ objectPosition: post.cardPosition || "center" }} /> : <span className="home-refresh-feature-placeholder"><BookOpenText size={48} weight="duotone" /></span>}
+  const renderFeaturedPost = (post, phase) => <a key={post.slug} className={`home-refresh-feature is-${phase}`} href={contentRoute("post", post)} aria-hidden={phase === "outgoing" ? "true" : undefined} tabIndex={phase === "outgoing" ? -1 : undefined}>
+    {post.image ? <img src={post.image} {...responsiveImageProps(post.image, "(max-width: 760px) calc(100vw - 24px), min(62vw, 760px)")} alt="" loading={phase === "current" ? "eager" : "lazy"} decoding="async" fetchPriority={phase === "current" ? "high" : "low"} onLoad={(event) => applyFeaturedTone(event.currentTarget)} style={{ objectPosition: post.cardPosition || "center" }} /> : <span className="home-refresh-feature-placeholder"><BookOpenText size={48} weight="duotone" /></span>}
     <span className="home-refresh-feature-shade" />
     <span className="home-refresh-feature-copy">
       <small>置顶阅读 · {post.category}</small>
@@ -146,7 +147,7 @@ export function HomePage({ stats, onStatsTargets }) {
 
         <aside className="home-refresh-profile material-panel" aria-labelledby="home-profile-name">
           <div className="home-refresh-profile-heading">
-            <a href="#/about" aria-label="查看关于我">{authorProfile.avatar ? <img src={authorProfile.avatarSmall || authorProfile.avatar} {...responsiveImageProps(authorProfile.avatarSmall || authorProfile.avatar, "132px")} alt={authorProfile.avatarAlt} width="132" height="132" loading="eager" decoding="async" /> : <span className="home-refresh-profile-avatar-placeholder" role="img" aria-label={authorProfile.avatarAlt}><UserCircle size={62} weight="duotone" /></span>}</a>
+            <a href={routeHref("/about")} aria-label="查看关于我">{authorProfile.avatar ? <img src={authorProfile.avatarSmall || authorProfile.avatar} {...responsiveImageProps(authorProfile.avatarSmall || authorProfile.avatar, "132px")} alt={authorProfile.avatarAlt} width="132" height="132" loading="eager" decoding="async" /> : <span className="home-refresh-profile-avatar-placeholder" role="img" aria-label={authorProfile.avatarAlt}><UserCircle size={62} weight="duotone" /></span>}</a>
             <span><small>ABOUT ME</small><strong id="home-profile-name">{authorProfile.name}</strong><em>{authorProfile.tagline}</em></span>
           </div>
           <p>{authorProfile.introduction}</p>
@@ -161,10 +162,10 @@ export function HomePage({ stats, onStatsTargets }) {
       <section className="home-refresh-section home-refresh-recent material-panel" aria-labelledby="home-recent-title">
         <header className="home-refresh-section-heading">
           <span><small>LATEST ARTICLES</small><h2 id="home-recent-title">近期文章</h2></span>
-          <a href="#/posts">浏览文章</a>
+          <a href={routeHref("/posts")}>浏览文章</a>
         </header>
         {recentPosts.length ? <nav className="home-refresh-news-track" aria-label="近期文章，横向滑动查看更多" {...articleScroller}>
-          {recentPosts.map((post) => <a className="home-refresh-news-card" href={`#/post/${post.slug}`} key={post.slug}>
+          {recentPosts.map((post) => <a className="home-refresh-news-card" href={contentRoute("post", post)} key={post.slug}>
             <ArticleCover post={post} className="home-refresh-news-cover" emptyClassName="is-placeholder" placeholderClassName="home-refresh-news-placeholder" sizes="(max-width: 760px) calc(100vw - 84px), 360px" />
             <span className="home-refresh-news-copy">
               <span className="home-refresh-news-meta"><small>{post.category}</small><time dateTime={post.date}>{formatContentDate(post.date).slice(0, 10)}</time></span>
@@ -180,10 +181,10 @@ export function HomePage({ stats, onStatsTargets }) {
         {showPoems && <section className="home-refresh-section home-refresh-poems material-panel" aria-labelledby="home-poems-title">
           <header className="home-refresh-section-heading">
             <span><small>SMALL POEMS</small><h2 id="home-poems-title">三行风与梦</h2></span>
-            <a href="#/poems">走进诗页</a>
+            <a href={routeHref("/poems")}>走进诗页</a>
           </header>
           {latestPoems.length ? <div className="home-refresh-list home-refresh-mini-track" {...poemScroller}>
-            {latestPoems.map((poem) => <a href={`#/poem/${poem.slug}`} key={poem.slug}>
+            {latestPoems.map((poem) => <a href={contentRoute("poem", poem)} key={poem.slug}>
               <Feather size={20} weight="duotone" />
               <span><small>小诗 · <time dateTime={poem.date}>{formatContentDate(poem.date).slice(0, 10)}</time></small><strong>{poem.title}</strong><small>{poem.previewLines.slice(0, 2).join(" / ")}</small></span>
             </a>)}
@@ -193,12 +194,12 @@ export function HomePage({ stats, onStatsTargets }) {
         {showMusic && <section className="home-refresh-section home-refresh-music material-panel" aria-labelledby="home-music-title">
           <header className="home-refresh-section-heading">
             <span><small>MUSIC NOTES</small><h2 id="home-music-title">耳边正在发生</h2></span>
-            <a href="#/music">音乐手记</a>
+            <a href={routeHref("/music")}>音乐手记</a>
           </header>
           {latestMusic.length ? <div className="home-refresh-list home-refresh-mini-track" {...musicScroller}>
             {latestMusic.map((entry) => {
               const EntryIcon = getMusicSectionIcon(entry.section);
-              return <a href={`#/music/${entry.section}/${entry.slug}`} key={`${entry.section}-${entry.slug}`}>
+              return <a href={contentRoute("music", entry)} key={`${entry.section}-${entry.slug}`}>
                 <EntryIcon size={21} weight="duotone" />
                 <span><small>{entry.kind} · {formatContentDate(entry.date).slice(0, 10)}</small><strong>{entry.title}</strong></span>
               </a>;

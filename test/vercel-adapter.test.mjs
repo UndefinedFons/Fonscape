@@ -69,10 +69,8 @@ test("Vercel redirects retired admin paths before the API-safe SPA fallback", as
   assert.equal(config.framework, "vite");
   assert.equal(config.outputDirectory, "dist");
   assert.deepEqual(config.redirects, [
-    { source: "/admin/setup", destination: "/#/admin/setup", statusCode: 302 },
-    { source: "/admin/setup/", destination: "/#/admin/setup", statusCode: 302 },
     { source: "/admin", destination: "/", statusCode: 302 },
-    { source: "/admin/:path*", destination: "/", statusCode: 302 },
+    { source: "/admin/", destination: "/", statusCode: 302 },
   ]);
   assert.deepEqual(config.rewrites.slice(0, 2), [
     { source: "/api", destination: "/api/fonscape?path=" },
@@ -84,13 +82,10 @@ test("Vercel redirects retired admin paths before the API-safe SPA fallback", as
   assert.equal(config.rewrites.at(-1).destination, "/index.html");
 });
 
-test("Cloudflare Pages redirects every retired admin path to the blog home", async () => {
+test("Cloudflare Pages leaves the setup pathname available to the SPA", async () => {
   const source = await readFile(new URL("../public/_redirects", import.meta.url), "utf8");
   assert.deepEqual(source.trim().split(/\r?\n/u), [
-    "/admin/setup /#/admin/setup 302",
-    "/admin/setup/ /#/admin/setup 302",
     "/admin / 302",
     "/admin/ / 302",
-    "/admin/* / 302",
   ]);
 });

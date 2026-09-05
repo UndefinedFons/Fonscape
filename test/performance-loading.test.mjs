@@ -15,41 +15,46 @@ test("non-current hero artwork waits until navigation intent or sustained idle t
 });
 
 test("route and feature surfaces stay out of the initial module", async () => {
-  const [app, main] = await Promise.all([
+  const [app, routes, main, routing] = await Promise.all([
     readFile("src/App.jsx", "utf8"),
+    readFile("src/appRoutes.jsx", "utf8"),
     readFile("src/main.jsx", "utf8"),
+    readFile("src/useAppRouting.js", "utf8"),
   ]);
 
-  assert.match(app, /import\("\.\/pages\/ArticlePage\.jsx"\)/u);
-  assert.match(app, /loadRichArticleModule/u);
-  assert.match(app, /ensureFullFontStylesheet\(\)/u);
-  assert.match(app, /ensureFullResponsiveImages\(\)/u);
-  assert.match(app, /const withFullFonts = \(loader\) => Promise\.all/u);
-  assert.match(app, /const withFullAssets = \(loader\) => Promise\.all/u);
-  assert.match(app, /const loadPostsModule = \(\) => withFullAssets\(\(\) => import\("\.\/pages\/PostsPage\.jsx"\)\)/u);
-  assert.match(app, /const loadDialogsModule = \(\) => withFullFonts\(\(\) => import\("\.\/components\/Dialogs\.jsx"\)\)/u);
-  assert.match(app, /const loadAccountModule = \(\) => withFullFonts\(\(\) => import\("\.\/community\/AccountDialog\.jsx"\)\)/u);
-  assert.match(app, /const ArticlePage = lazy\(/u);
-  assert.match(app, /const SearchDialog = lazy\(/u);
-  assert.match(app, /const AccountDialog = lazy\(/u);
+  assert.match(routes, /import\("\.\/pages\/ArticlePage\.jsx"\)/u);
+  assert.match(routes, /loadRichArticleModule/u);
+  assert.match(routes, /ensureFullFontStylesheet\(\)/u);
+  assert.match(routes, /ensureFullResponsiveImages\(\)/u);
+  assert.match(routes, /const withFullFonts = \(loader\) => Promise\.all/u);
+  assert.match(routes, /const withFullAssets = \(loader\) => Promise\.all/u);
+  assert.match(routes, /const loadPostsModule = \(\) => withFullAssets\(\(\) => import\("\.\/pages\/PostsPage\.jsx"\)\)/u);
+  assert.match(routes, /const loadDialogsModule = \(\) => withFullFonts\(\(\) => import\("\.\/components\/Dialogs\.jsx"\)\)/u);
+  assert.match(routes, /const loadAccountModule = \(\) => withFullFonts\(\(\) => import\("\.\/community\/AccountDialog\.jsx"\)\)/u);
+  assert.match(routes, /const ArticlePage = lazy\(/u);
+  assert.match(routes, /const SearchDialog = lazy\(/u);
+  assert.match(routes, /const AccountDialog = lazy\(/u);
   assert.doesNotMatch(app, /import .*pages\/(?:ArticlePage|PostsPage|PoemsPage|PoemPage|MusicPage|AboutPage|FriendsPage|AdminSetupPage)\.jsx/u);
   assert.doesNotMatch(app, /import .*community\/AccountDialog\.jsx/u);
   assert.doesNotMatch(app, /import .*components\/Dialogs\.jsx/u);
-  assert.match(app, /startTransition\(\(\) =>/u);
+  assert.match(routing, /startTransition\(\(\) =>/u);
   assert.doesNotMatch(app, /route-chunk-loading/u);
   assert.match(main, /React\.Suspense fallback=\{null\}/u);
   assert.match(main, /preloadRoute\(initialRoute\)/u);
 });
 
 test("navigation intent preloads the matching route module", async () => {
-  const app = await readFile("src/App.jsx", "utf8");
+  const [app, routes] = await Promise.all([
+    readFile("src/App.jsx", "utf8"),
+    readFile("src/appRoutes.jsx", "utf8"),
+  ]);
 
-  assert.match(app, /function routeModuleLoader\(path\)/u);
-  assert.match(app, /function preloadRouteModule\(path\)/u);
-  assert.match(app, /function preloadRouteContent\(path\)/u);
+  assert.match(routes, /function routeModuleLoader\(path\)/u);
+  assert.match(routes, /function preloadRouteModule\(path\)/u);
+  assert.match(routes, /function preloadRouteContent\(path\)/u);
   assert.match(app, /preloadRouteModule\(path\)/u);
   assert.match(app, /preloadRouteContent\(path\)/u);
-  assert.match(app, /loadPost\(decode\(routePath\.slice\("\/post\/"\.length\)\)\)\.catch/u);
+  assert.match(routes, /loadPost\(decodeRoutePath\(routePath\.slice\("\/post\/"\.length\)\)\)\.catch/u);
   assert.match(app, /document\.addEventListener\("focusin", preloadLinkedRoute\)/u);
   assert.match(app, /document\.addEventListener\("touchstart", preloadLinkedRoute/u);
 });
@@ -62,7 +67,7 @@ test("listing surfaces can use smaller sources without changing detail artwork",
   ]);
 
   assert.match(cards, /responsiveImageProps\(imageSource, sizes\)/u);
-  assert.match(home, /responsiveImageProps\(post\.cardImage \|\| post\.image/u);
+  assert.match(home, /responsiveImageProps\(post\.image/u);
   assert.match(home, /authorProfile\.avatarSmall \|\| authorProfile\.avatar/u);
   assert.match(article, /src=\{post\.image\}/u);
 });

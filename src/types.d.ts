@@ -91,7 +91,6 @@ export interface Post extends DatedEntry {
   wordCount: number;
   outline: ArticleOutlineItem[];
   image?: string;
-  cardImage?: string;
   cardPosition?: string;
   coverMode?: "wide" | "none";
   [key: string]: unknown;
@@ -125,7 +124,6 @@ export interface MusicReview extends DatedEntry {
   firstParagraph: string;
   wordCount: number;
   image?: string;
-  cardImage?: string;
   [key: string]: unknown;
 }
 

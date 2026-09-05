@@ -1,0 +1,485 @@
+
+/* Global glass: one fixed, pre-softened image layer; surfaces only change opacity. */
+:root {
+  --glass-image-opacity:0;
+  --glass-veil-opacity:0;
+  --glass-page-wash:rgba(252,247,251,.38);
+  --glass-surface:color-mix(in srgb,var(--surface) 66%,transparent);
+  --glass-surface-strong:color-mix(in srgb,var(--surface) 82%,transparent);
+  --glass-soft:color-mix(in srgb,var(--surface-soft) 72%,transparent);
+}
+:root[data-theme="dark"] {
+  --glass-page-wash:rgba(25,13,32,.56);
+}
+.app-shell {
+  position:relative;
+  isolation:isolate;
+  background:var(--bg);
+  transition:background-color .38s cubic-bezier(.22,1,.36,1);
+}
+.global-glass-backdrop,
+.global-glass-veil {
+  position:fixed;
+  z-index:0;
+  inset:-12px;
+  display:block;
+  pointer-events:none;
+  opacity:0;
+  transition:opacity .42s cubic-bezier(.22,1,.36,1);
+}
+.global-glass-backdrop {
+  background-color:var(--bg);
+  background-image:var(--glass-background-image);
+  background-position:center;
+  background-size:cover;
+  background-repeat:no-repeat;
+  filter:var(--glass-background-filter,none);
+  transform:var(--glass-background-transform,none);
+  backface-visibility:hidden;
+  contain:strict;
+}
+.global-glass-veil {
+  inset:0;
+  background:var(--glass-page-wash);
+  transform:translateZ(0);
+  backface-visibility:hidden;
+  contain:strict;
+}
+.app-shell>.route-view,
+.app-shell>footer {
+  position:relative;
+  z-index:1;
+}
+:root[data-glass="on"] {
+  --glass-image-opacity:1;
+  --glass-veil-opacity:1;
+}
+:root[data-glass="on"] .app-shell { background-color:transparent; }
+:root[data-glass="on"] .global-glass-backdrop {
+  opacity:var(--glass-image-opacity);
+}
+:root[data-glass="on"] .global-glass-veil { opacity:var(--glass-veil-opacity); }
+:root[data-glass-transition="on"] .global-glass-backdrop,
+:root[data-glass-transition="on"] .global-glass-veil {
+  animation:global-glass-in .56s cubic-bezier(.4,0,.2,1) both;
+}
+:root[data-glass-transition="off"] .global-glass-backdrop,
+:root[data-glass-transition="off"] .global-glass-veil {
+  animation:global-glass-out .56s cubic-bezier(.4,0,.2,1) both;
+}
+:root[data-glass="on"] .header-center,
+:root[data-glass="on"] .home-refresh-profile,
+:root[data-glass="on"] .home-refresh-section,
+:root[data-glass="on"] .article-card,
+:root[data-glass="on"] .poem-card,
+:root[data-glass="on"] .poem-page>article,
+:root[data-glass="on"] .music-tabs,
+:root[data-glass="on"] .music-source-card,
+:root[data-glass="on"] .friend-card,
+:root[data-glass="on"] .series-navigation,
+:root[data-glass="on"] .community-account-notice {
+  background-color:var(--glass-surface);
+}
+:root[data-glass="on"] .home-refresh-profile,
+:root[data-glass="on"] .home-refresh-section {
+  position:relative;
+  isolation:isolate;
+  background-color:transparent;
+}
+:root[data-glass="on"] .home-refresh-profile::before,
+:root[data-glass="on"] .home-refresh-section::before {
+  content:none;
+}
+:root[data-glass="on"] .header-center {
+  -webkit-backdrop-filter:none;
+  backdrop-filter:none;
+  background:color-mix(in srgb,var(--surface) 94%,transparent);
+}
+:root[data-glass="on"] .home-refresh-news-card,
+:root[data-glass="on"] .home-refresh-list>a,
+:root[data-glass="on"] .pagination button,
+:root[data-glass="on"] .article-index-actions button,
+:root[data-glass="on"] .comment-composer--reply,
+:root[data-glass="on"] .comment-composer textarea,
+:root[data-glass="on"] .friend-request input {
+  background-color:var(--glass-soft);
+}
+:root[data-glass="on"] .article-index-actions button {
+  border-color:transparent!important;
+  background:var(--glass-surface-strong)!important;
+  box-shadow:0 10px 30px color-mix(in srgb,var(--shadow-color) 26%,transparent);
+}
+:root[data-glass="on"] .friend-card {
+  background:var(--glass-surface);
+  border-color:color-mix(in srgb,var(--friend-color) 28%,var(--line));
+  -webkit-backdrop-filter:blur(14px);
+  backdrop-filter:blur(14px);
+  box-shadow:
+    0 14px 36px color-mix(in srgb,var(--shadow-color) 34%,transparent),
+    0 0 38px color-mix(in srgb,var(--friend-color) 14%,transparent);
+}
+:root[data-glass="on"] .friend-card:hover,
+:root[data-glass="on"] .friend-card:focus-visible {
+  background:var(--glass-surface);
+  border-color:color-mix(in srgb,var(--friend-color) 82%,var(--line));
+  box-shadow:
+    0 0 28px color-mix(in srgb,var(--friend-color) 38%,transparent),
+    0 0 68px color-mix(in srgb,var(--friend-color) 24%,transparent),
+    0 18px 42px color-mix(in srgb,var(--shadow-color) 42%,transparent);
+}
+:root[data-glass="on"] .article-index--archive::before {
+  content:"";
+  position:absolute;
+  z-index:-1;
+  inset:14px 0 30px;
+  border:0;
+  border-radius:24px;
+  background:var(--glass-surface);
+  box-shadow:0 14px 36px color-mix(in srgb,var(--shadow-color) 28%,transparent);
+  pointer-events:none;
+  opacity:1;
+  transform:translateY(0) scale(1);
+  transition:opacity .34s ease,transform .42s cubic-bezier(.22,1,.36,1);
+}
+:root[data-glass="on"] .article-index--archive.is-view-switching::before { opacity:0; transform:translateY(10px) scale(.992); }
+:root[data-glass="on"] .article-index-actions button::before {
+  background:linear-gradient(120deg,color-mix(in srgb,var(--accent-soft) 66%,transparent),color-mix(in srgb,#e5c9ff 52%,transparent) 56%,color-mix(in srgb,var(--surface) 64%,transparent))!important;
+}
+:root[data-glass="on"][data-theme="dark"] .article-index-actions button::before {
+  background:linear-gradient(120deg,color-mix(in srgb,var(--accent-soft) 55%,transparent),color-mix(in srgb,var(--surface) 82%,transparent) 56%,color-mix(in srgb,var(--accent-soft) 40%,transparent))!important;
+  opacity:.45;
+}
+:root[data-glass="on"][data-theme="dark"] .article-index-actions button.active {
+  border-color:color-mix(in srgb,var(--accent) 34%,transparent)!important;
+  background:color-mix(in srgb,var(--surface) 74%,transparent)!important;
+  box-shadow:inset 0 1px 0 color-mix(in srgb,#fff 8%,transparent),0 8px 22px color-mix(in srgb,var(--shadow-color) 16%,transparent)!important;
+}
+:root[data-glass="on"] .archive-control-groups button.active {
+  background:color-mix(in srgb,var(--accent-soft) 68%,transparent);
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb,#fff 34%,transparent),
+    0 5px 14px color-mix(in srgb,var(--accent) 10%,transparent);
+}
+:root[data-glass="on"] .archive-return { background:color-mix(in srgb,var(--accent-soft) 62%,transparent)!important; box-shadow:inset 0 1px 0 color-mix(in srgb,#fff 32%,transparent),0 6px 16px color-mix(in srgb,var(--accent) 10%,transparent)!important; }
+:root[data-glass="on"] .archive-timeline>a { background:color-mix(in srgb,var(--surface) 46%,transparent); box-shadow:inset 0 1px 0 color-mix(in srgb,#fff 24%,transparent),0 6px 18px color-mix(in srgb,var(--shadow-color) 18%,transparent); }
+:root[data-glass="on"] .search-dialog,
+:root[data-glass="on"] .settings-dialog,
+:root[data-glass="on"] .account-dialog,
+:root[data-glass="on"] .article-filter-dialog {
+  background:var(--surface);
+}
+:root[data-glass="on"] footer {
+  border-top:0;
+  background:transparent;
+  color:var(--text);
+  box-shadow:none;
+  text-shadow:0 1px 6px color-mix(in srgb,var(--surface) 32%,transparent);
+}
+:root[data-glass="on"] .dialog-backdrop,
+:root[data-glass="on"] .account-backdrop {
+  background:rgba(43,23,52,.4);
+}
+
+/* Account dialogs own their scroll area so viewport bounce cannot expose a blank frame. */
+.account-backdrop {
+  height:100vh;
+  height:100dvh;
+  min-height:100dvh;
+  overflow:hidden;
+  overscroll-behavior:none;
+  isolation:isolate;
+  contain:paint;
+}
+.account-dialog {
+  min-height:0;
+  overscroll-behavior:none;
+  touch-action:pan-y;
+}
+
+/* Archive controls preserve their two filter rows while shrinking cleanly. */
+.article-index--archive {
+  padding-top:clamp(18px,2.4vw,30px);
+}
+.article-index--archive .archive-controls,
+.article-index--archive .archive-control-groups,
+.article-index--archive .archive-timeline {
+  box-sizing:border-box;
+  min-width:0;
+  max-width:100%;
+}
+.article-index--archive .archive-controls {
+  grid-template-columns:minmax(0,1fr) minmax(0,max-content);
+  width:100%;
+  overflow-x:clip;
+}
+.article-index--archive .archive-control-groups {
+  width:100%;
+  overflow-x:clip;
+}
+.article-index--archive .archive-control-groups>div {
+  min-width:0;
+  max-width:100%;
+  flex-wrap:wrap;
+  position:relative;
+  padding-left:51px;
+}
+.article-index--archive .archive-control-groups>div>span {
+  position:absolute;
+  top:50%;
+  left:0;
+  width:43px;
+  flex:0 0 43px;
+  transform:translateY(-50%);
+}
+.article-index--archive .archive-controls span {
+  width:43px;
+  flex:0 0 43px;
+}
+.article-index--archive .archive-controls button,
+.article-index--archive .archive-return {
+  max-width:100%;
+}
+@media (max-width:760px) {
+  .article-index--archive {
+    padding-top:18px;
+  }
+  .article-index--archive .archive-controls {
+    grid-template-columns:minmax(0,1fr);
+  }
+  .article-index--archive .archive-control-groups,
+  .article-index--archive .archive-control-groups>div {
+    width:100%;
+  }
+  .article-index--archive .archive-return {
+    width:100%;
+    justify-self:stretch;
+  }
+}
+
+/* Keep account chrome fixed while only the active tab content scrolls. */
+.account-backdrop {
+  touch-action:none;
+}
+.account-dialog {
+  display:flex;
+  flex-direction:column;
+  overflow:hidden;
+  max-height:calc(100dvh - 100px);
+}
+.account-center {
+  min-height:0;
+  display:flex;
+  flex-direction:column;
+}
+.account-center.is-cropping {
+  flex:1 1 auto;
+}
+.account-center.is-cropping > .account-profile-header {
+  flex:0 0 auto;
+  padding-bottom:14px;
+}
+.account-center.is-cropping .account-crop-scroll {
+  min-height:0;
+  flex:1 1 auto;
+  display:flex;
+  flex-direction:column;
+  overflow-x:hidden;
+  overflow-y:auto;
+  overscroll-behavior:contain;
+  -webkit-overflow-scrolling:touch;
+  touch-action:pan-y;
+  scrollbar-width:none;
+  -ms-overflow-style:none;
+}
+.account-center.is-cropping .account-crop-scroll::-webkit-scrollbar {
+  width:0;
+  height:0;
+  display:none;
+}
+.account-center > .account-profile-header,
+.account-center > .avatar-crop-panel,
+.account-center > .account-mode-tabs,
+.account-center > .account-center-actions {
+  flex:0 0 auto;
+}
+.account-center.is-cropping .account-tab-panel {
+  flex:0 0 auto;
+  overflow:visible;
+}
+.account-tab-panel {
+  min-height:0;
+  flex:1 1 auto;
+  overflow-y:auto;
+  overscroll-behavior:contain;
+  -webkit-overflow-scrolling:touch;
+  touch-action:pan-y;
+  padding:2px;
+  margin-inline:-2px;
+}
+.account-tab-panel > .account-comment-list,
+.account-tab-panel > .account-reply-list {
+  max-height:none;
+  overflow:visible;
+  -webkit-mask-image:none;
+  mask-image:none;
+}
+.account-auth {
+  min-height:0;
+  flex:1 1 auto;
+  display:flex;
+  flex-direction:column;
+  padding:2px;
+  margin-inline:-2px;
+}
+.account-auth-head {
+  flex:0 0 auto;
+}
+.account-auth-form {
+  min-height:0;
+  flex:1 1 auto;
+  overflow-y:auto;
+  overscroll-behavior:contain;
+  -webkit-overflow-scrolling:touch;
+  touch-action:pan-y;
+}
+@media (max-width:760px) {
+  .account-dialog {
+    max-height:calc(100dvh - 24px);
+  }
+}
+
+/* One shared material surface. Page geometry never changes when glass is toggled. */
+.comments-material-panel>.comments-section { margin:0; padding:0; }
+.comments-material-panel .comment-login-prompt { padding:15px 4px; }
+.material-panel {
+  transition:background-color .38s cubic-bezier(.22,1,.36,1),outline-color .38s ease,box-shadow .38s ease;
+}
+:root[data-glass="on"] .material-panel {
+  outline:1px solid color-mix(in srgb,#fff 42%,var(--line));
+  outline-offset:-1px;
+  background:var(--glass-surface);
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb,#fff 28%,transparent),
+    0 14px 36px color-mix(in srgb,var(--shadow-color) 28%,transparent);
+}
+:root[data-glass="on"] .comments-material-panel>.comments-section { margin:0; padding:0; }
+:root[data-glass="on"] .comments-material-panel .comment-login-prompt { padding:15px 4px; }
+:root[data-glass="on"] .header-center.material-panel {
+  background:color-mix(in srgb,var(--surface) 94%,transparent);
+}
+:root[data-glass="on"] .about-story .prose-block p {
+  color:var(--text);
+  text-shadow:0 1px 12px color-mix(in srgb,var(--surface) 32%,transparent);
+}
+:root[data-glass="on"] .about-profile-copy>p,
+:root[data-glass="on"] .about-interest-list,
+:root[data-glass="on"] .about-channel {
+  color:var(--text);
+  text-shadow:0 1px 10px color-mix(in srgb,var(--surface) 28%,transparent);
+}
+:root[data-glass="on"] .about-story>header p { color:var(--text); text-shadow:0 1px 10px color-mix(in srgb,var(--surface) 28%,transparent); }
+:root[data-glass="on"] .article-page>.comments-section {
+  padding-inline:0;
+  border:0;
+  background:transparent;
+  box-shadow:none;
+}
+:root[data-theme="dark"][data-glass="on"] .material-panel {
+  outline-color:color-mix(in srgb,var(--accent) 18%,var(--line));
+  background:var(--glass-surface);
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb,#fff 10%,transparent),
+    0 14px 36px color-mix(in srgb,var(--shadow-color) 30%,transparent);
+}
+:root[data-theme="dark"][data-glass="on"] .friend-card {
+  background:var(--glass-surface);
+  border-color:color-mix(in srgb,var(--friend-color) 34%,var(--line));
+  box-shadow:
+    0 14px 36px color-mix(in srgb,var(--shadow-color) 42%,transparent),
+    0 0 42px color-mix(in srgb,var(--friend-color) 18%,transparent);
+}
+:root[data-theme="dark"][data-glass="on"] .friend-card:hover,
+:root[data-theme="dark"][data-glass="on"] .friend-card:focus-visible {
+  background:var(--glass-surface);
+  border-color:color-mix(in srgb,var(--friend-color) 88%,var(--line));
+  box-shadow:
+    0 0 30px color-mix(in srgb,var(--friend-color) 46%,transparent),
+    0 0 74px color-mix(in srgb,var(--friend-color) 30%,transparent),
+    0 18px 44px color-mix(in srgb,var(--shadow-color) 48%,transparent);
+}
+@media (max-width:760px) {
+  :root[data-glass="on"] .article-index--archive::before { inset:9px 0 22px; border-radius:20px; }
+}
+:root[data-theme="dark"][data-glass="on"] .home-refresh-list>a:hover,
+:root[data-theme="dark"][data-glass="on"] .home-refresh-list>a:focus-visible {
+  border-color:color-mix(in srgb,var(--accent) 46%,var(--line));
+  background:color-mix(in srgb,var(--accent-soft) 72%,var(--glass-soft));
+  box-shadow:0 8px 20px color-mix(in srgb,var(--shadow-color) 42%,transparent);
+}
+/* Modal veils fade by opacity only; animating a viewport blur causes visible frame drops. */
+.dialog-backdrop,
+.account-backdrop,
+.image-lightbox {
+  -webkit-backdrop-filter:none;
+  backdrop-filter:none;
+}
+.image-lightbox { background:rgba(20,12,28,.92); }
+@keyframes dialog-backdrop-in { from { opacity:0; } to { opacity:1; } }
+@keyframes dialog-backdrop-out { from { opacity:1; } to { opacity:0; } }
+@keyframes account-backdrop-out { from { opacity:1; } to { opacity:0; } }
+@keyframes lightbox-in { from { opacity:0; } to { opacity:1; } }
+@keyframes lightbox-out { from { opacity:1; } to { opacity:0; } }
+@keyframes global-glass-in { from { opacity:0; } to { opacity:1; } }
+@keyframes global-glass-out { from { opacity:1; } to { opacity:0; } }
+
+@media (max-width:760px) {
+  .global-glass-backdrop,
+  .global-glass-veil {
+    inset:0 0 auto;
+    width:100%;
+    height:100lvh;
+  }
+  .global-glass-backdrop {
+    inset:-16px -16px auto;
+    width:auto;
+    height:calc(100lvh + 32px);
+    background-size:cover;
+    transform:var(--glass-background-transform,none);
+    transform-origin:center;
+  }
+}
+:root[data-glass-transition] .global-glass-backdrop,
+:root[data-glass-transition] .global-glass-veil {
+  will-change:opacity;
+}
+
+/* Keep panel depth without real-time backdrop sampling. */
+.inner-icon,
+.image-lightbox-close {
+  -webkit-backdrop-filter:none;
+  backdrop-filter:none;
+}
+
+@supports (content-visibility:auto) {
+  .article-card,
+  .poem-card {
+    content-visibility:auto;
+    contain-intrinsic-size:auto 360px;
+  }
+  .home-refresh-recent,
+  .home-refresh-columns {
+    content-visibility:auto;
+    contain-intrinsic-size:auto 520px;
+  }
+}
+@supports not (height:100lvh) {
+  @media (max-width:760px) {
+    .global-glass-veil { height:100vh; }
+    .global-glass-backdrop { height:calc(100vh + 32px); }
+  }
+}
+@media (prefers-reduced-motion:reduce) {
+  .global-glass-backdrop,
+  .global-glass-veil { animation:none!important; transition:none; }
+  .settings-button:hover svg { transform:none; }
+}

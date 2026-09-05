@@ -70,7 +70,7 @@ test("a lost comment response can be retried once and older comments remain reac
     return route.fulfill({ status: 404, json: { error: "not mocked" } });
   });
 
-  await page.goto("/#/about");
+  await page.goto("/about");
   await expect(page.getByText("200 条评论")).toBeVisible();
   const editor = page.getByPlaceholder("在这里留下你的想法…");
   await editor.fill("网络重试评论");
@@ -120,7 +120,7 @@ test("a reply posted from another page is fetched, expanded, and located", async
     return route.fulfill({ status: 404, json: { error: "not mocked" } });
   });
 
-  await page.goto("/#/about");
+  await page.goto("/about");
   await expect(page.getByText("21 条评论")).toBeVisible();
   await page.getByRole("button", { name: "第 2 页" }).click();
   const parent = page.locator("#comment-page-two");
@@ -161,7 +161,7 @@ test("a successful comment stays published when its follow-up locate request fai
     return route.fulfill({ status: 404, json: { error: "not mocked" } });
   });
 
-  await page.goto("/#/about");
+  await page.goto("/about");
   const editor = page.getByPlaceholder("在这里留下你的想法…");
   await expect(editor).toBeVisible();
   await editor.fill(created.body);
@@ -174,4 +174,92 @@ test("a successful comment stays published when its follow-up locate request fai
   await page.getByRole("button", { name: "重试" }).click();
   await expect.poll(() => followUpQueries.length).toBe(2);
   expect(followUpQueries).toEqual([created.id, created.id]);
+});
+
+test("a same-page comment refresh keeps the existing list mounted while the locate request is pending", async ({ page }) => {
+  const existing = comment("existing-comment", "已有评论", 200);
+  const created = comment("created-comment", "稍后出现的新评论", 300);
+  let followUpStarted = false;
+  let releaseFollowUp;
+  const followUp = new Promise((resolve) => { releaseFollowUp = resolve; });
+
+  await page.route("**/api/**", async (route) => {
+    const request = route.request();
+    const url = new URL(request.url());
+    const path = url.pathname;
+    if (path === "/api/auth/session") return route.fulfill({ json: { user: viewer } });
+    if (path === "/api/site/runtime") return route.fulfill({ json: { launchedAt: 1 } });
+    if (path === "/api/content/stats") return route.fulfill({ json: { stats: {} } });
+    if (path === "/api/comments" && request.method() === "GET") {
+      if (url.searchParams.get("comment") === created.id) {
+        followUpStarted = true;
+        await followUp;
+        return route.fulfill({ json: { comments: [created, existing], total: 2, page: 1, pageSize: 20, totalPages: 1 } });
+      }
+      return route.fulfill({ json: { comments: [existing], total: 1, page: 1, pageSize: 20, totalPages: 1 } });
+    }
+    if (path === "/api/comments" && request.method() === "POST") return route.fulfill({ status: 201, json: { comment: created } });
+    return route.fulfill({ status: 404, json: { error: "not mocked" } });
+  });
+
+  await page.goto("/about");
+  await expect(page.getByText("1 条评论")).toBeVisible();
+  await page.locator("#comment-existing-comment").evaluate((node) => { window.__existingCommentNode = node; });
+  const editor = page.getByPlaceholder("在这里留下你的想法…");
+  await editor.fill(created.body);
+  await page.getByRole("button", { name: "发表" }).click();
+  await expect.poll(() => followUpStarted).toBe(true);
+  await expect(page.locator("#comment-existing-comment")).toBeVisible();
+  await expect(page.locator(".comments-section .community-skeleton")).toHaveCount(0);
+  expect(await page.locator("#comment-existing-comment").evaluate((node) => node === window.__existingCommentNode)).toBe(true);
+
+  releaseFollowUp();
+  await expect(page.getByText(created.body)).toBeVisible();
+  await expect(page.getByText("2 条评论")).toBeVisible();
+  expect(await page.locator("#comment-existing-comment").evaluate((node) => node === window.__existingCommentNode)).toBe(true);
+});
+
+test("a same-page reply refresh keeps its parent thread mounted until replacement data arrives", async ({ page }) => {
+  const parent = comment("parent-comment", "回复所在的父评论", 200);
+  const created = reply("created-reply", "稍后出现的新回复", 300, parent.id);
+  let followUpStarted = false;
+  let releaseFollowUp;
+  const followUp = new Promise((resolve) => { releaseFollowUp = resolve; });
+
+  await page.route("**/api/**", async (route) => {
+    const request = route.request();
+    const url = new URL(request.url());
+    const path = url.pathname;
+    if (path === "/api/auth/session") return route.fulfill({ json: { user: viewer } });
+    if (path === "/api/site/runtime") return route.fulfill({ json: { launchedAt: 1 } });
+    if (path === "/api/content/stats") return route.fulfill({ json: { stats: {} } });
+    if (path === "/api/comments" && request.method() === "GET") {
+      if (url.searchParams.get("comment") === created.id) {
+        followUpStarted = true;
+        await followUp;
+        return route.fulfill({ json: { comments: [parent, created], total: 2, page: 1, pageSize: 20, totalPages: 1 } });
+      }
+      return route.fulfill({ json: { comments: [parent], total: 1, page: 1, pageSize: 20, totalPages: 1 } });
+    }
+    if (path === "/api/comments" && request.method() === "POST") return route.fulfill({ status: 201, json: { comment: created } });
+    return route.fulfill({ status: 404, json: { error: "not mocked" } });
+  });
+
+  await page.goto("/about");
+  await expect(page.getByText("1 条评论")).toBeVisible();
+  await page.locator("#comment-parent-comment").evaluate((node) => { window.__parentCommentNode = node; });
+  await page.locator("#comment-parent-comment").getByRole("button", { name: "回复" }).click();
+  const editor = page.locator(".comment-composer--reply");
+  await editor.getByPlaceholder("写下回复…").fill(created.body);
+  await editor.getByRole("button", { name: "发表" }).click();
+  await expect.poll(() => followUpStarted).toBe(true);
+  await expect(page.locator("#comment-parent-comment")).toBeVisible();
+  await expect(page.getByText(parent.body)).toBeVisible();
+  await expect(page.locator(".comments-section .community-skeleton")).toHaveCount(0);
+  expect(await page.locator("#comment-parent-comment").evaluate((node) => node === window.__parentCommentNode)).toBe(true);
+
+  releaseFollowUp();
+  await expect(page.getByText(created.body)).toBeVisible();
+  await expect(page.getByText("2 条评论")).toBeVisible();
+  expect(await page.locator("#comment-parent-comment").evaluate((node) => node === window.__parentCommentNode)).toBe(true);
 });

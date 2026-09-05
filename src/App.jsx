@@ -1,130 +1,23 @@
-import { lazy, startTransition, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { flushSync } from "react-dom";
 import { useCommunity } from "./community/CommunityProvider.jsx";
-import { stopArticleAudio } from "./articleAudio.js";
 import { ArticleOutlinePopover, Header } from "./components/Header.jsx";
 import { Footer } from "./components/Footer.jsx";
-import { loadCollection, loadMusicReview, loadPoem, loadPost, siteConfig } from "./content/index.js";
-import { HomePage } from "./pages/HomePage.jsx";
-import { NotFound } from "./pages/NotFound.jsx";
+import { AccountDialog, preloadAccount, preloadDialogs, preloadRouteContent, preloadRouteModule, RouteContent, SearchDialog, SettingsDialog } from "./appRoutes.jsx";
 import { getGlassBackground, preloadHeroAssets, PRIMARY_HERO_PATHS } from "./heroImages.js";
-import { clearArticleIndexState, clearPaginationFamily, consumeDetailSource, consumeNavigationType, formatRouteLocation, markPopNavigation, markPushNavigation, paginationFamily, parseHash, parseHashQuery, rememberDetailSource, replaceHashWithHome, routeScrollPositions } from "./routeState.js";
-import { ensureFullResponsiveImages } from "./responsiveImages.ts";
-import { getScrollBehavior, prefersReducedMotion, setRouteDocumentTitle } from "./navigation.js";
-import { isSiteRouteEnabled, normalizeRouteLocation, normalizeRoutePath } from "./sectionAvailability.js";
-
-const withFullFonts = (loader) => Promise.all([loader(), ensureFullFontStylesheet()]).then(([module]) => module);
-const withFullAssets = (loader) => Promise.all([loader(), ensureFullFontStylesheet(), ensureFullResponsiveImages()]).then(([module]) => module);
-const loadAboutModule = () => withFullAssets(() => import("./pages/AboutPage.jsx"));
-const loadAdminSetupModule = () => withFullFonts(() => import("./pages/AdminSetupPage.jsx"));
-const loadRichArticleModule = () => import("./RichArticleContent.jsx");
-const loadArticleModule = () => Promise.all([import("./pages/ArticlePage.jsx"), loadRichArticleModule(), ensureFullFontStylesheet(), ensureFullResponsiveImages()]).then(([module]) => module);
-const loadDialogsModule = () => withFullFonts(() => import("./components/Dialogs.jsx"));
-const loadFriendsModule = () => withFullAssets(() => import("./pages/FriendsPage.jsx"));
-const loadMusicModule = () => withFullAssets(() => import("./pages/MusicPage.jsx"));
-const loadMusicDetailModule = () => Promise.all([loadMusicModule(), loadRichArticleModule(), ensureFullFontStylesheet()]).then(([module]) => module);
-const loadPoemModule = () => Promise.all([import("./pages/PoemPage.jsx"), ensureFullFontStylesheet(), ensureFullResponsiveImages()]).then(([module]) => module);
-const loadPoemsModule = () => withFullAssets(() => import("./pages/PoemsPage.jsx"));
-const loadPostsModule = () => withFullAssets(() => import("./pages/PostsPage.jsx"));
-const loadAccountModule = () => withFullFonts(() => import("./community/AccountDialog.jsx"));
-
-const AboutPage = lazy(() => loadAboutModule().then((module) => ({ default: module.AboutPage })));
-const AdminSetupPage = lazy(() => loadAdminSetupModule().then((module) => ({ default: module.AdminSetupPage })));
-const ArticlePage = lazy(() => loadArticleModule().then((module) => ({ default: module.ArticlePage })));
-const SearchDialog = lazy(() => loadDialogsModule().then((module) => ({ default: module.SearchDialog })));
-const SettingsDialog = lazy(() => loadDialogsModule().then((module) => ({ default: module.SettingsDialog })));
-const FriendsPage = lazy(() => loadFriendsModule().then((module) => ({ default: module.FriendsPage })));
-const MusicPage = lazy(() => loadMusicModule().then((module) => ({ default: module.MusicPage })));
-const MusicDetailPage = lazy(() => loadMusicDetailModule().then((module) => ({ default: module.MusicDetailPage })));
-const PoemPage = lazy(() => loadPoemModule().then((module) => ({ default: module.PoemPage })));
-const PoemsPage = lazy(() => loadPoemsModule().then((module) => ({ default: module.PoemsPage })));
-const PostsPage = lazy(() => loadPostsModule().then((module) => ({ default: module.PostsPage })));
-const AccountDialog = lazy(() => loadAccountModule().then((module) => ({ default: module.AccountDialog })));
-
-const prefetchedRouteModules = new Set();
-
-let fullFontStylesheetReady;
-function ensureFullFontStylesheet() {
-  if (typeof document === "undefined") return Promise.resolve();
-  if (fullFontStylesheetReady) return fullFontStylesheetReady;
-  const existing = document.querySelector('link[rel="stylesheet"][href="/fonscape/google-fonts-full.css"]');
-  if (existing?.sheet && existing.media !== "print") return Promise.resolve();
-  fullFontStylesheetReady = new Promise((resolve) => {
-    const stylesheet = existing || Object.assign(document.createElement("link"), { rel: "stylesheet", href: "/fonscape/google-fonts-full.css" });
-    const finish = () => {
-      stylesheet.media = "all";
-      resolve();
-    };
-    stylesheet.addEventListener("load", finish, { once: true });
-    stylesheet.addEventListener("error", finish, { once: true });
-    if (existing?.sheet) finish();
-    else if (!existing) document.head.append(stylesheet);
-  });
-  return fullFontStylesheetReady;
-}
-
-function routeModuleLoader(path) {
-  const routePath = normalizeRoutePath(path);
-  if (!isSiteRouteEnabled(routePath, siteConfig)) return null;
-  if (routePath.startsWith("/post/")) return loadArticleModule;
-  if (routePath.startsWith("/poem/")) return loadPoemModule;
-  if (routePath.startsWith("/music/")) return loadMusicDetailModule;
-  if (routePath === "/music") return loadMusicModule;
-  if (routePath === "/posts") return loadPostsModule;
-  if (routePath === "/poems") return loadPoemsModule;
-  if (routePath === "/friends") return loadFriendsModule;
-  if (routePath === "/about") return loadAboutModule;
-  if (routePath === "/admin/setup") return loadAdminSetupModule;
-  return null;
-}
-
-function preloadRouteModule(path) {
-  const loader = routeModuleLoader(path);
-  if (!loader || prefetchedRouteModules.has(loader)) return;
-  prefetchedRouteModules.add(loader);
-  loader().catch(() => prefetchedRouteModules.delete(loader));
-}
-
-function preloadRouteContent(path) {
-  const routePath = normalizeRoutePath(path);
-  if (!isSiteRouteEnabled(routePath, siteConfig)) return Promise.resolve(null);
-  const decode = (value) => {
-    try { return decodeURIComponent(value); } catch { return value; }
-  };
-  if (routePath.startsWith("/post/")) {
-    return loadPost(decode(routePath.slice("/post/".length))).catch(() => null);
-  }
-  if (routePath.startsWith("/poem/")) {
-    return loadPoem(decode(routePath.slice("/poem/".length))).catch(() => null);
-  }
-  if (routePath.startsWith("/music/")) {
-    const [, section, slug] = routePath.split("/");
-    if (section && slug) return loadMusicReview(decode(section), decode(slug)).catch(() => null);
-  }
-  if (routePath === "/posts") return loadCollection("post").catch(() => null);
-  if (routePath === "/poems") return loadCollection("poem").catch(() => null);
-  if (routePath === "/music") return loadCollection("music").catch(() => null);
-  return Promise.resolve(null);
-}
-
-export function preloadRoute(path) {
-  const routePath = normalizeRoutePath(path);
-  if (!isSiteRouteEnabled(routePath, siteConfig)) {
-    replaceHashWithHome();
-    setRouteDocumentTitle("/", siteConfig.title);
-    return Promise.resolve([null, null]);
-  }
-  setRouteDocumentTitle(routePath, siteConfig.title);
-  const loader = routeModuleLoader(path);
-  return Promise.all([loader ? loader() : null, preloadRouteContent(path)]);
-}
+import { getScrollBehavior, prefersReducedMotion } from "./navigation.js";
+import { parseRoutePath, parseRouteQuery } from "./routeState.js";
+import { isSiteRouteEnabled } from "./sectionAvailability.js";
+import { isApplicationRoute } from "./routes.js";
+import { siteConfig } from "./siteConfig.js";
+import { useAppRouting, isRetiredAdminRoute } from "./useAppRouting.js";
 
 export function App() {
   const { viewer, openAccount, accountOpen, accountNotice, dismissAccountNotice } = useCommunity();
-  const [route, setRoute] = useState(parseHash);
-  const [routeQuery, setRouteQuery] = useState(parseHashQuery);
-  const routeRef = useRef({ path: route, query: routeQuery });
-  const pendingScrollRef = useRef(0);
+  const [route, setRoute] = useState(parseRoutePath);
+  const [routeQuery, setRouteQuery] = useState(parseRouteQuery);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const { routeRef } = useAppRouting({ route, routeQuery, setRoute, setRouteQuery, setMenuOpen });
   const [theme, setTheme] = useState(() => localStorage.getItem("theme") || "light");
   const [themeChanging, setThemeChanging] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
@@ -134,7 +27,6 @@ export function App() {
   const [glassTransition, setGlassTransition] = useState(null);
   const glassTransitionTimerRef = useRef(0);
   const [glassBackground, setGlassBackground] = useState(() => getGlassBackground(route));
-  const [menuOpen, setMenuOpen] = useState(false);
   const [articleOutlineOpen, setArticleOutlineOpen] = useState(false);
   const [activeOutlineId, setActiveOutlineId] = useState("");
   const [activePostOutline, setActivePostOutline] = useState([]);
@@ -188,102 +80,6 @@ export function App() {
       sessionStorage.removeItem(storageKey);
     }
   }, []);
-  useEffect(() => {
-    const previousScrollRestoration = history.scrollRestoration;
-    history.scrollRestoration = "manual";
-    const markLinkNavigation = (event) => {
-      if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
-      const anchor = event.target.closest?.('a[href^="#/"]');
-      if (anchor?.hasAttribute("data-horizontal-drag")) return;
-      if (anchor && !anchor.target) {
-        const sourceRoute = parseHash();
-        const sourceQuery = parseHashQuery();
-        const sourceLocation = formatRouteLocation(sourceRoute, sourceQuery);
-        const destinationLocation = normalizeRouteLocation(anchor.getAttribute("href")?.slice(1));
-        if (destinationLocation === sourceLocation) return;
-        routeRef.current = { path: sourceRoute, query: sourceQuery };
-        routeScrollPositions.set(sourceLocation, window.scrollY);
-        rememberDetailSource(destinationLocation, sourceLocation);
-        markPushNavigation();
-      }
-    };
-    const onHash = () => {
-      const previousLocation = formatRouteLocation(routeRef.current.path, routeRef.current.query);
-      routeScrollPositions.set(previousLocation, window.scrollY);
-      const parsedRoute = parseHash();
-      const parsedQuery = parseHashQuery();
-      const enabled = isSiteRouteEnabled(parsedRoute, siteConfig);
-      const nextRoute = enabled ? parsedRoute : replaceHashWithHome();
-      const nextQuery = enabled ? parsedQuery : "";
-      const navigationType = consumeNavigationType();
-      consumeDetailSource(nextRoute, { preserveExisting: navigationType === "pop" });
-      const previousPaginationFamily = paginationFamily(routeRef.current.path);
-      const nextPaginationFamily = paginationFamily(nextRoute);
-      if (previousPaginationFamily !== nextPaginationFamily) {
-        // Crossing between content families starts the destination listing fresh.
-        // List -> detail -> list stays inside one family, so browser/back navigation
-        // still restores the page the reader came from.
-        if (previousPaginationFamily) clearPaginationFamily(previousPaginationFamily);
-        if (nextPaginationFamily) clearPaginationFamily(nextPaginationFamily);
-        if (previousPaginationFamily === "posts" || nextPaginationFamily === "posts") clearArticleIndexState();
-      }
-      if (routeRef.current.path.startsWith("/post/") && !nextRoute.startsWith("/post/")) stopArticleAudio();
-      const nextLocation = formatRouteLocation(nextRoute, nextQuery);
-      pendingScrollRef.current = navigationType === "pop" || navigationType === "restore"
-        ? (routeScrollPositions.get(nextLocation) || 0)
-        : 0;
-      routeRef.current = { path: nextRoute, query: nextQuery };
-      setRouteDocumentTitle(nextRoute, siteConfig.title);
-      startTransition(() => {
-        setRoute(nextRoute);
-        setRouteQuery(nextQuery);
-      });
-      setMenuOpen(false);
-    };
-    document.addEventListener("click", markLinkNavigation, true);
-    window.addEventListener("hashchange", onHash);
-    window.addEventListener("popstate", markPopNavigation);
-    return () => {
-      document.removeEventListener("click", markLinkNavigation, true);
-      window.removeEventListener("hashchange", onHash);
-      window.removeEventListener("popstate", markPopNavigation);
-      history.scrollRestoration = previousScrollRestoration;
-    };
-  }, []);
-  useLayoutEffect(() => {
-    setRouteDocumentTitle(route, siteConfig.title);
-  }, [route]);
-  useLayoutEffect(() => {
-    const top = pendingScrollRef.current;
-    let frame = 0;
-    let timeout = 0;
-    let attempts = 0;
-    let observer = null;
-    const minimumAttempts = top > 0 ? 8 : 0;
-    const cleanup = () => {
-      window.cancelAnimationFrame(frame);
-      window.clearTimeout(timeout);
-      observer?.disconnect();
-    };
-    const restore = () => {
-      const max = Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
-      window.scrollTo({ top: Math.min(top, max), behavior: "instant" });
-      attempts += 1;
-      if ((top <= max && attempts >= minimumAttempts) || attempts >= 60) cleanup();
-      else {
-        frame = window.requestAnimationFrame(restore);
-      }
-    };
-    frame = window.requestAnimationFrame(() => {
-      if (top > 0 && typeof ResizeObserver === "function") {
-        observer = new ResizeObserver(restore);
-        observer.observe(document.documentElement);
-      }
-      restore();
-    });
-    timeout = window.setTimeout(cleanup, 1500);
-    return cleanup;
-  }, [route]);
   useEffect(() => { document.documentElement.dataset.theme = theme; localStorage.setItem("theme", theme); }, [theme]);
   useLayoutEffect(() => {
     document.documentElement.dataset.glass = glassEnabled ? "on" : "off";
@@ -322,10 +118,14 @@ export function App() {
     const compact = window.matchMedia("(max-width:760px)").matches;
     const pendingPaths = PRIMARY_HERO_PATHS.filter((path) => isSiteRouteEnabled(path, siteConfig) && path !== routeRef.current.path);
     const preloadLinkedRoute = (event) => {
-      const anchor = event.target.closest?.('a[href^="#/"]');
+      const anchor = event.target.closest?.("a[href]");
       if (!anchor) return;
-      const path = anchor.getAttribute("href")?.slice(1);
-      if (!path) return;
+      const href = anchor.getAttribute("href");
+      if (!href || href.startsWith("#")) return;
+      let url;
+      try { url = new URL(href, window.location.href); } catch { return; }
+      if (url.origin !== window.location.origin || !isApplicationRoute(url.pathname)) return;
+      const path = `${url.pathname}${url.search}`;
       if (!isSiteRouteEnabled(path, siteConfig)) return;
       preloadHeroAssets(path, compact);
       preloadRouteModule(path);
@@ -359,35 +159,10 @@ export function App() {
       document.removeEventListener("focusin", preloadLinkedRoute);
       document.removeEventListener("touchstart", preloadLinkedRoute);
     };
-  }, []);
+  }, [routeRef]);
   const isSetupRoute = route === "/admin/setup";
-  const isRetiredAdminRoute = route === "/admin" || (route.startsWith("/admin/") && !isSetupRoute);
+  const isRetiredAdmin = isRetiredAdminRoute(route);
   const routeEnabled = isSiteRouteEnabled(route, siteConfig);
-  useEffect(() => {
-    if (routeEnabled) return;
-    replaceHashWithHome();
-    routeRef.current = { path: "/", query: "" };
-    setRoute("/");
-    setRouteQuery("");
-  }, [routeEnabled]);
-  useEffect(() => {
-    if (isRetiredAdminRoute) window.location.replace("#/");
-  }, [isRetiredAdminRoute]);
-  const content = useMemo(() => {
-    if (!routeEnabled) return <HomePage stats={contentStats.post || {}} onStatsTargets={requestContentStats} />;
-    if (route.startsWith("/post/")) return <ArticlePage slug={route.replace("/post/", "")} stats={contentStats.post || {}} onView={recordContentView} onOutline={setActivePostOutline} onStatsTargets={requestContentStats} />;
-    if (route.startsWith("/poem/")) return <PoemPage slug={route.replace("/poem/", "")} stats={contentStats.poem || {}} onView={recordContentView} onStatsTargets={requestContentStats} />;
-    if (route.startsWith("/music/")) return <MusicDetailPage path={route.replace("/music/", "")} stats={contentStats.music || {}} onView={recordContentView} onStatsTargets={requestContentStats} />;
-    if (route === "/") return <HomePage stats={contentStats.post || {}} onStatsTargets={requestContentStats} />;
-    if (route === "/posts") return <PostsPage query={routeQuery} stats={contentStats.post || {}} onStatsTargets={requestContentStats} />;
-    if (route === "/poems") return <PoemsPage stats={contentStats.poem || {}} onStatsTargets={requestContentStats} />;
-    if (route === "/music") return <MusicPage stats={contentStats.music || {}} onStatsTargets={requestContentStats} />;
-    if (route === "/friends") return <FriendsPage />;
-    if (route === "/about") return <AboutPage />;
-    if (route === "/admin/setup") return <AdminSetupPage />;
-    if (isRetiredAdminRoute) return <HomePage stats={contentStats.post} />;
-    return <NotFound />;
-  }, [route, routeQuery, contentStats, recordContentView, requestContentStats, isRetiredAdminRoute, routeEnabled]);
   const isDetailRoute = route.startsWith("/post/") || route.startsWith("/poem/") || route.startsWith("/music/");
   const hasArticleOutline = activePostOutline.length > 1;
   useEffect(() => {
@@ -437,12 +212,6 @@ export function App() {
     setAccountDialogRequested(true);
     openAccount(mode);
   }, [openAccount]);
-  const preloadDialogs = useCallback(() => {
-    loadDialogsModule().catch(() => {});
-  }, []);
-  const preloadAccount = useCallback(() => {
-    loadAccountModule().catch(() => {});
-  }, []);
   return <div className={themeChanging ? "app-shell theme-changing" : "app-shell"} style={{
     "--glass-background-image": `url("${glassBackground.image}")`,
     "--glass-background-filter": glassBackground.needsSoftening ? "blur(14px) saturate(.86)" : "none",
@@ -452,6 +221,8 @@ export function App() {
     <span className="global-glass-veil" aria-hidden="true" />
     {!isSetupRoute && <Header route={route} theme={theme} menuOpen={menuOpen} onMenu={() => { setArticleOutlineOpen(false); setMenuOpen((value) => !value); }} onTheme={toggleTheme} onSearch={() => { preloadDialogs(); setSearchOpen(true); }} onSearchIntent={preloadDialogs} onSettings={() => { preloadDialogs(); setSettingsOpen(true); }} onSettingsIntent={preloadDialogs} viewer={viewer} onAccount={() => requestAccount(viewer ? "profile" : "login")} onAccountIntent={preloadAccount} hasArticleOutline={hasArticleOutline} articleOutlineOpen={articleOutlineOpen} onArticleOutline={() => { setMenuOpen(false); setArticleOutlineOpen((value) => !value); }} onCloseArticleOutline={() => setArticleOutlineOpen(false)} />}
     {!isSetupRoute && hasArticleOutline && <ArticleOutlinePopover items={activePostOutline} open={articleOutlineOpen} activeId={activeOutlineId || activePostOutline[0]?.id} onClose={() => setArticleOutlineOpen(false)} onSelect={(item) => { document.getElementById(item.id)?.scrollIntoView({ behavior: getScrollBehavior(prefersReducedMotion()), block: "start" }); setActiveOutlineId(item.id); setArticleOutlineOpen(false); }} />}
-    <div className={isDetailRoute ? "route-view route-view--detail" : "route-view"} key={route}>{content}</div>{!isSetupRoute && <><Footer />{searchOpen && <Suspense fallback={null}><SearchDialog onClose={() => setSearchOpen(false)} /></Suspense>}{settingsOpen && <Suspense fallback={null}><SettingsDialog glassEnabled={glassEnabled} onGlassChange={handleGlassChange} onClose={() => setSettingsOpen(false)} /></Suspense>}{(accountDialogRequested || accountOpen) && <Suspense fallback={null}><AccountDialog /></Suspense>}{accountNotice && <aside className="community-account-notice" role="alert"><div><strong>账户通知</strong><p>{accountNotice}</p></div><button type="button" onClick={dismissAccountNotice}>知道了</button></aside>}</>}
+    <div className={isDetailRoute ? "route-view route-view--detail" : "route-view"} key={route}><RouteContent route={route} routeQuery={routeQuery} stats={contentStats} onView={recordContentView} onOutline={setActivePostOutline} onRequestStats={requestContentStats} isRetiredAdminRoute={isRetiredAdmin} routeEnabled={routeEnabled} /></div>{!isSetupRoute && <><Footer />{searchOpen && <Suspense fallback={null}><SearchDialog onClose={() => setSearchOpen(false)} /></Suspense>}{settingsOpen && <Suspense fallback={null}><SettingsDialog glassEnabled={glassEnabled} onGlassChange={handleGlassChange} onClose={() => setSettingsOpen(false)} /></Suspense>}{(accountDialogRequested || accountOpen) && <Suspense fallback={null}><AccountDialog /></Suspense>}{accountNotice && <aside className="community-account-notice" role="alert"><div><strong>账户通知</strong><p>{accountNotice}</p></div><button type="button" onClick={() => dismissAccountNotice()}>知道了</button></aside>}</>}
   </div>;
 }
+
+export { preloadRoute } from "./appRoutes.jsx";

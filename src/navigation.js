@@ -1,4 +1,5 @@
 import { normalizeRoutePath } from "./sectionAvailability.js";
+import { routeHref } from "./routes.js";
 
 const DETAIL_ROUTE_KINDS = Object.freeze([
   Object.freeze({ kind: "post", detailPrefix: "/post/", listPath: "/posts", label: "文章" }),
@@ -42,10 +43,10 @@ export function isDetailRoute(path) {
 export function getDetailFallbackRoute(path) {
   const route = normalizeRoutePath(path);
   const detail = getDetailRouteKind(route);
-  if (!detail) return "/";
-  if (detail.kind !== "music") return detail.listPath;
+  if (!detail) return routeHref("/");
+  if (detail.kind !== "music") return routeHref(detail.listPath);
   const section = route.split("/")[2] || "songs";
-  return section === "songs" ? detail.listPath : `${detail.listPath}?section=${encodeURIComponent(section)}`;
+  return section === "songs" ? routeHref(detail.listPath) : routeHref(detail.listPath, { section });
 }
 
 /**

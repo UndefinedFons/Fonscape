@@ -13,6 +13,7 @@ import { X } from "@phosphor-icons/react/X";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { navItems } from "../content/index.js";
 import { getDetailReadingTarget } from "../detailReading.js";
+import { routeHref } from "../routes.js";
 
 function useDetailReadingProgress(route) {
   const [progress, setProgress] = useState(0);
@@ -218,7 +219,7 @@ export function Header({ route, theme, menuOpen, onMenu, onTheme, onSearch, onSe
         <span className={indicator.ready ? "nav-active-indicator is-ready" : "nav-active-indicator"} style={{ "--indicator-x": `${indicator.x}px` }} aria-hidden="true" />
         {navItems.map(([path, label]) => {
           const active = path === "/" ? route === "/" : route === path || route.startsWith(`${path}/`) || (path === "/posts" && route.startsWith("/post/")) || (path === "/poems" && route.startsWith("/poem/"));
-          return <a key={path} className={active ? "active" : ""} href={`#${path}`}>{label}</a>;
+          return <a key={path} className={active ? "active" : ""} href={routeHref(path)}>{label}</a>;
         })}
       </nav>
       <div className="header-actions">
