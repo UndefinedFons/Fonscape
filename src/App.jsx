@@ -17,7 +17,7 @@ export function App() {
   const [route, setRoute] = useState(parseRoutePath);
   const [routeQuery, setRouteQuery] = useState(parseRouteQuery);
   const [menuOpen, setMenuOpen] = useState(false);
-  const { routeRef, navigationPending } = useAppRouting({ route, routeQuery, setRoute, setRouteQuery, setMenuOpen });
+  const { routeRef } = useAppRouting({ route, routeQuery, setRoute, setRouteQuery, setMenuOpen });
   const [theme, setTheme] = useState(() => localStorage.getItem("theme") || "light");
   const [themeChanging, setThemeChanging] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
@@ -97,17 +97,24 @@ export function App() {
   useEffect(() => {
     let idleId = null;
     let timerId = null;
-    const warmFrequentDialogs = () => {
+    const warmFrequentSurfaces = () => {
       preloadDialogs();
       preloadAccount();
+      for (const path of PRIMARY_HERO_PATHS) {
+        if (path === routeRef.current.path || !isSiteRouteEnabled(path, siteConfig)) continue;
+        preloadRouteModule(path);
+        preloadRouteContent(path);
+      }
     };
-    if ("requestIdleCallback" in window) idleId = window.requestIdleCallback(warmFrequentDialogs, { timeout: 1800 });
-    else timerId = window.setTimeout(warmFrequentDialogs, 700);
+    const connection = navigator.connection;
+    if (connection?.saveData || /^(?:slow-)?2g$/u.test(connection?.effectiveType || "")) return undefined;
+    if ("requestIdleCallback" in window) idleId = window.requestIdleCallback(warmFrequentSurfaces, { timeout: 900 });
+    else timerId = window.setTimeout(warmFrequentSurfaces, 400);
     return () => {
       if (idleId !== null) window.cancelIdleCallback?.(idleId);
       if (timerId !== null) window.clearTimeout(timerId);
     };
-  }, []);
+  }, [routeRef]);
   useEffect(() => {
     const background = getGlassBackground(route);
     const source = background.image;
@@ -235,13 +242,8 @@ export function App() {
     <span className="global-glass-veil" aria-hidden="true" />
     {!isSetupRoute && <Header route={route} theme={theme} menuOpen={menuOpen} onMenu={() => { setArticleOutlineOpen(false); setMenuOpen((value) => !value); }} onTheme={toggleTheme} onSearch={() => { preloadDialogs(); setSearchOpen(true); }} onSearchIntent={preloadDialogs} onSettings={() => { preloadDialogs(); setSettingsOpen(true); }} onSettingsIntent={preloadDialogs} viewer={viewer} onAccount={() => requestAccount(viewer ? "profile" : "login")} onAccountIntent={preloadAccount} hasArticleOutline={hasArticleOutline} articleOutlineOpen={articleOutlineOpen} onArticleOutline={() => { setMenuOpen(false); setArticleOutlineOpen((value) => !value); }} onCloseArticleOutline={() => setArticleOutlineOpen(false)} />}
     {!isSetupRoute && hasArticleOutline && <ArticleOutlinePopover items={activePostOutline} open={articleOutlineOpen} activeId={activeOutlineId || activePostOutline[0]?.id} onClose={() => setArticleOutlineOpen(false)} onSelect={(item) => { document.getElementById(item.id)?.scrollIntoView({ behavior: getScrollBehavior(prefersReducedMotion()), block: "start" }); setActiveOutlineId(item.id); setArticleOutlineOpen(false); }} />}
-    {navigationPending && <div className="route-loading-indicator" role="status" aria-live="polite"><span />正在打开页面…</div>}
-    <div className={isDetailRoute ? "route-view route-view--detail" : "route-view"} key={route}><RouteContent route={route} routeQuery={routeQuery} stats={contentStats} onView={recordContentView} onOutline={setActivePostOutline} onRequestStats={requestContentStats} isRetiredAdminRoute={isRetiredAdmin} routeEnabled={routeEnabled} /></div>{!isSetupRoute && <><Footer />{searchOpen && <Suspense fallback={<DialogLoading label="正在打开搜索…" />}><SearchDialog onClose={() => setSearchOpen(false)} /></Suspense>}{settingsOpen && <Suspense fallback={<DialogLoading label="正在打开设置…" />}><SettingsDialog glassEnabled={glassEnabled} onGlassChange={handleGlassChange} onClose={() => setSettingsOpen(false)} /></Suspense>}{(accountDialogRequested || accountOpen) && <Suspense fallback={<DialogLoading label="正在打开账户…" />}><AccountDialog /></Suspense>}{accountNotice && <aside className="community-account-notice" role="alert"><div><strong>账户通知</strong><p>{accountNotice}</p></div><button type="button" onClick={() => dismissAccountNotice()}>知道了</button></aside>}</>}
+    <div className={isDetailRoute ? "route-view route-view--detail" : "route-view"} key={route}><RouteContent route={route} routeQuery={routeQuery} stats={contentStats} onView={recordContentView} onOutline={setActivePostOutline} onRequestStats={requestContentStats} isRetiredAdminRoute={isRetiredAdmin} routeEnabled={routeEnabled} /></div>{!isSetupRoute && <><Footer />{searchOpen && <Suspense fallback={null}><SearchDialog onClose={() => setSearchOpen(false)} /></Suspense>}{settingsOpen && <Suspense fallback={null}><SettingsDialog glassEnabled={glassEnabled} onGlassChange={handleGlassChange} onClose={() => setSettingsOpen(false)} /></Suspense>}{(accountDialogRequested || accountOpen) && <Suspense fallback={null}><AccountDialog /></Suspense>}{accountNotice && <aside className="community-account-notice" role="alert"><div><strong>账户通知</strong><p>{accountNotice}</p></div><button type="button" onClick={() => dismissAccountNotice()}>知道了</button></aside>}</>}
   </div>;
-}
-
-function DialogLoading({ label }) {
-  return <div className="dialog-backdrop dialog-loading-backdrop"><div className="dialog-loading-panel" role="status" aria-live="polite"><span />{label}</div></div>;
 }
 
 export { preloadRoute } from "./appRoutes.jsx";

@@ -35,10 +35,17 @@ export function PostsPage({ query, stats, onStatsTargets }) {
   const [selectedSeries, setSelectedSeries] = useState(allSeries.includes(requestedSeries) ? requestedSeries : initialIndexState.series);
   const [filterOpen, setFilterOpen] = useState(hasFilterParameter);
   const [view, setView] = useState(requestedView === "archive" ? "archive" : initialIndexState.view);
+  const [viewSwitching, setViewSwitching] = useState(false);
+  const [filterSummaryClosing, setFilterSummaryClosing] = useState(false);
+  const [filterResultsLeaving, setFilterResultsLeaving] = useState(false);
+  const viewSwitchTimer = useRef(0);
+  const filterSummaryTimer = useRef(0);
   const requestedTagSelection = allTags.includes(requestedTag) ? requestedTag : "";
   const requestedSeriesSelection = allSeries.includes(requestedSeries) ? requestedSeries : "";
   useEffect(() => {
     if (!hasFilterParameter && !requestedTag && !requestedSeries && requestedView !== "archive") return;
+    setFilterSummaryClosing(false);
+    setFilterResultsLeaving(false);
     setCategory("全部");
     setSelectedTag(requestedTagSelection);
     setSelectedSeries(requestedSeriesSelection);
@@ -46,6 +53,10 @@ export function PostsPage({ query, stats, onStatsTargets }) {
     setFilterOpen(hasFilterParameter);
   }, [hasFilterParameter, requestedSeries, requestedSeriesSelection, requestedTag, requestedTagSelection, requestedView]);
   useEffect(() => { updateArticleIndexState({ category, tag: selectedTag, series: selectedSeries, view }); }, [category, selectedTag, selectedSeries, view]);
+  useEffect(() => () => {
+    window.clearTimeout(viewSwitchTimer.current);
+    window.clearTimeout(filterSummaryTimer.current);
+  }, []);
   const filtered = posts.filter((post) => (category === "全部" || post.category === category) && (!selectedTag || post.tags?.includes(selectedTag)) && (!selectedSeries || post.series === selectedSeries));
   const filterKey = `${category}|${selectedTag}|${selectedSeries}`;
   const pagination = usePagination(filtered, useResponsivePageSize(6, 3), filterKey, "posts");
@@ -65,12 +76,25 @@ export function PostsPage({ query, stats, onStatsTargets }) {
     const nextQuery = currentParameters.toString();
     replaceRoute(routeHref("/posts", nextQuery));
   };
-  const selectTag = (value) => { setSelectedTag(value); if (value) setSelectedSeries(""); replaceFilterQuery(value, ""); };
-  const selectSeries = (value) => { setSelectedSeries(value); if (value) setSelectedTag(""); replaceFilterQuery("", value); };
+  const selectTag = (value) => { setFilterSummaryClosing(false); setFilterResultsLeaving(false); setSelectedTag(value); if (value) setSelectedSeries(""); replaceFilterQuery(value, ""); };
+  const selectSeries = (value) => { setFilterSummaryClosing(false); setFilterResultsLeaving(false); setSelectedSeries(value); if (value) setSelectedTag(""); replaceFilterQuery("", value); };
   const clearSelectedFilter = () => {
-    setSelectedTag("");
-    setSelectedSeries("");
-    replaceFilterQuery("", "");
+    if (filterSummaryClosing) return;
+    const clear = () => {
+      setSelectedTag("");
+      setSelectedSeries("");
+      setFilterSummaryClosing(false);
+      setFilterResultsLeaving(false);
+      replaceFilterQuery("", "");
+    };
+    if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) {
+      clear();
+      return;
+    }
+    setFilterSummaryClosing(true);
+    setFilterResultsLeaving(true);
+    window.clearTimeout(filterSummaryTimer.current);
+    filterSummaryTimer.current = window.setTimeout(clear, 260);
   };
   const closeFilter = () => {
     setFilterOpen(false);
@@ -81,20 +105,37 @@ export function PostsPage({ query, stats, onStatsTargets }) {
     replaceRoute(routeHref(parseRoutePath(), nextQuery));
   };
   const toggleArchive = () => {
+    if (viewSwitching) return;
     const nextView = view === "archive" ? "cards" : "archive";
-    if (nextView === "archive") {
-      setCategory("全部");
-      setSelectedTag("");
-      setSelectedSeries("");
-      setFilterOpen(false);
+    const reduceMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    if (reduceMotion) {
+      if (nextView === "archive") {
+        setCategory("全部");
+        setSelectedTag("");
+        setSelectedSeries("");
+        setFilterOpen(false);
+      }
+      setView(nextView);
+      return;
     }
-    setView(nextView);
+    setViewSwitching(true);
+    window.clearTimeout(viewSwitchTimer.current);
+    viewSwitchTimer.current = window.setTimeout(() => {
+      if (nextView === "archive") {
+        setCategory("全部");
+        setSelectedTag("");
+        setSelectedSeries("");
+        setFilterOpen(false);
+      }
+      setView(nextView);
+      viewSwitchTimer.current = window.setTimeout(() => setViewSwitching(false), 70);
+    }, 280);
   };
   return <main><PageHero kicker="ARTICLE INDEX" title="文章" description={siteConfig.pages.postsDescription} icon={BookOpenText} variant="posts" />
-    <section className={`article-index page-width${view === "archive" ? " article-index--archive" : ""}`}>
+    <section className={`article-index page-width${view === "archive" ? " article-index--archive" : ""}${viewSwitching ? " is-view-switching" : ""}`}>
       {view === "cards" && <div className="article-index-toolbar article-index-toolbar--cards"><div className="article-type-tabs" role="tablist" aria-label="文章类型" style={{ "--type-count": categories.length, "--type-index": activeCategoryIndex }}><span className="article-type-indicator" aria-hidden="true" />{categories.map((item) => <button type="button" role="tab" aria-selected={category === item} key={item} className={category === item ? "active" : ""} onClick={() => setCategory(item)} title={item}>{item}</button>)}</div><div className="article-index-actions"><button type="button" className={filterOpen ? "active" : ""} onClick={() => setFilterOpen(true)}><Funnel size={17} />筛选</button><button type="button" onClick={toggleArchive}><FolderOpen size={17} />文章归档</button></div></div>}
-      {view === "cards" && (selectedTag || selectedSeries) && <div className="active-filter-summary"><div className="active-filter-current">{selectedTag ? <Hash size={18} weight="duotone" /> : <FolderOpen size={18} weight="duotone" />}<span><small>{selectedTag ? "当前标签" : "当前系列"}</small><strong>{selectedTag || selectedSeries}</strong></span></div><button type="button" className="clear-filter" onClick={clearSelectedFilter}><X size={14} />清除筛选</button></div>}
-      {view === "archive" ? <ArticleArchive posts={posts} stats={stats} onBack={toggleArchive} onStatsTargets={onStatsTargets} /> : <><div key={filterKey} ref={pagination.topRef} className="article-grid paginated-view">{pagination.pageItems.length ? pagination.pageItems.map((post, index) => <ArticleCard key={post.slug} post={post} stats={stats[post.slug]} imageLoading={index === 0 ? "eager" : "lazy"} />) : posts.length ? <div className="section-empty"><Funnel size={34} weight="duotone" /><h2>没有符合条件的文章</h2><p>换一种类型、标签或系列试试。</p></div> : <div className="section-empty"><BookOpenText size={34} weight="duotone" /><h2>暂无文章</h2></div>}</div><Pagination page={pagination.page} totalPages={pagination.totalPages} onChange={pagination.changePage} /></>}
+      {view === "cards" && (selectedTag || selectedSeries) && <div className={`active-filter-summary${filterSummaryClosing ? " is-leaving" : ""}`}><div className="active-filter-current">{selectedTag ? <Hash size={18} weight="duotone" /> : <FolderOpen size={18} weight="duotone" />}<span><small>{selectedTag ? "当前标签" : "当前系列"}</small><strong>{selectedTag || selectedSeries}</strong></span></div><button type="button" className="clear-filter" onClick={clearSelectedFilter} disabled={filterSummaryClosing}><X size={14} />清除筛选</button></div>}
+      {view === "archive" ? <ArticleArchive posts={posts} stats={stats} onBack={toggleArchive} onStatsTargets={onStatsTargets} /> : <><div key={filterKey} ref={pagination.topRef} className={`article-grid paginated-view${pagination.leaving ? " is-leaving" : ""}${filterResultsLeaving ? " is-filter-leaving" : ""}`}>{pagination.pageItems.length ? pagination.pageItems.map((post, index) => <ArticleCard key={post.slug} post={post} stats={stats[post.slug]} imageLoading={index === 0 ? "eager" : "lazy"} />) : posts.length ? <div className="section-empty"><Funnel size={34} weight="duotone" /><h2>没有符合条件的文章</h2><p>换一种类型、标签或系列试试。</p></div> : <div className="section-empty"><BookOpenText size={34} weight="duotone" /><h2>暂无文章</h2></div>}</div><Pagination page={pagination.page} totalPages={pagination.totalPages} onChange={pagination.changePage} /></>}
     </section>
     {filterOpen && view === "cards" && <ArticleFilterDialog tags={allTags} series={allSeries} selectedTag={selectedTag} selectedSeries={selectedSeries} onTag={selectTag} onSeries={selectSeries} onClose={closeFilter} />}
   </main>;
@@ -119,7 +160,7 @@ function ArticleFilterDialog({ tags, series, selectedTag, selectedSeries, onTag,
     }
     setPhase("closing");
     window.clearTimeout(closeTimerRef.current);
-    closeTimerRef.current = window.setTimeout(finishClose, 260);
+    closeTimerRef.current = window.setTimeout(finishClose, 520);
   };
   useEffect(() => lockPageScroll(), []);
   useEffect(() => {
@@ -150,15 +191,46 @@ function ArticleArchive({ posts: filteredPosts, stats = {}, onBack, onStatsTarge
   const yearPosts = filteredPosts.filter((post) => post.date.startsWith(year));
   const months = [...new Set(yearPosts.map((post) => post.date.slice(5, 7)))].sort().reverse();
   const [month, setMonth] = useState("");
+  const [switching, setSwitching] = useState("");
+  const [wrapHeight, setWrapHeight] = useState(null);
+  const archiveTimer = useRef(0);
+  const archiveWrapRef = useRef(null);
   useEffect(() => {
     const availableYears = JSON.parse(yearsKey);
     setYear((currentYear) => availableYears.includes(currentYear) ? currentYear : availableYears[0] || "");
     setMonth("");
   }, [filteredPostsKey, yearsKey]);
+  useEffect(() => () => window.clearTimeout(archiveTimer.current), []);
+  useEffect(() => {
+    if (switching !== "entering") return undefined;
+    const frame = window.requestAnimationFrame(() => {
+      const timeline = archiveWrapRef.current?.firstElementChild;
+      setWrapHeight(timeline?.getBoundingClientRect().height ?? archiveWrapRef.current?.scrollHeight ?? 0);
+      archiveTimer.current = window.setTimeout(() => {
+        setWrapHeight(null);
+        setSwitching("");
+      }, 300);
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [switching, year, month]);
   const selectArchive = (nextYear, nextMonth) => {
     if (nextYear === year && nextMonth === month) return;
-    setYear(nextYear);
-    setMonth(nextMonth);
+    const reduceMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    if (reduceMotion) {
+      setYear(nextYear);
+      setMonth(nextMonth);
+      return;
+    }
+    window.clearTimeout(archiveTimer.current);
+    const timeline = archiveWrapRef.current?.firstElementChild;
+    const currentHeight = timeline?.getBoundingClientRect().height ?? archiveWrapRef.current?.scrollHeight ?? 0;
+    setWrapHeight(currentHeight);
+    setSwitching("leaving");
+    archiveTimer.current = window.setTimeout(() => {
+      setYear(nextYear);
+      setMonth(nextMonth);
+      setSwitching("entering");
+    }, 190);
   };
   const visible = month ? yearPosts.filter((post) => post.date.slice(5, 7) === month) : yearPosts;
   const visibleStatsKey = JSON.stringify(visible.map((post) => post.slug));
@@ -168,5 +240,5 @@ function ArticleArchive({ posts: filteredPosts, stats = {}, onBack, onStatsTarge
   );
   useEffect(() => { onStatsTargets(visibleStatsTargets); }, [onStatsTargets, visibleStatsTargets]);
   if (!filteredPosts.length) return <div className="article-archive"><div className="archive-controls archive-controls--empty"><button type="button" className="archive-return" onClick={onBack}><ArrowLeft size={17} />返回文章</button></div><div className="section-empty"><FolderOpen size={34} weight="duotone" /><h2>归档中没有匹配项</h2></div></div>;
-  return <div className="article-archive"><div className="archive-controls"><div className="archive-control-groups"><div><span>年份</span>{years.map((item) => <button className={year === item ? "active" : ""} key={item} onClick={() => selectArchive(item, "")}>{item}</button>)}</div><div><span>月份</span><button className={!month ? "active" : ""} onClick={() => selectArchive(year, "")}>全年</button>{months.map((item) => <button className={month === item ? "active" : ""} key={item} onClick={() => selectArchive(year, item)}>{item} 月</button>)}</div></div><button type="button" className="archive-return" onClick={onBack}><ArrowLeft size={17} />返回文章</button></div><div className="archive-timeline-wrap"><div className="archive-timeline is-entering" key={`${year}-${month}`}>{visible.map((post) => <a href={contentRoute("post", post)} key={post.slug}><time>{post.date.slice(0, 10)}</time><i aria-hidden="true" /><div><span>{post.category}{post.series ? ` · ${post.series}` : ""}</span><strong>{post.title}</strong></div><small><Eye size={14} />{stats[post.slug]?.views || 0}<ChatCircleDots size={14} />{stats[post.slug]?.comments || 0}</small></a>)}</div></div></div>;
+  return <div className="article-archive"><div className="archive-controls"><div className="archive-control-groups"><div><span>年份</span>{years.map((item) => <button className={year === item ? "active" : ""} key={item} onClick={() => selectArchive(item, "")}>{item}</button>)}</div><div><span>月份</span><button className={!month ? "active" : ""} onClick={() => selectArchive(year, "")}>全年</button>{months.map((item) => <button className={month === item ? "active" : ""} key={item} onClick={() => selectArchive(year, item)}>{item} 月</button>)}</div></div><button type="button" className="archive-return" onClick={onBack}><ArrowLeft size={17} />返回文章</button></div><div className="archive-timeline-wrap" ref={archiveWrapRef} style={wrapHeight == null ? undefined : { height: wrapHeight }}><div className={`archive-timeline${switching === "leaving" ? " is-leaving" : ""}${switching === "entering" ? " is-entering" : ""}`} key={`${year}-${month}`}>{visible.map((post) => <a href={contentRoute("post", post)} key={post.slug}><time>{post.date.slice(0, 10)}</time><i aria-hidden="true" /><div><span>{post.category}{post.series ? ` · ${post.series}` : ""}</span><strong>{post.title}</strong></div><small><Eye size={14} />{stats[post.slug]?.views || 0}<ChatCircleDots size={14} />{stats[post.slug]?.comments || 0}</small></a>)}</div></div></div>;
 }
