@@ -129,7 +129,7 @@ button,input { font:inherit; } a { color:inherit; text-decoration:none; } button
 .inner-hero::after { z-index:1; background:var(--inner-scrim); }
 .inner-hero-copy { position:relative; z-index:2; width:min(100%,650px); display:flex; flex-direction:column; align-items:center; text-align:center; animation:hero-copy-reveal .52s .12s cubic-bezier(.22,1,.36,1) both; }
 .route-hero-art { position:absolute; z-index:0; inset:0; overflow:hidden; contain:paint; background:var(--surface); }
-.route-hero-art-layer { position:absolute; inset:0; background-color:var(--surface); background-image:var(--hero-art-image); background-position:var(--hero-art-position); background-size:var(--hero-art-size,cover); background-repeat:no-repeat; backface-visibility:hidden; transform:translateZ(0); }
+.route-hero-art-layer { position:absolute; inset:0; background-color:var(--surface); background-image:var(--hero-art-image),var(--hero-art-lqip,none); background-position:var(--hero-art-position); background-size:var(--hero-art-size,cover); background-repeat:no-repeat; backface-visibility:hidden; transform:translateZ(0); }
 .route-hero-art-layer.is-previous { z-index:0; }
 .route-hero-art-layer.is-current { z-index:1; }
 .route-hero-art.is-forward .route-hero-art-layer.is-previous { animation:none; }
@@ -425,6 +425,17 @@ button,input { font:inherit; } a { color:inherit; text-decoration:none; } button
 .dialog-backdrop.is-closing .search-dialog { animation:dialog-panel-out .22s ease-in both; }
 .settings-dialog { width:min(510px,100%); padding:24px; border:1px solid var(--line); border-radius:22px; background:var(--surface); box-shadow:var(--shadow); transform-origin:top center; animation:dialog-panel-in .34s cubic-bezier(.22,1,.36,1) both; }
 .dialog-backdrop.is-closing .settings-dialog { animation:dialog-panel-out .24s ease-in both; }
+.dialog-skeleton-content { display:grid; align-content:start; gap:12px; }
+.dialog-skeleton-content--search { min-height:260px; }
+.dialog-skeleton-content--settings { min-height:124px; }
+.dialog-skeleton-content--account { min-height:284px; }
+.dialog-skeleton-line,.dialog-skeleton-block { display:block; border-radius:999px; background:linear-gradient(90deg,var(--surface-soft),color-mix(in srgb,var(--surface) 65%,var(--accent-soft)),var(--surface-soft)); background-size:220% 100%; animation:content-loading 1.4s linear infinite; }
+.dialog-skeleton-line { height:14px; }
+.dialog-skeleton-line--title { width:34%; height:22px; }
+.dialog-skeleton-line--wide { width:78%; }
+.dialog-skeleton-line--medium { width:56%; }
+.dialog-skeleton-block { height:112px; margin-top:8px; border-radius:16px; }
+.search-dialog.had-loading>:not(.dialog-skeleton-content),.settings-dialog.had-loading>:not(.dialog-skeleton-content),.account-dialog.had-loading>:not(.account-dialog-close):not(.dialog-skeleton-content) { animation:dialog-content-reveal .2s ease-out both; }
 .settings-dialog>header { display:flex; align-items:flex-start; justify-content:space-between; gap:18px; }
 .settings-dialog>header>span { display:grid; gap:4px; }
 .settings-dialog>header small { color:var(--accent); font-size:9px; font-weight:800; letter-spacing:.16em; }
@@ -507,6 +518,7 @@ footer::before { content:""; position:absolute; top:0; left:50%; width:min(1180p
 @keyframes menu-icon-in { from { opacity:0; transform:rotate(-70deg) scale(.68); } to { opacity:1; transform:rotate(0) scale(1); } }
 @keyframes dialog-backdrop-in { from { opacity:0; backdrop-filter:blur(0); } to { opacity:1; backdrop-filter:blur(8px); } }
 @keyframes dialog-panel-in { from { opacity:0; transform:translateY(-16px) scale(.965); } to { opacity:1; transform:translateY(0) scale(1); } }
+@keyframes dialog-content-reveal { from { opacity:0; transform:translateY(4px); } to { opacity:1; transform:translateY(0); } }
 @keyframes dialog-backdrop-out { from { opacity:1; } to { opacity:0; backdrop-filter:blur(0); } }
 @keyframes dialog-panel-out { from { opacity:1; transform:translateY(0) scale(1); } to { opacity:0; transform:translateY(-10px) scale(.975); } }
 @keyframes route-view-in { from { opacity:0; transform:translateY(10px) scale(.998); } to { opacity:1; transform:translateY(0) scale(1); } }
@@ -531,7 +543,7 @@ footer::before { content:""; position:absolute; top:0; left:50%; width:min(1180p
   .main-nav.is-open { opacity:1; visibility:visible; pointer-events:auto; transform:translate(-50%,0) scale(1); transition-delay:0s; } .main-nav a,.main-nav a:last-child { display:flex; min-height:45px; padding:0 14px; border-radius:11px; }
   .nav-active-indicator { display:none; } .main-nav a.active { background:var(--accent-soft); }
   .hero { min-height:380px; }
-  .route-hero-art-layer { background-image:var(--hero-art-image-mobile,var(--hero-art-image)); background-position:var(--hero-art-position-mobile,var(--hero-art-position)); }
+  .route-hero-art-layer { background-image:var(--hero-art-image-mobile,var(--hero-art-image)),var(--hero-art-lqip-mobile,var(--hero-art-lqip,none)); background-position:var(--hero-art-position-mobile,var(--hero-art-position)); }
   .hero-copy { margin:72px 16px 0; padding:22px 18px; background:transparent; backdrop-filter:none; }
   .hero h1 { font-size:38px; } .hero p { font-size:14px; }
   .profile-avatar { grid-row:1/4; width:82px; height:82px; margin:0; }

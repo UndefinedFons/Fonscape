@@ -71,12 +71,13 @@ test("one-click deployment asks for only an empty administrator bootstrap token"
 
 test("content, font, image and RSS artifacts generate before supported project commands", async () => {
   const packageJson = await readJson("../package.json");
-  assert.equal(packageJson.scripts["pnpm:devPreinstall"], "node scripts/generate-content-targets.mjs && node scripts/generate-font-css.mjs && node scripts/generate-responsive-images.mjs --manifest-only");
+  assert.equal(packageJson.scripts["pnpm:devPreinstall"], "node scripts/generate-responsive-images.mjs --manifest-only && node scripts/generate-content-targets.mjs && node scripts/generate-font-css.mjs");
   for (const hook of ["predev", "prebuild", "pretest"]) {
     const commands = packageJson.scripts[hook].split(" && ");
     for (const script of ["generate-content-targets", "generate-font-css", "generate-responsive-images", "generate-rss", "generate-sitemap"]) {
       assert.ok(commands.includes(`node scripts/${script}.mjs`), `${hook} must generate ${script}`);
     }
+    assert.ok(commands.indexOf("node scripts/generate-responsive-images.mjs") < commands.indexOf("node scripts/generate-content-targets.mjs"), `${hook} must generate image descriptors before content chunks`);
   }
   assert.equal(packageJson.scripts.precheck, undefined);
   assert.match(packageJson.scripts.check, /^pnpm test /u);

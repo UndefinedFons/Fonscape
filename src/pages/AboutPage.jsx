@@ -4,7 +4,6 @@ import { GithubLogo } from "@phosphor-icons/react/GithubLogo";
 import { UserCircle } from "@phosphor-icons/react/UserCircle";
 import { XLogo } from "@phosphor-icons/react/XLogo";
 import { CommentsSection } from "../community/CommentsSection.jsx";
-import { PageHero } from "../components/PageHero.jsx";
 import { authorProfile, siteConfig } from "../content/index.js";
 import { useResponsiveImage } from "../useResponsiveImage.js";
 
@@ -41,8 +40,7 @@ export function resolveChannels(author) {
 export function AboutPage() {
   const channels = resolveChannels(authorProfile);
   const portraitImage = useResponsiveImage(authorProfile.avatar, "(max-width: 760px) min(70vw, 320px), 320px");
-  return <main className="about-page">
-    <PageHero kicker="HELLO" title="关于我" description={siteConfig.about.heroDescription} icon={UserCircle} variant="about" />
+  return <>
     <section className="about-layout material-panel page-width">
       <aside className="about-profile">
         <div className="about-portrait">{authorProfile.avatar ? <img {...portraitImage} alt={authorProfile.avatarAlt} loading="lazy" decoding="async" /> : <span className="about-portrait-placeholder" role="img" aria-label={authorProfile.avatarAlt}><UserCircle size={112} weight="duotone" /></span>}</div>
@@ -62,5 +60,5 @@ export function AboutPage() {
       </article>
     </section>
     <div className="about-comments page-width"><div className="material-panel comments-material-panel"><CommentsSection targetType="post" slug="site-about" /></div></div>
-  </main>;
+  </>;
 }

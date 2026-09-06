@@ -117,7 +117,10 @@ function contentMetadataPlugin() {
   const metadataPath = resolve(process.cwd(), "functions/_generated/content-metadata.js");
   let generation = Promise.resolve();
   const regenerate = () => {
-    generation = generation.then(() => Promise.all([generateContentArtifacts(), generateFontStylesheets(), generateResponsiveImages(), generateRssFeed(), generateSitemap()]));
+    generation = generation.then(async () => {
+      await generateResponsiveImages();
+      await Promise.all([generateContentArtifacts(), generateFontStylesheets(), generateRssFeed(), generateSitemap()]);
+    });
     return generation;
   };
   return {
@@ -125,6 +128,7 @@ function contentMetadataPlugin() {
     async handleHotUpdate({ file, modules, server }) {
       if (file.startsWith(`${imageRoot}/`) && /\.(?:avif|jpe?g|png|webp)$/iu.test(file)) {
         await generateResponsiveImages();
+        await generateContentArtifacts();
         server.ws.send({ type: "full-reload" });
         return [];
       }

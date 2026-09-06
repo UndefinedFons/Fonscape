@@ -12,7 +12,6 @@ import {
   loadResponsiveImageCache,
   renderResponsiveVariant,
   renderResponsiveVariantBuffer,
-  responsiveImageChunkMap,
   RESPONSIVE_IMAGE_CACHE_VERSION,
   saveResponsiveImageCache,
   safeLocalSourcePath,
@@ -20,7 +19,7 @@ import {
   shouldKeepResponsiveVariant,
   sourceAssetPath,
 } from "../scripts/generate-responsive-images.mjs";
-import { responsiveImageProps, responsiveImageUrl } from "../src/responsiveImages.ts";
+import { registerResponsiveImages, responsiveImageProps, responsiveImageUrl } from "../src/responsiveImages.ts";
 
 test("Markdown image discovery includes rendered local rasters and ignores code or remote sources", () => {
   const markdown = [
@@ -90,26 +89,33 @@ test("responsive variants keep aspect ratio and never enlarge an original", asyn
 });
 
 test("responsive variants are retained only when they reduce transfer size", () => {
-  assert.equal(shouldKeepResponsiveVariant(10_000, 9_999), true);
+  assert.equal(shouldKeepResponsiveVariant(10_000, 9_000), true);
+  assert.equal(shouldKeepResponsiveVariant(10_000, 9_001), false);
   assert.equal(shouldKeepResponsiveVariant(10_000, 10_000), false);
   assert.equal(shouldKeepResponsiveVariant(10_000, 10_001), false);
 });
 
-test("responsive width selection stays deterministic and caps each source at five generated files", () => {
-  assert.deepEqual(selectResponsiveWidths([128, 256, 384, 640, 960, 1280, 1600], { preferSmall: true }), [128, 384, 640, 960, 1600]);
-  assert.deepEqual(selectResponsiveWidths([384, 640, 768, 960, 1280, 1600]), [384, 640, 960, 1280, 1600]);
-  assert.deepEqual(selectResponsiveWidths([384, 640, 960]), [384, 640, 960]);
+test("responsive width selection stays deterministic and caps each source at two generated files", () => {
+  assert.deepEqual(selectResponsiveWidths([128, 256, 384, 640, 960, 1280, 1600], { preferSmall: true }), [128, 1600]);
+  assert.deepEqual(selectResponsiveWidths([384, 640, 768, 960, 1280, 1600]), [384, 1600]);
+  assert.deepEqual(selectResponsiveWidths([384, 640, 960]), [384, 960]);
 });
 
-test("full responsive metadata maps each source to only its owning chunk", () => {
-  const chunks = [
-    { "/assets/first.webp": {}, "/assets/second.webp": {} },
-    { "/assets/third.webp": {} },
-  ];
-  assert.deepEqual(responsiveImageChunkMap(chunks), {
-    "/assets/first.webp": 0,
-    "/assets/second.webp": 0,
-    "/assets/third.webp": 1,
+test("content-provided metadata gives img a derivative src synchronously", () => {
+  registerResponsiveImages({
+    "/assets/registered.jpg": {
+      width: 1800,
+      height: 1200,
+      candidates: [
+        { src: "/fonscape/generated-images/registered-small.webp", width: 640 },
+        { src: "/fonscape/generated-images/registered-large.webp", width: 1600 },
+      ],
+    },
+  });
+  assert.deepEqual(responsiveImageProps("/assets/registered.jpg", "100vw"), {
+    src: "/fonscape/generated-images/registered-small.webp",
+    srcSet: "/fonscape/generated-images/registered-small.webp 640w, /fonscape/generated-images/registered-large.webp 1600w",
+    sizes: "100vw",
   });
 });
 
@@ -126,7 +132,7 @@ test("responsive manifests are deterministic and missing entries retain the orig
   await generateResponsiveImages();
   const second = await readFile("functions/_generated/responsive-images.js", "utf8");
   assert.equal(second, first);
-  assert.deepEqual(responsiveImageProps("/assets/not-generated.png", "100vw"), {});
+  assert.deepEqual(responsiveImageProps("/assets/not-generated.png", "100vw"), { src: "/assets/not-generated.png" });
   assert.equal(responsiveImageUrl("/assets/not-generated.png", 640), "/assets/not-generated.png");
 });
 
@@ -221,8 +227,7 @@ test("responsive generation reuses accepted and rejected outcomes without weaken
   const readGeneratedManifests = async () => {
     const names = (await readdir(manifestDirectory)).filter((name) => (
       name === "responsive-images.js"
-      || name === "responsive-images-full.js"
-      || /^responsive-images-full-\d+\.js$/u.test(name)
+      || name === "responsive-images-build.json"
     )).sort();
     return new Map(await Promise.all(names.map(async (name) => [
       name,
@@ -240,13 +245,13 @@ test("responsive generation reuses accepted and rejected outcomes without weaken
   const options = { cacheDirectory, generatedDirectory, manifestDirectory, sourceTargets };
   let acceptedBytes;
   try {
-    await writeFile(acceptedPath, await makeFixture(1000, 750, 60));
-    await writeFile(rejectedPath, await makeFixture(400, 300, 1));
+    await writeFile(acceptedPath, await makeFixture(2000, 1500, 100));
+    await writeFile(rejectedPath, await makeFixture(2000, 1500, 1));
 
     const coldCounter = { value: 0 };
     const cold = await generateResponsiveImages({ ...options, sharpLibrary: countedSharp(coldCounter) });
     assert.deepEqual([cold.sourceCount, cold.variantCount], [2, 2]);
-    assert.equal(coldCounter.value, 6);
+    assert.equal(coldCounter.value, 8);
     const coldManifests = await readGeneratedManifests();
     const cacheManifestPath = join(cacheDirectory, "manifest.json");
     const coldCacheText = await readFile(cacheManifestPath, "utf8");
@@ -263,7 +268,7 @@ test("responsive generation reuses accepted and rejected outcomes without weaken
     const warmCounter = { value: 0 };
     const warm = await generateResponsiveImages({ ...options, sharpLibrary: countedSharp(warmCounter) });
     assert.deepEqual([warm.sourceCount, warm.variantCount], [2, 2]);
-    assert.equal(warmCounter.value, 2, "warm generation only inspects each source; neither outcome is re-encoded");
+    assert.equal(warmCounter.value, 4, "warm generation inspects each source and refreshes only inline LQIP data");
     assert.deepEqual(await readGeneratedManifests(), coldManifests);
     assert.equal(await readFile(cacheManifestPath, "utf8"), coldCacheText);
 
@@ -271,7 +276,7 @@ test("responsive generation reuses accepted and rejected outcomes without weaken
     await rm(acceptedOutputPath);
     const missingCounter = { value: 0 };
     await generateResponsiveImages({ ...options, sharpLibrary: countedSharp(missingCounter) });
-    assert.equal(missingCounter.value, 3, "a missing accepted output is regenerated while the rejected outcome remains cached");
+    assert.equal(missingCounter.value, 5, "a missing accepted output is regenerated while the rejected outcome remains cached");
     assert.deepEqual(await readFile(acceptedOutputPath), acceptedBytes);
 
     await rm(acceptedOutputPath);
@@ -288,7 +293,7 @@ test("responsive generation reuses accepted and rejected outcomes without weaken
     await writeFile(cacheManifestPath, "{broken cache");
     const corruptCacheCounter = { value: 0 };
     await generateResponsiveImages({ ...options, sharpLibrary: countedSharp(corruptCacheCounter) });
-    assert.equal(corruptCacheCounter.value, 6, "a corrupt cache falls back to a cold generation");
+    assert.equal(corruptCacheCounter.value, 8, "a corrupt cache falls back to a cold generation");
     assert.deepEqual(await readFile(acceptedOutputPath), acceptedBytes);
 
     const corruptOutput = Buffer.from(acceptedBytes);
@@ -296,7 +301,7 @@ test("responsive generation reuses accepted and rejected outcomes without weaken
     await writeFile(acceptedOutputPath, corruptOutput);
     const corruptOutputCounter = { value: 0 };
     await generateResponsiveImages({ ...options, sharpLibrary: countedSharp(corruptOutputCounter) });
-    assert.equal(corruptOutputCounter.value, 3, "a corrupt accepted output is regenerated without touching cached outcomes");
+    assert.equal(corruptOutputCounter.value, 5, "a corrupt accepted output is regenerated without touching cached outcomes");
     assert.deepEqual(await readFile(acceptedOutputPath), acceptedBytes);
 
     const sameSizeCorruption = Buffer.from(acceptedBytes);
@@ -312,10 +317,10 @@ test("responsive generation reuses accepted and rejected outcomes without weaken
     await generateResponsiveImages({ ...options, sharpLibrary: countedSharp({ value: 0 }) });
 
     const oldGeneratedNames = new Set(await readdir(generatedDirectory));
-    await writeFile(acceptedPath, await makeFixture(1000, 750, 70));
+    await writeFile(acceptedPath, await makeFixture(2000, 1500, 95));
     const invalidatedCounter = { value: 0 };
     await generateResponsiveImages({ ...options, sharpLibrary: countedSharp(invalidatedCounter) });
-    assert.equal(invalidatedCounter.value, 5, "changing source bytes invalidates only that source's cached candidates");
+    assert.equal(invalidatedCounter.value, 6, "changing source bytes invalidates only that source's cached candidates");
     const invalidatedCache = JSON.parse(await readFile(cacheManifestPath, "utf8"));
     assert.equal(invalidatedCache.entries.some((entry) => entry.source === acceptedSource), true);
     assert.equal(invalidatedCache.entries.some((entry) => entry.source === acceptedSource && entry.sourceHash === coldCache.entries.find((candidate) => candidate.source === acceptedSource)?.sourceHash), false);

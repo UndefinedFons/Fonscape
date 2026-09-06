@@ -1,6 +1,11 @@
-import { lazy } from "react";
-import { loadCollection, loadMusicReview, loadPoem, loadPost, siteConfig } from "./content/index.js";
-import { preloadResponsiveImageIndex } from "./responsiveImages.ts";
+import { BookOpenText } from "@phosphor-icons/react/BookOpenText";
+import { Feather } from "@phosphor-icons/react/Feather";
+import { LinkSimple } from "@phosphor-icons/react/LinkSimple";
+import { MusicNotes } from "@phosphor-icons/react/MusicNotes";
+import { UserCircle } from "@phosphor-icons/react/UserCircle";
+import { lazy, Suspense } from "react";
+import { loadCollectionPageChunk, loadMusicReview, loadPoem, loadPost, siteConfig } from "./content/index.js";
+import { PageHero } from "./components/PageHero.jsx";
 import { replaceRouteWithHome } from "./routeState.js";
 import { setRouteDocumentTitle } from "./navigation.js";
 import { isSiteRouteEnabled, normalizeRoutePath } from "./sectionAvailability.js";
@@ -13,7 +18,6 @@ const withFullFonts = (loader) => {
 };
 const withFullAssets = (loader) => {
   void ensureFullFontStylesheet();
-  void preloadResponsiveImageIndex().catch(() => {});
   return loader();
 };
 const loadAboutModule = () => withFullAssets(() => import("./pages/AboutPage.jsx"));
@@ -28,6 +32,18 @@ const loadPoemModule = () => withFullAssets(() => import("./pages/PoemPage.jsx")
 const loadPoemsModule = () => withFullAssets(() => import("./pages/PoemsPage.jsx"));
 const loadPostsModule = () => withFullAssets(() => import("./pages/PostsPage.jsx"));
 const loadAccountModule = () => withFullFonts(() => import("./community/AccountDialog.jsx"));
+
+const primaryRouteShells = {
+  "/posts": { kicker: "ARTICLE INDEX", title: "文章", description: siteConfig.pages.postsDescription, icon: BookOpenText, variant: "posts" },
+  "/poems": { kicker: "SMALL POEMS", title: "小诗", description: siteConfig.pages.poemsDescription, icon: Feather, variant: "poems" },
+  "/music": { kicker: "MUSIC NOTES", title: "音乐", description: siteConfig.pages.musicDescription, icon: MusicNotes, variant: "music" },
+  "/friends": { kicker: "FRIEND LINKS", title: "友链", description: siteConfig.pages.friendsDescription, icon: LinkSimple, variant: "friends" },
+  "/about": { kicker: "HELLO", title: "关于我", description: siteConfig.about.heroDescription, icon: UserCircle, variant: "about" },
+};
+
+function PrimaryRoute({ path, children }) {
+  return <main className={path === "/about" ? "about-page" : undefined}><PageHero {...primaryRouteShells[path]} /><Suspense fallback={null}>{children}</Suspense></main>;
+}
 
 export const AboutPage = lazy(() => loadAboutModule().then((module) => ({ default: module.AboutPage })));
 export const AdminSetupPage = lazy(() => loadAdminSetupModule().then((module) => ({ default: module.AdminSetupPage })));
@@ -50,7 +66,7 @@ export function preloadAccount() {
   return loadAccountModule().catch(() => {});
 }
 
-const prefetchedRouteModules = new Set();
+const prefetchedRouteModules = new Map();
 
 let fullFontStylesheetReady;
 function ensureFullFontStylesheet() {
@@ -91,9 +107,14 @@ export function routeModuleLoader(path) {
 /** @param {string} path */
 export function preloadRouteModule(path) {
   const loader = routeModuleLoader(path);
-  if (!loader || prefetchedRouteModules.has(loader)) return;
-  prefetchedRouteModules.add(loader);
-  loader().catch(() => prefetchedRouteModules.delete(loader));
+  if (!loader) return Promise.resolve(null);
+  if (!prefetchedRouteModules.has(loader)) {
+    prefetchedRouteModules.set(loader, loader().catch((error) => {
+      prefetchedRouteModules.delete(loader);
+      throw error;
+    }));
+  }
+  return prefetchedRouteModules.get(loader);
 }
 
 /** @param {unknown} value */
@@ -113,9 +134,9 @@ export function preloadRouteContent(path) {
     const [, section, ...slugParts] = routePath.split("/");
     if (section && slugParts.length) return loadMusicReview(decodeRoutePath(section), decodeRoutePath(slugParts.join("/"))).catch(() => null);
   }
-  if (routePath === "/posts") return loadCollection("post").catch(() => null);
-  if (routePath === "/poems") return loadCollection("poem").catch(() => null);
-  if (routePath === "/music") return loadCollection("music").catch(() => null);
+  if (routePath === "/posts") return loadCollectionPageChunk("post", 0).catch(() => null);
+  if (routePath === "/poems") return loadCollectionPageChunk("poem", 0).catch(() => null);
+  if (routePath === "/music") return loadCollectionPageChunk("music", 0).catch(() => null);
   return Promise.resolve(null);
 }
 
@@ -142,11 +163,11 @@ export function RouteContent({ route, routeQuery, stats, onView, onOutline, onRe
   if (route.startsWith("/poem/")) return <PoemPage slug={decodeRoutePath(route.slice("/poem/".length))} stats={stats.poem || {}} onView={onView} onStatsTargets={onRequestStats} />;
   if (route.startsWith("/music/")) return <MusicDetailPage path={decodeRoutePath(route.slice("/music/".length))} stats={stats.music || {}} onView={onView} onStatsTargets={onRequestStats} />;
   if (route === "/") return <HomePage stats={stats.post || {}} onStatsTargets={onRequestStats} />;
-  if (route === "/posts") return <PostsPage query={routeQuery} stats={stats.post || {}} onStatsTargets={onRequestStats} />;
-  if (route === "/poems") return <PoemsPage stats={stats.poem || {}} onStatsTargets={onRequestStats} />;
-  if (route === "/music") return <MusicPage stats={stats.music || {}} onStatsTargets={onRequestStats} />;
-  if (route === "/friends") return <FriendsPage />;
-  if (route === "/about") return <AboutPage />;
+  if (route === "/posts") return <PrimaryRoute path={route}><PostsPage query={routeQuery} stats={stats.post || {}} onStatsTargets={onRequestStats} /></PrimaryRoute>;
+  if (route === "/poems") return <PrimaryRoute path={route}><PoemsPage stats={stats.poem || {}} onStatsTargets={onRequestStats} /></PrimaryRoute>;
+  if (route === "/music") return <PrimaryRoute path={route}><MusicPage stats={stats.music || {}} onStatsTargets={onRequestStats} /></PrimaryRoute>;
+  if (route === "/friends") return <PrimaryRoute path={route}><FriendsPage /></PrimaryRoute>;
+  if (route === "/about") return <PrimaryRoute path={route}><AboutPage /></PrimaryRoute>;
   if (route === "/admin/setup") return <AdminSetupPage />;
   return <NotFound />;
 }

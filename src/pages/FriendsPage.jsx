@@ -4,8 +4,7 @@ import { useEffect, useState } from "react";
 import { CommentsSection } from "../community/CommentsSection.jsx";
 import { useCommunity } from "../community/CommunityProvider.jsx";
 import { api } from "../community/api.js";
-import { PageHero } from "../components/PageHero.jsx";
-import { friendLinks, siteConfig } from "../content/index.js";
+import { friendLinks } from "../content/index.js";
 
 export function FriendRequestGuide() {
   const [values, setValues] = useState({ site: "", url: "", description: "", color: "#ffb7c5" });
@@ -82,8 +81,6 @@ export function FriendsPage() {
   const { viewer } = useCommunity();
   const profiles = useFriendProfiles();
   return (
-    <main>
-      <PageHero kicker="FRIEND LINKS" title="友链" description={siteConfig.pages.friendsDescription} icon={LinkSimple} variant="friends" />
       <section className="friends-layout page-width">
         {friendLinks.length ? (
           <div className="friend-grid">
@@ -104,6 +101,5 @@ export function FriendsPage() {
         <FriendRequestGuide />
         <div className="material-panel comments-material-panel"><CommentsSection targetType="post" slug="site-friends" /></div>
       </section>
-    </main>
   );
 }

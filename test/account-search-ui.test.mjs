@@ -24,8 +24,8 @@ test("account notifications stay unread until an individual message is opened", 
   assert.doesNotMatch(source, /loadFeedWithBestEffortReceipt|readThrough/u);
   assert.match(center, /const \[tab, setTab\] = useState\("profile"\);/u);
   assert.match(data, /if \(item\.unread && markRead\) Promise\.resolve\(markRead\(item\.id\)\)\.catch\(\(\) => \{\}\);/u);
-  assert.match(feeds, /commentLinkProps\(reply, closeAccount, markReplyRead\)/u);
-  assert.match(feeds, /commentLinkProps\(comment, closeAccount, markAdminCommentRead\)/u);
+  assert.match(feeds, /commentLinkProps\(reply, onClose, markReplyRead\)/u);
+  assert.match(feeds, /commentLinkProps\(comment, onClose, markAdminCommentRead\)/u);
 });
 
 test("the combined search feed applies newest-first ordering with stable ties", () => {

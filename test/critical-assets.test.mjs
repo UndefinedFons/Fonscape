@@ -38,7 +38,7 @@ test("site metadata configuration is applied to the generated HTML", async () =>
   assert.match(transformed, /content="A \$&amp; \$1 &lt;small> site &quot;description&quot;"/u);
 });
 
-test("homepage and detail images use shared responsive candidates while retaining original fallbacks", async () => {
+test("homepage and detail images use two responsive derivatives while lightboxes retain originals", async () => {
   const [config, cards, home, responsive, responsiveHook, zoomable, richArticle, article, music, generator, player] = await Promise.all([
     readFile("vite.config.mjs", "utf8"),
     readFile("src/components/Cards.jsx", "utf8"),
@@ -63,14 +63,17 @@ test("homepage and detail images use shared responsive candidates while retainin
   assert.match(home, /responsiveImageProps\(authorProfile\.avatarSmall \|\| authorProfile\.avatar/u);
   assert.match(responsive, /srcSet:/u);
   assert.match(responsive, /candidates\.at\(-1\)\?\.src \|\| source/u);
-  assert.match(responsiveHook, /loadResponsiveImage\(source\)/u);
+  assert.match(responsiveHook, /return responsiveImageProps\(source, sizes\)/u);
+  assert.doesNotMatch(responsiveHook, /src: undefined/u);
   assert.match(zoomable, /useResponsiveImage\(src, sizes\)/u);
   assert.match(zoomable, /<img src=\{src\} alt=\{alt\} \/>/u);
   assert.match(responsive, /detailImageSizes = "\(max-width: 760px\) calc\(100vw - 68px\), min\(calc\(100vw - 116px\), 790px\)"/u);
   assert.match(richArticle, /sizes=\{detailImageSizes\}/u);
   assert.match(article, /sizes=\{detailImageSizes\}/u);
   assert.match(music, /useResponsiveImage\(review\?\.image \|\| "",/u);
-  assert.match(generator, /detail: \[384, 640, 960, 1280, 1600\]/u);
+  assert.match(generator, /detail: \[640, 1600\]/u);
+  assert.match(generator, /MAX_RESPONSIVE_CANDIDATES_PER_SOURCE = 2/u);
+  assert.match(generator, /renderInlineLqip/u);
   assert.match(generator, /extractLocalRasterSources/u);
   assert.match(generator, /addTarget\(targets, post\.image, "detail"\)/u);
   assert.match(generator, /post\.musicBlocks/iu);

@@ -1,5 +1,5 @@
 import { siteConfig } from "./siteConfig.js";
-import { responsiveImageUrl } from "./responsiveImages.ts";
+import { responsiveImageLqip, responsiveImageUrl } from "./responsiveImages.ts";
 
 const PRIMARY_HERO_ORDER = ["home", "posts", "poems", "music", "friends", "about"];
 const PRIMARY_HERO_PATHS = ["/", "/posts", "/poems", "/music", "/friends", "/about"];
@@ -23,9 +23,13 @@ function getHeroStyle(variant) {
   const hero = getHeroConfig(variant);
   const desktopImage = responsiveImageUrl(hero.image, 1600);
   const mobileImage = responsiveImageUrl(hero.mobileImage || hero.image, 960);
+  const desktopLqip = responsiveImageLqip(hero.image);
+  const mobileLqip = responsiveImageLqip(hero.mobileImage || hero.image);
   return {
     "--hero-art-image": `url("${desktopImage}")`,
     "--hero-art-image-mobile": `url("${mobileImage}")`,
+    "--hero-art-lqip": desktopLqip ? `url("${desktopLqip}")` : "none",
+    "--hero-art-lqip-mobile": mobileLqip ? `url("${mobileLqip}")` : "none",
     "--hero-art-position": hero.position || "center",
     "--hero-art-position-mobile": hero.mobilePosition || hero.position || "center",
     "--hero-art-size": hero.size || "cover",
@@ -43,12 +47,13 @@ function pathVariant(path) {
 
 /**
  * @param {import("./types.js").HeroConfig} hero
- * @returns {{ image: string, needsSoftening: boolean }}
+ * @returns {{ image: string, lqip: string, needsSoftening: boolean }}
  */
 function resolveGlassBackground(hero) {
   const glassImage = typeof hero.glassImage === "string" ? hero.glassImage.trim() : "";
   return {
     image: responsiveImageUrl(glassImage || hero.image, 1280),
+    lqip: responsiveImageLqip(glassImage || hero.image),
     needsSoftening: !glassImage,
   };
 }
@@ -64,19 +69,26 @@ const inFlightHeroImages = new Map();
 /**
  * @param {string} path
  * @param {boolean} [mobile]
+ * @param {"low" | "high" | "auto"} [priority]
  */
-function preloadHeroAssets(path, mobile = false) {
+function preloadHeroAssets(path, mobile = false, priority = "low") {
   const hero = getHeroConfig(pathVariant(path));
   const sources = [
     mobile ? responsiveImageUrl(hero.mobileImage || hero.image, 960) : responsiveImageUrl(hero.image, 1600),
     resolveGlassBackground(hero).image,
   ];
   for (const source of sources) {
-    if (!source || preloadedHeroSources.has(source)) continue;
+    if (!source) continue;
+    const existing = inFlightHeroImages.get(source);
+    if (existing) {
+      if (priority === "high") existing.fetchPriority = "high";
+      continue;
+    }
+    if (preloadedHeroSources.has(source)) continue;
     preloadedHeroSources.add(source);
     const image = new Image();
     image.decoding = "async";
-    image.fetchPriority = "low";
+    image.fetchPriority = priority;
     const finish = () => inFlightHeroImages.delete(source);
     image.addEventListener("load", finish, { once: true });
     image.addEventListener("error", finish, { once: true });

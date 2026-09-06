@@ -11,13 +11,15 @@ import {
   sortNewestFirst,
 } from "../src/content/frontmatter.js";
 import { sortFeaturedPosts } from "../src/pages/homeContent.js";
+import { extractLocalRasterSources, isLocalRasterSource } from "./generate-responsive-images.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const outputPath = join(root, "functions", "_generated", "content-targets.js");
 const metadataOutputPath = join(root, "functions", "_generated", "content-metadata.js");
 const generatedContentRoot = join(root, "public", "fonscape", "content");
+const responsiveImageBuildPath = join(root, "functions", "_generated", "responsive-images-build.json");
 
-export const CONTENT_SCHEMA_VERSION = 2;
+export const CONTENT_SCHEMA_VERSION = 3;
 export const CONTENT_PAGE_CHUNK_SIZE = 50;
 export const CONTENT_INDEX_CHUNK_SIZE = 200;
 export const HOME_LATEST_LIMIT = 5;
@@ -105,10 +107,29 @@ export function contentKey(type, entry) {
   return type === "music" ? `${String(entry.section)}/${String(entry.slug)}` : String(entry.slug);
 }
 
-function homeEntry(type, entry) {
+function collectEntryImageSources(value, sources = new Set()) {
+  if (typeof value === "string") {
+    if (isLocalRasterSource(value)) sources.add(value);
+    return sources;
+  }
+  if (Array.isArray(value)) value.forEach((item) => collectEntryImageSources(item, sources));
+  else if (value && typeof value === "object") Object.values(value).forEach((item) => collectEntryImageSources(item, sources));
+  return sources;
+}
+
+function responsiveImagesFor(entry, raw, imageCatalog) {
+  const sources = collectEntryImageSources(entry);
+  for (const source of extractLocalRasterSources(raw || "")) sources.add(source);
+  return Object.fromEntries([...sources].sort().flatMap((source) => imageCatalog[source] ? [[source, imageCatalog[source]]] : []));
+}
+
+function homeEntry(type, entry, imageCatalog = {}) {
   const common = { slug: String(entry.slug), title: String(entry.title || ""), date: String(entry.date || "") };
+  const responsiveImages = responsiveImagesFor(entry, "", imageCatalog);
+  const withImages = Object.keys(responsiveImages).length ? { responsiveImages } : {};
   if (type === "post") return {
     ...common,
+    ...withImages,
     category: String(entry.category || ""),
     featured: Boolean(entry.featured),
     ...(Number.isInteger(entry.featuredOrder) ? { featuredOrder: entry.featuredOrder } : {}),
@@ -120,11 +141,13 @@ function homeEntry(type, entry) {
   };
   if (type === "poem") return {
     ...common,
+    ...withImages,
     previewLines: Array.isArray(entry.previewLines) ? entry.previewLines.slice(0, 3).map(String) : [],
     lineCount: Number(entry.lineCount) || 0,
   };
   if (type === "music") return {
     ...common,
+    ...withImages,
     section: String(entry.section || "songs"),
     kind: String(entry.kind || ""),
   };
@@ -158,7 +181,7 @@ export function contentSearchEntry(type, entry) {
   };
 }
 
-export function buildContentDistribution(collections) {
+export function buildContentDistribution(collections, imageCatalog = {}) {
   const files = new Map();
   const descriptors = {};
   const addJson = (path, value) => files.set(path, `${JSON.stringify(value)}\n`);
@@ -172,6 +195,7 @@ export function buildContentDistribution(collections) {
         key,
         source: record.source,
         body: `/fonscape/content/bodies/${encodeURIComponent(type)}/${encodePath(record.name)}`,
+        responsiveImages: responsiveImagesFor(record.entry, record.raw, imageCatalog),
       };
     });
     const pageChunks = chunkValues(metadata, CONTENT_PAGE_CHUNK_SIZE);
@@ -185,9 +209,9 @@ export function buildContentDistribution(collections) {
     const search = ordered.map((record) => contentSearchEntry(type, record.entry));
     chunkValues(facets, CONTENT_INDEX_CHUNK_SIZE).forEach((chunk, index) => addJson(`facets/${encodeURIComponent(type)}/${index}.json`, chunk));
     chunkValues(search, CONTENT_INDEX_CHUNK_SIZE).forEach((chunk, index) => addJson(`search/${encodeURIComponent(type)}/${index}.json`, chunk));
-    const featured = type === "post" ? sortFeaturedPosts(ordered.map(({ entry }) => entry)).map((entry) => homeEntry(type, entry)) : [];
+    const featured = type === "post" ? sortFeaturedPosts(ordered.map(({ entry }) => entry)).map((entry) => homeEntry(type, entry, imageCatalog)) : [];
     chunkValues(featured, HOME_FEATURED_CHUNK_SIZE).forEach((chunk, index) => addJson(`featured/${encodeURIComponent(type)}/${index}.json`, chunk));
-    const latest = ordered.slice(0, HOME_LATEST_LIMIT).map(({ entry }) => homeEntry(type, entry));
+    const latest = ordered.slice(0, HOME_LATEST_LIMIT).map(({ entry }) => homeEntry(type, entry, imageCatalog));
     descriptors[type] = {
       count: ordered.length,
       pageChunkSize: CONTENT_PAGE_CHUNK_SIZE,
@@ -240,7 +264,8 @@ export async function generateContentArtifacts({ check = false } = {}) {
   if (targets.post) targets.post.push("site-about", "site-friends");
   for (const values of Object.values(targets)) values.sort();
   const audioAssetSizes = await readAudioAssetSizes();
-  const { manifest, files } = buildContentDistribution(collections);
+  const imageCatalog = await readFile(responsiveImageBuildPath, "utf8").then(JSON.parse).catch(() => ({}));
+  const { manifest, files } = buildContentDistribution(collections, imageCatalog);
   const renderedTargets = `// Generated by scripts/generate-content-targets.mjs. Do not edit by hand.\n`
     + `const targets = ${JSON.stringify(targets, null, 2)};\n\n`
     + `const targetSets = Object.fromEntries(\n`
