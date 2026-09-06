@@ -12,6 +12,7 @@ import {
   loadResponsiveImageCache,
   renderResponsiveVariant,
   renderResponsiveVariantBuffer,
+  responsiveVariantExtension,
   RESPONSIVE_IMAGE_CACHE_VERSION,
   saveResponsiveImageCache,
   safeLocalSourcePath,
@@ -86,6 +87,13 @@ test("responsive variants keep aspect ratio and never enlarge an original", asyn
   } finally {
     await rm(directory, { recursive: true, force: true });
   }
+});
+
+test("responsive derivatives use WebP for every supported source format", () => {
+  for (const extension of [".avif", ".jpeg", ".jpg", ".png", ".webp"]) {
+    assert.equal(responsiveVariantExtension(`/assets/cover${extension}`), ".webp");
+  }
+  assert.equal(responsiveVariantExtension("/assets/cover.svg"), null);
 });
 
 test("responsive variants are retained only when they reduce transfer size", () => {
