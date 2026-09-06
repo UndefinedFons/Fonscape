@@ -1,11 +1,7 @@
 import { ArrowLeft } from "@phosphor-icons/react/ArrowLeft";
 import { ArrowRight } from "@phosphor-icons/react/ArrowRight";
-import { CalendarBlank } from "@phosphor-icons/react/CalendarBlank";
-import { ChatCircleDots } from "@phosphor-icons/react/ChatCircleDots";
-import { Eye } from "@phosphor-icons/react/Eye";
-import { TextAa } from "@phosphor-icons/react/TextAa";
 import { lazy, use, useEffect, useMemo, useState } from "react";
-import { MusicReviewCard } from "../components/Cards.jsx";
+import { MusicReviewCard, PostMeta } from "../components/Cards.jsx";
 import { Pagination } from "../components/Pagination.jsx";
 import { CommentsSection } from "../community/CommentsSection.jsx";
 import { loadMusicReview, siteConfig } from "../content/index.js";
@@ -17,7 +13,6 @@ import { setDocumentTitle } from "../navigation.js";
 import { detailImageSizes } from "../responsiveImages.ts";
 import { useResponsiveImage } from "../useResponsiveImage.js";
 import { useProgressiveCollection } from "../useProgressiveCollection.js";
-import { formatContentDate, getPostWordCount } from "../siteUtils.js";
 import { NotFound } from "./NotFound.jsx";
 
 const RichArticleContent = lazy(() => import("../RichArticleContent.jsx").then((module) => ({ default: module.RichArticleContent })));
@@ -59,7 +54,7 @@ export function MusicDetailPage({ path, stats, onView, onStatsTargets }) {
   useEffect(() => { setDocumentTitle(review?.title || "页面不存在", siteConfig.title); }, [review?.title]);
   if (!review) return <NotFound />;
   return <main className="article-page music-detail-page material-panel page-width"><button className="back-button" onClick={() => returnFromDetail(musicRoute(section, slug))}><ArrowLeft size={17} />返回</button><article className="article-detail article-detail--music">
-    <div className="article-intro-copy"><span className="category">MUSIC NOTE</span><h1>{review.title}</h1>{review.excerpt && <p className="article-lede">{review.excerpt}</p>}<div className="post-meta"><span><TextAa size={16} />{getPostWordCount(review)} 字</span><span><CalendarBlank size={16} />{formatContentDate(review.date)}</span><span><Eye size={16} />{stats[statsSlug]?.views || 0}</span><span><ChatCircleDots size={16} />{stats[statsSlug]?.comments || 0}</span></div></div>
+    <div className="article-intro-copy"><span className="category">MUSIC NOTE</span><h1>{review.title}</h1>{review.excerpt && <p className="article-lede">{review.excerpt}</p>}<PostMeta post={review} showTags={false} stats={stats[statsSlug]} /></div>
     {review.url && <a className="music-source-card music-source-card--lead" href={review.url} target="_blank" rel="noreferrer">{review.image && <img {...sourceCardImage} alt={`${review.sourceTitle || review.title}专辑封面`} decoding="async" />}<span><small>网易云音乐 · {review.kind}</small><strong>{review.sourceTitle || review.title}</strong><em>{review.sourceMeta || review.kind}</em></span><b>{review.action || "前往收听"}<ArrowRight size={17} /></b></a>}
     {!review.url && review.image && <img className="music-detail-cover" {...detailCoverImage} alt={`${review.title}的封面`} decoding="async" />}
     {detailReview?.content && <RichArticleContent post={detailReview} />}

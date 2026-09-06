@@ -1,7 +1,7 @@
 import { CopySimple } from "@phosphor-icons/react/CopySimple";
 import { LinkSimple } from "@phosphor-icons/react/LinkSimple";
 import { useEffect, useState } from "react";
-import { CommentsSection } from "../community/CommentsSection.jsx";
+import { CommentsPanel } from "../community/CommentsPanel.jsx";
 import { useCommunity } from "../community/CommunityProvider.jsx";
 import { api } from "../community/api.js";
 import { friendLinks } from "../content/index.js";
@@ -99,7 +99,7 @@ export function FriendsPage() {
           </div>
         ) : <div className="friends-empty material-panel"><LinkSimple size={38} weight="duotone" /><h2>暂无友链</h2></div>}
         <FriendRequestGuide />
-        <div className="material-panel comments-material-panel"><CommentsSection targetType="post" slug="site-friends" /></div>
+        <CommentsPanel targetType="post" slug="site-friends" />
       </section>
   );
 }
