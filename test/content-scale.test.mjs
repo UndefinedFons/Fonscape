@@ -73,5 +73,6 @@ test("a fourth generic content collection reuses the distribution pipeline", () 
   assert.ok(files.has("pages/essay/0.json"));
   assert.ok(files.has("pages/essay/1.json"));
   assert.ok(files.has("entries/essay/essay-72.json"));
-  assert.ok(files.has("bodies/essay/essay-72.md"));
+  assert.equal(JSON.parse(files.get("entries/essay/essay-72.json")).content, essay[72].raw);
+  assert.equal([...files].some(([path]) => path.startsWith("bodies/")), false);
 });

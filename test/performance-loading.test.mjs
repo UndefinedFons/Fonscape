@@ -100,15 +100,51 @@ test("collection pages render chunk zero and append later chunks serially while 
   assert.doesNotMatch(progressive, /Promise\.all/u);
 });
 
-test("Markdown bodies stay out of the initial module and load with detail metadata", async () => {
+test("Markdown bodies stay out of the initial module and load in one detail response", async () => {
   const [contentIndex, generator] = await Promise.all([
     readFile("src/content/index.js", "utf8"),
     readFile("scripts/generate-content-targets.mjs", "utf8"),
   ]);
   assert.doesNotMatch(contentIndex, /import\.meta\.glob/u);
-  assert.match(contentIndex, /fetch\(metadata\.body/u);
+  assert.match(contentIndex, /const content = metadata\.content/u);
+  assert.doesNotMatch(contentIndex, /fetch\(metadata\.body/u);
+  assert.match(generator, /content: record\.raw/u);
   assert.match(generator, /CONTENT_PAGE_CHUNK_SIZE = 50/u);
   assert.match(generator, /extractLocalRasterSources/u);
+});
+
+test("a cold detail entry resolves metadata and Markdown with one request", async () => {
+  const { loadContentEntry } = await import("../src/content/index.js");
+  const originalFetch = globalThis.fetch;
+  const requests = [];
+  globalThis.fetch = async (input) => {
+    requests.push(String(input));
+    return new Response(JSON.stringify({
+      key: "single-request",
+      source: "src/content/posts/single-request.md",
+      content: "---\ntitle: 单次请求\ndate: 2026-09-06\ncategory: 记录\n---\n\n正文。",
+      responsiveImages: {},
+    }), { status: 200, headers: { "Content-Type": "application/json" } });
+  };
+  try {
+    const entry = await loadContentEntry("post", "single-request");
+    assert.equal(entry.title, "单次请求");
+    assert.deepEqual(requests, ["/fonscape/content/entries/post/single-request.json"]);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("detail routes retain the final page container while lazy modules and content resolve", async () => {
+  const [app, styles] = await Promise.all([
+    readFile("src/App.jsx", "utf8"),
+    readFile("src/styles/base.css", "utf8"),
+  ]);
+  assert.match(app, /function DetailRouteFallback/u);
+  assert.match(app, /<Suspense fallback=\{isDetailRoute \? <DetailRouteFallback route=\{route\} \/> : null\}>/u);
+  assert.match(app, /article-page\$\{music \? " music-detail-page" : ""\} material-panel page-width detail-route-pending/u);
+  assert.match(styles, /\.route-view--detail \{ animation:route-view-in \.65s cubic-bezier\(\.16,1,\.3,1\) both; \}/u);
+  assert.match(styles, /\.detail-route-pending \{ min-height:max\(440px,calc\(100vh - 180px\)\); \}/u);
 });
 
 test("the JavaScript budget inspects every asset and isolates the largest non-entry chunk", () => {

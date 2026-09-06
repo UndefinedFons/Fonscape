@@ -25,7 +25,7 @@ const roleWidths = {
   hero: [960, 1600],
   thumbnail: [128, 384],
 };
-const encoderVersion = "two-size-webp-v4";
+const encoderVersion = "two-size-webp-v5";
 
 async function sourceFiles(path) {
   const info = await stat(path).catch((error) => {
@@ -62,8 +62,12 @@ function addTarget(targets, source, role) {
   targets.get(source).add(role);
 }
 
-export function selectResponsiveWidths(widths, { preferSmall = false, limit = MAX_RESPONSIVE_CANDIDATES_PER_SOURCE } = {}) {
-  const available = [...new Set(widths)].filter(Number.isFinite).sort((left, right) => left - right);
+export function selectResponsiveWidths(widths, { preferSmall = false, limit = MAX_RESPONSIVE_CANDIDATES_PER_SOURCE, sourceWidth = Infinity } = {}) {
+  const available = [...new Set(widths
+    .filter(Number.isFinite)
+    .map((width) => Math.min(width, sourceWidth)))]
+    .filter((width) => width > 0)
+    .sort((left, right) => left - right);
   if (available.length <= limit) return available;
   const selected = new Set([available[0], available.at(-1)]);
   const priorities = preferSmall
@@ -457,7 +461,7 @@ async function createResponsiveVariantPipeline(sourceBuffer, outputPath, width, 
   if (extension === ".png") pipeline.png({ compressionLevel: 9, adaptiveFiltering: true });
   else if (extension === ".jpg" || extension === ".jpeg") pipeline.jpeg({ quality: 92, chromaSubsampling: "4:4:4", mozjpeg: true });
   else if (extension === ".avif") pipeline.avif({ quality: 75, effort: 4, chromaSubsampling: "4:4:4" });
-  else pipeline.webp({ quality: 92, alphaQuality: 100, effort: 4, smartSubsample: true });
+  else pipeline.webp({ quality: 96, alphaQuality: 100, effort: 4, smartSubsample: true });
   return pipeline;
 }
 
@@ -586,9 +590,9 @@ export async function generateResponsiveImages({
     const widths = selectResponsiveWidths([
       Math.max(...roleTargets.map((widths) => widths[0])),
       Math.max(...roleTargets.map((widths) => widths.at(-1))),
-    ]
-      .filter((width) => width < metadata.width), {
+    ], {
       preferSmall: roles.has("avatar") || roles.has("thumbnail"),
+      sourceWidth: metadata.width,
     });
     const candidates = [];
     for (const width of widths) {
@@ -711,7 +715,9 @@ export async function generateResponsiveImages({
         }));
       }
     }
-    if (candidates.length === 0) candidates.push({ src: source, width: metadata.width });
+    if ((candidates.at(-1)?.width || 0) < metadata.width) {
+      candidates.push({ src: source, width: metadata.width });
+    }
     entries[source] = {
       width: metadata.width,
       height: metadata.height,
