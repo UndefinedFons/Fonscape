@@ -4,6 +4,7 @@ import { relative, resolve } from "node:path";
 import { gzipSync } from "node:zlib";
 import { fileURLToPath } from "node:url";
 import { isMermaidEngineChunkName } from "./chunk-size-warning.mjs";
+import { MAX_RESPONSIVE_VARIANT_BYTES } from "./generate-responsive-images.mjs";
 
 const DIST_ROOT = resolve(process.cwd(), "dist");
 const ENTRY_HTML = resolve(DIST_ROOT, "index.html");
@@ -17,7 +18,7 @@ const ENTRY_HTML_GZIP_LIMIT = 52 * 1024;
 const LOCAL_FONT_CSS_GZIP_LIMIT = 48 * 1024;
 const FULL_FONT_CSS_GZIP_LIMIT = 190 * 1024;
 const HIGH_PRIORITY_IMAGE_LIMIT = 320 * 1024;
-const GENERATED_RESPONSIVE_IMAGE_LIMIT = 512 * 1024;
+const GENERATED_RESPONSIVE_IMAGE_LIMIT = MAX_RESPONSIVE_VARIANT_BYTES;
 const CONTENT_PAGE_GZIP_LIMIT = 96 * 1024;
 const CONTENT_INDEX_GZIP_LIMIT = 48 * 1024;
 const CONTENT_ENTRY_GZIP_LIMIT = 48 * 1024;

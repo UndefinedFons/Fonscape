@@ -25,8 +25,9 @@ const roleWidths = {
   hero: [960, 1600],
   thumbnail: [128, 384],
 };
-export const MAX_RESPONSIVE_VARIANT_BYTES = 1024 * 1024;
-const responsiveWebpQualities = [96, 94, 92];
+export const RESPONSIVE_VARIANT_TARGET_BYTES = 1024 * 1024;
+export const MAX_RESPONSIVE_VARIANT_BYTES = 2 * 1024 * 1024;
+const responsiveWebpQualities = [96, 94, 92, 90, 88, 86, 84];
 const encoderVersion = "two-size-webp-v6";
 
 async function sourceFiles(path) {
@@ -481,7 +482,11 @@ export async function renderResponsiveVariantBuffer(sourceBuffer, outputPath, wi
   for (const quality of responsiveWebpQualities) {
     const pipeline = await createResponsiveVariantPipeline(sourceBuffer, outputPath, width, sharpLibrary, quality);
     output = await pipeline.toBuffer();
-    if (output.byteLength <= MAX_RESPONSIVE_VARIANT_BYTES) break;
+    if (output.byteLength <= RESPONSIVE_VARIANT_TARGET_BYTES) return output;
+    if (quality <= 92 && output.byteLength <= MAX_RESPONSIVE_VARIANT_BYTES) return output;
+  }
+  if (output.byteLength > MAX_RESPONSIVE_VARIANT_BYTES) {
+    throw new Error(`响应式图片候选超过 ${MAX_RESPONSIVE_VARIANT_BYTES / 1024 / 1024} MiB 上限：${outputPath}`);
   }
   return output;
 }

@@ -11,6 +11,7 @@ import {
   isLocalRasterSource,
   loadResponsiveImageCache,
   MAX_RESPONSIVE_VARIANT_BYTES,
+  RESPONSIVE_VARIANT_TARGET_BYTES,
   renderResponsiveVariant,
   renderResponsiveVariantBuffer,
   responsiveVariantExtension,
@@ -113,12 +114,43 @@ test("WebP variants prefer high fidelity and adapt only when the file budget req
       resize() { return this; },
       keepIccProfile() { return this; },
       webp(options) { quality = options.quality; qualities.push(quality); return this; },
-      async toBuffer() { return Buffer.alloc(quality === 96 ? MAX_RESPONSIVE_VARIANT_BYTES + 1 : MAX_RESPONSIVE_VARIANT_BYTES); },
+      async toBuffer() { return Buffer.alloc(quality === 96 ? RESPONSIVE_VARIANT_TARGET_BYTES + 1 : RESPONSIVE_VARIANT_TARGET_BYTES); },
     };
   };
   const output = await renderResponsiveVariantBuffer(Buffer.from("source"), "candidate.webp", 1600, fakeSharp);
   assert.deepEqual(qualities, [96, 94]);
+  assert.equal(output.byteLength, RESPONSIVE_VARIANT_TARGET_BYTES);
+});
+
+test("complex WebP variants keep a 2 MiB hard ceiling across theme installations", async () => {
+  const qualities = [];
+  const fakeSharp = () => {
+    let quality = 96;
+    return {
+      rotate() { return this; },
+      resize() { return this; },
+      keepIccProfile() { return this; },
+      webp(options) { quality = options.quality; qualities.push(quality); return this; },
+      async toBuffer() { return Buffer.alloc(quality >= 92 ? MAX_RESPONSIVE_VARIANT_BYTES + 1 : MAX_RESPONSIVE_VARIANT_BYTES); },
+    };
+  };
+  const output = await renderResponsiveVariantBuffer(Buffer.from("source"), "complex.webp", 1600, fakeSharp);
+  assert.deepEqual(qualities, [96, 94, 92, 90]);
   assert.equal(output.byteLength, MAX_RESPONSIVE_VARIANT_BYTES);
+});
+
+test("pathological image candidates fail instead of silently exceeding the hard ceiling", async () => {
+  const fakeSharp = () => ({
+    rotate() { return this; },
+    resize() { return this; },
+    keepIccProfile() { return this; },
+    webp() { return this; },
+    async toBuffer() { return Buffer.alloc(MAX_RESPONSIVE_VARIANT_BYTES + 1); },
+  });
+  await assert.rejects(
+    renderResponsiveVariantBuffer(Buffer.from("source"), "pathological.webp", 1600, fakeSharp),
+    /超过 2 MiB 上限/u,
+  );
 });
 
 test("responsive width selection stays deterministic and caps each source at two generated files", () => {
