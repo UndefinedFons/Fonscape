@@ -120,17 +120,15 @@ export function loadContentEntry(type, key, parser = parsers[type]) {
       if (error?.status === 404) return null;
       throw error;
     }
-    if (!metadata || typeof metadata !== "object" || Array.isArray(metadata) || typeof metadata.body !== "string") {
+    if (!metadata || typeof metadata !== "object" || Array.isArray(metadata) || typeof metadata.content !== "string") {
       throw new Error(`${type} 内容 metadata 无效。`);
     }
     registerResponsiveImages(metadata.responsiveImages);
-    const response = await fetch(metadata.body, { headers: { Accept: "text/markdown, text/plain" } });
-    if (!response.ok) throw new Error(`${type} 内容正文加载失败：${response.status}。`);
-    const source = await response.text();
-    if (typeof parser !== "function") return Object.freeze({ ...metadata, content: source });
-    const entry = parser(metadata.source, source);
+    const content = metadata.content;
+    if (typeof parser !== "function") return Object.freeze({ ...metadata, content });
+    const entry = parser(metadata.source, content);
     if (keyFor[type]?.(entry) !== normalizedKey) throw new Error(`${type} 内容 metadata 与正文不一致。`);
-    const { key: _key, source: _source, body: _body, ...lightweight } = metadata;
+    const { key: _key, source: _source, content: _content, ...lightweight } = metadata;
     return Object.freeze({ ...lightweight, ...entry });
   });
 }

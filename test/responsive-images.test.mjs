@@ -107,6 +107,7 @@ test("responsive width selection stays deterministic and caps each source at two
   assert.deepEqual(selectResponsiveWidths([128, 256, 384, 640, 960, 1280, 1600], { preferSmall: true }), [128, 1600]);
   assert.deepEqual(selectResponsiveWidths([384, 640, 768, 960, 1280, 1600]), [384, 1600]);
   assert.deepEqual(selectResponsiveWidths([384, 640, 960]), [384, 960]);
+  assert.deepEqual(selectResponsiveWidths([640, 1600], { sourceWidth: 1199 }), [640, 1199]);
 });
 
 test("content-provided metadata gives img a derivative src synchronously", () => {
@@ -261,6 +262,12 @@ test("responsive generation reuses accepted and rejected outcomes without weaken
     assert.deepEqual([cold.sourceCount, cold.variantCount], [2, 2]);
     assert.equal(coldCounter.value, 8);
     const coldManifests = await readGeneratedManifests();
+    const coldBuildManifest = JSON.parse(coldManifests.get("responsive-images-build.json"));
+    for (const source of [acceptedSource, rejectedSource]) {
+      const candidates = coldBuildManifest[source].candidates;
+      assert.deepEqual(candidates.at(-1), { src: source, width: 2000 });
+      assert.ok(candidates.filter((candidate) => candidate.src !== source).length <= 2);
+    }
     const cacheManifestPath = join(cacheDirectory, "manifest.json");
     const coldCacheText = await readFile(cacheManifestPath, "utf8");
     const coldCache = JSON.parse(coldCacheText);
