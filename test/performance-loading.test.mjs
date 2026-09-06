@@ -10,8 +10,7 @@ test("cold navigation separates hover, press and idle resource priority", async 
     readFile("src/useAppRouting.js", "utf8"),
   ]);
 
-  assert.doesNotMatch(routing, /startTransition/u);
-  assert.match(routing, /setRoute\(nextRoute\);\s*setRouteQuery\(nextQuery\);/u);
+  assert.match(routing, /startTransition\(\(\) => \{\s*setRoute\(nextRoute\);\s*setRouteQuery\(nextQuery\);\s*\}\)/u);
   assert.match(app, /document\.addEventListener\("pointerover", preloadLinkedRoute/u);
   assert.match(app, /document\.addEventListener\("pointerdown", preloadLinkedRoute/u);
   assert.match(app, /document\.addEventListener\("focusin", preloadLinkedRoute/u);
@@ -100,51 +99,57 @@ test("collection pages render chunk zero and append later chunks serially while 
   assert.doesNotMatch(progressive, /Promise\.all/u);
 });
 
-test("Markdown bodies stay out of the initial module and load in one detail response", async () => {
+test("Markdown bodies stay out of the initial module and retain the 1.15.1 detail handoff", async () => {
   const [contentIndex, generator] = await Promise.all([
     readFile("src/content/index.js", "utf8"),
     readFile("scripts/generate-content-targets.mjs", "utf8"),
   ]);
   assert.doesNotMatch(contentIndex, /import\.meta\.glob/u);
-  assert.match(contentIndex, /const content = metadata\.content/u);
-  assert.doesNotMatch(contentIndex, /fetch\(metadata\.body/u);
-  assert.match(generator, /content: record\.raw/u);
+  assert.match(contentIndex, /fetch\(metadata\.body/u);
+  assert.match(contentIndex, /const source = await response\.text\(\)/u);
+  assert.match(generator, /body: `\/fonscape\/content\/bodies\//u);
+  assert.match(generator, /files\.set\(`bodies\//u);
   assert.match(generator, /CONTENT_PAGE_CHUNK_SIZE = 50/u);
   assert.match(generator, /extractLocalRasterSources/u);
 });
 
-test("a cold detail entry resolves metadata and Markdown with one request", async () => {
+test("a cold detail entry resolves metadata and Markdown with the two 1.15.1 requests", async () => {
   const { loadContentEntry } = await import("../src/content/index.js");
   const originalFetch = globalThis.fetch;
   const requests = [];
   globalThis.fetch = async (input) => {
     requests.push(String(input));
-    return new Response(JSON.stringify({
-      key: "single-request",
-      source: "src/content/posts/single-request.md",
-      content: "---\ntitle: 单次请求\ndate: 2026-09-06\ncategory: 记录\n---\n\n正文。",
-      responsiveImages: {},
-    }), { status: 200, headers: { "Content-Type": "application/json" } });
+    if (String(input).endsWith(".json")) {
+      return new Response(JSON.stringify({
+        key: "two-request",
+        source: "src/content/posts/two-request.md",
+        body: "/fonscape/content/bodies/post/two-request.md",
+        responsiveImages: {},
+      }), { status: 200, headers: { "Content-Type": "application/json" } });
+    }
+    return new Response("---\ntitle: 两段请求\ndate: 2026-09-06\ncategory: 记录\n---\n\n正文。", { status: 200, headers: { "Content-Type": "text/markdown" } });
   };
   try {
-    const entry = await loadContentEntry("post", "single-request");
-    assert.equal(entry.title, "单次请求");
-    assert.deepEqual(requests, ["/fonscape/content/entries/post/single-request.json"]);
+    const entry = await loadContentEntry("post", "two-request");
+    assert.equal(entry.title, "两段请求");
+    assert.deepEqual(requests, [
+      "/fonscape/content/entries/post/two-request.json",
+      "/fonscape/content/bodies/post/two-request.md",
+    ]);
   } finally {
     globalThis.fetch = originalFetch;
   }
 });
 
-test("detail routes retain the final page container while lazy modules and content resolve", async () => {
+test("detail routes retain the original route animation while lazy modules and content resolve", async () => {
   const [app, styles] = await Promise.all([
     readFile("src/App.jsx", "utf8"),
     readFile("src/styles/base.css", "utf8"),
   ]);
-  assert.match(app, /function DetailRouteFallback/u);
-  assert.match(app, /<Suspense fallback=\{isDetailRoute \? <DetailRouteFallback route=\{route\} \/> : null\}>/u);
-  assert.match(app, /article-page\$\{music \? " music-detail-page" : ""\} material-panel page-width detail-route-pending/u);
+  assert.doesNotMatch(app, /DetailRouteFallback|detail-route-pending|detail-route-stage/u);
+  assert.match(app, /<div className=\{isDetailRoute \? "route-view route-view--detail" : "route-view"\} key=\{route\}>/u);
   assert.match(styles, /\.route-view--detail \{ animation:route-view-in \.65s cubic-bezier\(\.16,1,\.3,1\) both; \}/u);
-  assert.match(styles, /\.detail-route-pending \{ min-height:max\(440px,calc\(100vh - 180px\)\); \}/u);
+  assert.doesNotMatch(styles, /detail-route-pending|detail-route-stage/u);
 });
 
 test("the JavaScript budget inspects every asset and isolates the largest non-entry chunk", () => {

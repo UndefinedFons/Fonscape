@@ -23,12 +23,16 @@ const withFullAssets = (loader) => {
 const loadAboutModule = () => withFullAssets(() => import("./pages/AboutPage.jsx"));
 const loadAdminSetupModule = () => withFullFonts(() => import("./pages/AdminSetupPage.jsx"));
 const loadRichArticleModule = () => import("./RichArticleContent.jsx");
-const loadArticleModule = () => withFullAssets(() => Promise.all([import("./pages/ArticlePage.jsx"), loadRichArticleModule()]).then(([module]) => module));
+// Detail routes keep the 1.15.1 handoff: resolve the page module, rich body
+// renderer and fonts before React commits the detail view. Responsive image
+// candidates are bundled in the current catalog and therefore need no second
+// manifest request here.
+const loadArticleModule = () => Promise.all([import("./pages/ArticlePage.jsx"), loadRichArticleModule(), ensureFullFontStylesheet()]).then(([module]) => module);
 const loadDialogsModule = () => withFullFonts(() => import("./components/Dialogs.jsx"));
 const loadFriendsModule = () => withFullAssets(() => import("./pages/FriendsPage.jsx"));
 const loadMusicModule = () => withFullAssets(() => import("./pages/MusicPage.jsx"));
-const loadMusicDetailModule = () => withFullFonts(() => Promise.all([loadMusicModule(), loadRichArticleModule()]).then(([module]) => module));
-const loadPoemModule = () => withFullAssets(() => import("./pages/PoemPage.jsx"));
+const loadMusicDetailModule = () => Promise.all([loadMusicModule(), loadRichArticleModule(), ensureFullFontStylesheet()]).then(([module]) => module);
+const loadPoemModule = () => Promise.all([import("./pages/PoemPage.jsx"), ensureFullFontStylesheet()]).then(([module]) => module);
 const loadPoemsModule = () => withFullAssets(() => import("./pages/PoemsPage.jsx"));
 const loadPostsModule = () => withFullAssets(() => import("./pages/PostsPage.jsx"));
 const loadAccountModule = () => withFullFonts(() => import("./community/AccountDialog.jsx"));

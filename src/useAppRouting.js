@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef } from "react";
+import { startTransition, useEffect, useLayoutEffect, useRef } from "react";
 import { stopArticleAudio } from "./articleAudio.js";
 import {
   clearArticleIndexState,
@@ -89,8 +89,10 @@ export function useAppRouting({ route, routeQuery, setRoute, setRouteQuery, setM
         : 0;
       routeRef.current = { path: nextRoute, query: nextQuery };
       setRouteDocumentTitle(nextRoute, siteConfig.title);
-      setRoute(nextRoute);
-      setRouteQuery(nextQuery);
+      startTransition(() => {
+        setRoute(nextRoute);
+        setRouteQuery(nextQuery);
+      });
       setMenuOpen(false);
     };
 

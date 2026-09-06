@@ -495,8 +495,6 @@ footer::before { content:""; position:absolute; top:0; left:50%; width:min(1180p
   margin-top:var(--route-content-gap);
 }
 .route-view--detail { animation:route-view-in .65s cubic-bezier(.16,1,.3,1) both; }
-.detail-route-pending { min-height:max(440px,calc(100vh - 180px)); }
-.poem-page.detail-route-pending>article { min-height:360px; }
 .route-view:not(.route-view--detail)>main>:not(.hero):not(.inner-hero):not(.about-layout) { animation:primary-content-enter 1.1s .1s cubic-bezier(.22,1,.36,1) both; }
 .route-view:not(.route-view--detail)>main>.article-index:not(.hero):not(.inner-hero):not(.about-layout) { animation-duration:1.25s; }
 .route-view:not(.route-view--detail)>main>.about-layout { animation:about-content-reveal .67s .1s ease-out both; }
