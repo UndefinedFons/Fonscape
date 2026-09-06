@@ -25,7 +25,7 @@ const roleWidths = {
   hero: [960, 1600],
   thumbnail: [128, 384],
 };
-const encoderVersion = "two-size-webp-v3";
+const encoderVersion = "two-size-webp-v4";
 
 async function sourceFiles(path) {
   const info = await stat(path).catch((error) => {
@@ -50,6 +50,10 @@ async function sourceFiles(path) {
 export function isLocalRasterSource(value) {
   return typeof value === "string"
     && /^\/(?:assets|fonscape)\/[^?#]+\.(?:avif|jpe?g|png|webp)(?:[?#].*)?$/iu.test(value);
+}
+
+export function responsiveVariantExtension(sourcePath) {
+  return supportedExtensions.has(extname(sourcePath).toLowerCase()) ? ".webp" : null;
 }
 
 function addTarget(targets, source, role) {
@@ -569,13 +573,14 @@ export async function generateResponsiveImages({
     const sourcePath = await safeLocalSourcePath(source);
     const sourceExtension = extname(sourcePath).toLowerCase();
     if (!supportedExtensions.has(sourceExtension)) continue;
-    const extension = sourceExtension === ".png" ? ".png" : ".webp";
+    const extension = responsiveVariantExtension(sourcePath);
+    if (!extension) continue;
     const sourceBuffer = await readFile(sourcePath);
     const metadata = await sharp(sourceBuffer).metadata();
     if (!metadata.width || !metadata.height || metadata.pages > 1) continue;
     const sourceHash = createHash("sha256").update(sourceBuffer).digest("hex");
     const digest = createHash("sha256").update(encoderFingerprint).update(sourceBuffer).digest("hex").slice(0, 12);
-    const stem = basename(sourcePath, extension).replaceAll(/[^a-z0-9_-]+/giu, "-").replaceAll(/^-|-$/gu, "") || "image";
+    const stem = basename(sourcePath, sourceExtension).replaceAll(/[^a-z0-9_-]+/giu, "-").replaceAll(/^-|-$/gu, "") || "image";
     const roles = targets.get(source);
     const roleTargets = [...roles].map((role) => roleWidths[role] || []).filter((widths) => widths.length);
     const widths = selectResponsiveWidths([
