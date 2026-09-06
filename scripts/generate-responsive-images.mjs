@@ -25,7 +25,7 @@ const roleWidths = {
   hero: [960, 1600],
   thumbnail: [128, 384],
 };
-export const MAX_RESPONSIVE_VARIANT_BYTES = 512 * 1024;
+export const MAX_RESPONSIVE_VARIANT_BYTES = 1024 * 1024;
 const responsiveWebpQualities = [96, 94, 92];
 const encoderVersion = "two-size-webp-v6";
 
