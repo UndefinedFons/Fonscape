@@ -15,5 +15,6 @@ const initialRoute = parseRoutePath();
 const render = () => createRoot(document.getElementById("root")).render(
   <React.StrictMode><AppErrorBoundary><React.Suspense fallback={null}><CommunityProvider><App /></CommunityProvider></React.Suspense></AppErrorBoundary></React.StrictMode>,
 );
-if (initialRoute !== "/") preloadRoute(initialRoute).catch(() => {});
-render();
+const initialLoader = initialRoute === "/" ? null : preloadRoute(initialRoute);
+if (initialLoader) initialLoader.then(render, render);
+else render();

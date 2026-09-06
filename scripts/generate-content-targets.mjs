@@ -19,7 +19,7 @@ const metadataOutputPath = join(root, "functions", "_generated", "content-metada
 const generatedContentRoot = join(root, "public", "fonscape", "content");
 const responsiveImageBuildPath = join(root, "functions", "_generated", "responsive-images-build.json");
 
-export const CONTENT_SCHEMA_VERSION = 4;
+export const CONTENT_SCHEMA_VERSION = 3;
 export const CONTENT_PAGE_CHUNK_SIZE = 50;
 export const CONTENT_INDEX_CHUNK_SIZE = 200;
 export const HOME_LATEST_LIMIT = 5;
@@ -194,17 +194,16 @@ export function buildContentDistribution(collections, imageCatalog = {}) {
         ...lightweight,
         key,
         source: record.source,
+        body: `/fonscape/content/bodies/${encodeURIComponent(type)}/${encodePath(record.name)}`,
         responsiveImages: responsiveImagesFor(record.entry, record.raw, imageCatalog),
       };
     });
     const pageChunks = chunkValues(metadata, CONTENT_PAGE_CHUNK_SIZE);
     pageChunks.forEach((chunk, index) => addJson(`pages/${encodeURIComponent(type)}/${index}.json`, chunk));
     metadata.forEach((entry, index) => {
+      addJson(`entries/${encodeURIComponent(type)}/${encodePath(entry.key)}.json`, entry);
       const record = ordered[index];
-      addJson(`entries/${encodeURIComponent(type)}/${encodePath(entry.key)}.json`, {
-        ...entry,
-        content: record.raw,
-      });
+      files.set(`bodies/${encodeURIComponent(type)}/${record.name.replaceAll("\\", "/")}`, record.raw);
     });
     const facets = ordered.map((record, index) => contentFacet(type, record.entry, Math.floor(index / CONTENT_PAGE_CHUNK_SIZE)));
     const search = ordered.map((record) => contentSearchEntry(type, record.entry));
