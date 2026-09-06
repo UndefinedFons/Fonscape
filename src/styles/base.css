@@ -428,7 +428,7 @@ button,input { font:inherit; } a { color:inherit; text-decoration:none; } button
 .dialog-skeleton-content { display:grid; align-content:start; gap:12px; }
 .dialog-skeleton-content--search { min-height:260px; }
 .dialog-skeleton-content--settings { min-height:124px; }
-.dialog-skeleton-content--account { min-height:284px; }
+.dialog-skeleton-content--account { min-height:378px; }
 .dialog-skeleton-line,.dialog-skeleton-block { display:block; border-radius:999px; background:linear-gradient(90deg,var(--surface-soft),color-mix(in srgb,var(--surface) 65%,var(--accent-soft)),var(--surface-soft)); background-size:220% 100%; animation:content-loading 1.4s linear infinite; }
 .dialog-skeleton-line { height:14px; }
 .dialog-skeleton-line--title { width:34%; height:22px; }
