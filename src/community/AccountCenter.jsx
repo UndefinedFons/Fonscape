@@ -10,8 +10,8 @@ import { loadMyComments, loadMyReplies, loadReceivedComments } from "./accountDa
 import { MyMessages, MyReplies, ReceivedComments } from "./AccountFeeds.jsx";
 import { AvatarCropper } from "./AvatarCropper.jsx";
 
-export function AccountCenter({ contentLookup }) {
-  const { viewer, logout, updateViewer, closeAccount } = useCommunity();
+export function AccountCenter({ contentLookup, onClose }) {
+  const { viewer, logout, updateViewer } = useCommunity();
   const adminTabs = viewer.role === "admin";
   const [tab, setTab] = useState("profile");
   const [nickname, setNickname] = useState(viewer.nickname);
@@ -91,13 +91,13 @@ export function AccountCenter({ contentLookup }) {
   };
   const signOut = async () => {
     setBusy(true);
-    try { await logout(); closeAccount(); } finally { setBusy(false); }
+    try { await logout(); onClose(); } finally { setBusy(false); }
   };
   const centerBody = <>
     {crop && <AvatarCropper crop={crop} onChange={setCrop} onCancel={() => setCrop(null)} onApply={applyCrop} busy={busy} />}
     {!crop && <><div className={`account-mode-tabs account-mode-tabs--center${adminTabs ? " account-mode-tabs--admin" : ""}`} data-active={tab} role="tablist" aria-label="个人中心"><button type="button" role="tab" aria-selected={tab === "profile"} className={tab === "profile" ? "active" : ""} onClick={() => setTab("profile")}>个人资料</button><button type="button" role="tab" aria-selected={tab === "comments"} className={tab === "comments" ? "active" : ""} onClick={() => setTab("comments")}>我的消息</button>{adminTabs && <button type="button" role="tab" aria-selected={tab === "received"} className={tab === "received" ? "active" : ""} onClick={() => setTab("received")}><span>收到评论</span>{viewer.unreadAdminComments > 0 && <em>{viewer.unreadAdminComments > 99 ? "99+" : viewer.unreadAdminComments}</em>}</button>}<button type="button" role="tab" aria-selected={tab === "replies"} className={tab === "replies" ? "active" : ""} onClick={() => setTab("replies")}><span>收到回复</span>{viewer.unreadReplies > 0 && <em>{viewer.unreadReplies > 99 ? "99+" : viewer.unreadReplies}</em>}</button></div>
     <div className="account-tab-panel">
-      {tab === "profile" ? <form className="community-form account-profile-form" onSubmit={saveProfile}><label><span>公开昵称</span><span className="community-input"><UserCircle size={18} /><input value={nickname} onChange={(event) => setNickname(event.target.value)} minLength="1" maxLength="10" required /></span></label><label><span>登录账户</span><span className="community-input is-readonly"><At size={18} /><input value={viewer.username} readOnly /></span></label>{message && <p className="community-form-message" role="status">{message}</p>}<button className="account-nickname-save" type="submit" disabled={busy || nickname.trim() === viewer.nickname}>保存昵称</button></form> : tab === "comments" ? <MyMessages contentLookup={contentLookup} /> : tab === "received" ? <ReceivedComments contentLookup={contentLookup} /> : <MyReplies contentLookup={contentLookup} />}
+      {tab === "profile" ? <form className="community-form account-profile-form" onSubmit={saveProfile}><label><span>公开昵称</span><span className="community-input"><UserCircle size={18} /><input value={nickname} onChange={(event) => setNickname(event.target.value)} minLength="1" maxLength="10" required /></span></label><label><span>登录账户</span><span className="community-input is-readonly"><At size={18} /><input value={viewer.username} readOnly /></span></label>{message && <p className="community-form-message" role="status">{message}</p>}<button className="account-nickname-save" type="submit" disabled={busy || nickname.trim() === viewer.nickname}>保存昵称</button></form> : tab === "comments" ? <MyMessages contentLookup={contentLookup} onClose={onClose} /> : tab === "received" ? <ReceivedComments contentLookup={contentLookup} onClose={onClose} /> : <MyReplies contentLookup={contentLookup} onClose={onClose} />}
     </div>
     <footer className="account-center-actions"><button type="button" onClick={signOut} disabled={busy}><SignOut size={17} />退出登录</button></footer></>}
   </>;

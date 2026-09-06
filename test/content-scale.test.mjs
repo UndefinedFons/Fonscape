@@ -9,7 +9,6 @@ import {
   buildContentDistribution,
   resolveCollectionDefinitions,
 } from "../scripts/generate-content-targets.mjs";
-import { chunkResponsiveEntries } from "../scripts/generate-responsive-images.mjs";
 
 const types = ["post", "poem", "music"];
 
@@ -76,24 +75,3 @@ test("a fourth generic content collection reuses the distribution pipeline", () 
   assert.ok(files.has("entries/essay/essay-72.json"));
   assert.ok(files.has("bodies/essay/essay-72.md"));
 });
-
-for (const total of [0, 50, 500, 2000]) {
-  test(`${total} responsive image records stay in fixed-size catalog chunks`, () => {
-    const entries = Object.fromEntries(Array.from({ length: total }, (_, index) => [
-      `/assets/content-${index}.webp`,
-      {
-        width: 1600,
-        height: 900,
-        candidates: [384, 576, 768, 960, 1280, 1600].map((width) => ({
-          src: `/fonscape/generated-images/content-${index}-w${width}.webp`,
-          width,
-        })),
-      },
-    ]));
-    const chunks = chunkResponsiveEntries(entries, 100);
-
-    assert.equal(chunks.length, Math.ceil(total / 100));
-    assert.ok(chunks.every((chunk) => Object.keys(chunk).length <= 100));
-    assert.ok(chunks.every((chunk) => gzipSync(JSON.stringify(chunk), { level: 9 }).byteLength < 32 * 1024));
-  });
-}

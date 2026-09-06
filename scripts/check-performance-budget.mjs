@@ -18,7 +18,6 @@ const LOCAL_FONT_CSS_GZIP_LIMIT = 48 * 1024;
 const FULL_FONT_CSS_GZIP_LIMIT = 190 * 1024;
 const HIGH_PRIORITY_IMAGE_LIMIT = 320 * 1024;
 const GENERATED_RESPONSIVE_IMAGE_LIMIT = 512 * 1024;
-const RESPONSIVE_MANIFEST_CHUNK_GZIP_LIMIT = 32 * 1024;
 const CONTENT_PAGE_GZIP_LIMIT = 96 * 1024;
 const CONTENT_INDEX_GZIP_LIMIT = 48 * 1024;
 const CONTENT_ENTRY_GZIP_LIMIT = 48 * 1024;
@@ -161,13 +160,18 @@ export function checkPerformanceBudget() {
   const generatedImageRoot = resolve(DIST_ROOT, "fonscape/generated-images");
   const generatedImageFiles = existsSync(generatedImageRoot) ? readdirSync(generatedImageRoot, { withFileTypes: true }).filter((entry) => entry.isFile()) : [];
   const generatedImageBytes = generatedImageFiles.reduce((total, entry) => total + statSync(resolve(generatedImageRoot, entry.name)).size, 0);
-  const responsiveManifestAssets = javascriptAssets.filter(({ path }) => /^responsive-images-full-.*\.js$/u.test(path.split(/[\\/]/u).at(-1) || ""));
-  if (responsiveManifestAssets.length === 0) failures.push("找不到按需加载的响应式图片清单索引。");
-  for (const asset of responsiveManifestAssets.filter(({ path }) => /^responsive-images-full-\d+-/u.test(path.split(/[\\/]/u).at(-1) || ""))) {
-    if (asset.gzip > RESPONSIVE_MANIFEST_CHUNK_GZIP_LIMIT) {
-      failures.push(`响应式图片清单分块 ${formatAssetPath(asset.path)} gzip ${formatKiB(asset.gzip)} 超过 ${formatKiB(RESPONSIVE_MANIFEST_CHUNK_GZIP_LIMIT)} 分块预算`);
-    }
+  const generatedCounts = new Map();
+  for (const entry of generatedImageFiles) {
+    const bytes = statSync(resolve(generatedImageRoot, entry.name)).size;
+    if (bytes > GENERATED_RESPONSIVE_IMAGE_LIMIT) failures.push(`响应式图片候选 /fonscape/generated-images/${entry.name} 为 ${formatKiB(bytes)}，超过 ${formatKiB(GENERATED_RESPONSIVE_IMAGE_LIMIT)}`);
+    const match = entry.name.match(/^(.+)-([a-f\d]{12})-w\d+\.[^.]+$/u);
+    if (!match) continue;
+    const sourceKey = `${match[1]}-${match[2]}`;
+    generatedCounts.set(sourceKey, (generatedCounts.get(sourceKey) || 0) + 1);
   }
+  for (const [sourceKey, count] of generatedCounts) if (count > 2) failures.push(`原图 ${sourceKey} 生成了 ${count} 个派生文件，超过最多 2 个的限制`);
+  const obsoleteResponsiveManifestAssets = javascriptAssets.filter(({ path }) => /^responsive-images-full(?:-|\.)/u.test(path.split(/[\\/]/u).at(-1) || ""));
+  if (obsoleteResponsiveManifestAssets.length) failures.push(`运行时不应包含完整响应式图片清单：${obsoleteResponsiveManifestAssets.map(({ path }) => formatAssetPath(path)).join("、")}`);
 
   const contentRoot = resolve(DIST_ROOT, "fonscape/content");
   const contentDataFiles = collectFiles(contentRoot).filter((path) => path.endsWith(".json"));

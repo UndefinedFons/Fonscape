@@ -55,10 +55,12 @@ test("poem and music navigation visibility is independently configurable", () =>
 test("glass backgrounds soften ordinary hero images without double-blurring prepared assets", () => {
   assert.deepEqual(resolveGlassBackground({ image: "/assets/plain.webp" }), {
     image: "/assets/plain.webp",
+    lqip: "",
     needsSoftening: true,
   });
   assert.deepEqual(resolveGlassBackground({ image: "/assets/plain.webp", glassImage: "/assets/soft.webp" }), {
     image: "/assets/soft.webp",
+    lqip: "",
     needsSoftening: false,
   });
 });

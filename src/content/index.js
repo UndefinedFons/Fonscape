@@ -3,6 +3,7 @@ import { authorProfile, navItems, siteConfig } from "../siteConfig.js";
 import { parseMusicReview, parsePoem, parsePost, sortNewestFirst } from "./frontmatter.js";
 import { contentManifest } from "../../functions/_generated/content-metadata.js";
 import { contentRoute as buildContentRoute } from "../routes.js";
+import { registerResponsiveImages } from "../responsiveImages.ts";
 
 const descriptors = contentManifest?.collections && typeof contentManifest.collections === "object"
   ? contentManifest.collections
@@ -15,6 +16,8 @@ const entryRequests = new Map();
 const collectionRequests = new Map();
 const featuredRequests = new Map();
 const searchIndexRequests = new Map();
+const emptyCollection = Object.freeze([]);
+const emptyCollectionRequest = Promise.resolve(emptyCollection);
 
 function pathFor(kind, type, value) {
   const suffix = value === undefined ? "" : `/${encodeURIComponent(String(value))}`;
@@ -55,11 +58,12 @@ export const contentCollectionTypes = Object.freeze(Object.keys(descriptors));
 
 export function loadCollectionPageChunk(type, index) {
   const descriptor = descriptors[type];
-  if (!descriptor || index < 0 || index >= descriptor.pageChunkCount) return Promise.resolve([]);
+  if (!descriptor || index < 0 || index >= descriptor.pageChunkCount) return emptyCollectionRequest;
   const key = `${type}:${index}`;
   return cachedRequest(pageRequests, key, () => fetchJson(pathFor("pages", type, index), `${type} 内容分块`)
     .then((value) => {
       if (!Array.isArray(value)) throw new Error(`${type} 内容分块格式无效。`);
+      value.forEach((entry) => registerResponsiveImages(entry?.responsiveImages));
       return Object.freeze(value.map((entry) => Object.freeze({ ...entry })));
     }));
 }
@@ -119,6 +123,7 @@ export function loadContentEntry(type, key, parser = parsers[type]) {
     if (!metadata || typeof metadata !== "object" || Array.isArray(metadata) || typeof metadata.body !== "string") {
       throw new Error(`${type} 内容 metadata 无效。`);
     }
+    registerResponsiveImages(metadata.responsiveImages);
     const response = await fetch(metadata.body, { headers: { Accept: "text/markdown, text/plain" } });
     if (!response.ok) throw new Error(`${type} 内容正文加载失败：${response.status}。`);
     const source = await response.text();
@@ -156,6 +161,8 @@ export function loadFeaturedChunk(type, index) {
 const postHome = descriptors.post?.home || { latest: [], featured: [] };
 const poemHome = descriptors.poem?.home || { latest: [] };
 const musicHome = descriptors.music?.home || { latest: [] };
+[...(postHome.featured || []), ...(postHome.latest || []), ...(poemHome.latest || []), ...(musicHome.latest || [])]
+  .forEach((entry) => registerResponsiveImages(entry?.responsiveImages));
 export const homeContent = Object.freeze({
   featuredPosts: Object.freeze(postHome.featured || []),
   featuredCount: Number(descriptors.post?.featuredCount || 0),
