@@ -3,7 +3,7 @@ import { EnvelopeSimple } from "@phosphor-icons/react/EnvelopeSimple";
 import { GithubLogo } from "@phosphor-icons/react/GithubLogo";
 import { UserCircle } from "@phosphor-icons/react/UserCircle";
 import { XLogo } from "@phosphor-icons/react/XLogo";
-import { CommentsSection } from "../community/CommentsSection.jsx";
+import { CommentsPanel } from "../community/CommentsPanel.jsx";
 import { authorProfile, siteConfig } from "../content/index.js";
 import { useResponsiveImage } from "../useResponsiveImage.js";
 
@@ -59,6 +59,6 @@ export function AboutPage() {
         {siteConfig.about.paragraphs.length > 0 && <div className="prose-block">{siteConfig.about.paragraphs.map((paragraph) => <p key={paragraph}>{paragraph}</p>)}</div>}
       </article>
     </section>
-    <div className="about-comments page-width"><div className="material-panel comments-material-panel"><CommentsSection targetType="post" slug="site-about" /></div></div>
+    <div className="about-comments page-width"><CommentsPanel targetType="post" slug="site-about" /></div>
   </>;
 }
