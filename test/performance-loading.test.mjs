@@ -65,6 +65,7 @@ test("cold dialogs show the final shell immediately and preserve original close 
   assert.doesNotMatch(dialogs, /search-dialog-content|settings-dialog-content|dialog-content-reveal/u);
   assert.doesNotMatch(account, /account-dialog-content|dialog-content-reveal/u);
   assert.match(styles, /\.account-dialog\.had-loading>:not\(\.account-dialog-close\):not\(\.dialog-skeleton-content\) \{ animation:dialog-content-reveal \.2s ease-out both; \}/u);
+  assert.match(styles, /\.dialog-skeleton-content--account \{ min-height:378px; \}/u);
   assert.match(styles, /\.dialog-backdrop\.is-closing \.search-dialog \{ animation:dialog-panel-out \.22s ease-in both; \}/u);
   assert.match(styles, /\.dialog-backdrop\.is-closing \.settings-dialog \{ animation:dialog-panel-out \.24s ease-in both; \}/u);
   assert.match(communityStyles, /\.account-backdrop\.is-closing \.account-dialog \{ animation:account-panel-out \.24s cubic-bezier\(\.4,0,1,1\) both; \}/u);
