@@ -25,7 +25,9 @@ const roleWidths = {
   hero: [960, 1600],
   thumbnail: [128, 384],
 };
-const encoderVersion = "two-size-webp-v5";
+export const MAX_RESPONSIVE_VARIANT_BYTES = 512 * 1024;
+const responsiveWebpQualities = [96, 94, 92];
+const encoderVersion = "two-size-webp-v6";
 
 async function sourceFiles(path) {
   const info = await stat(path).catch((error) => {
@@ -451,7 +453,7 @@ async function ensureSafeGeneratedRoot({ create = true } = {}, outputDirectory =
   return true;
 }
 
-async function createResponsiveVariantPipeline(sourceBuffer, outputPath, width, sharpLibrary) {
+async function createResponsiveVariantPipeline(sourceBuffer, outputPath, width, sharpLibrary, webpQuality = responsiveWebpQualities[0]) {
   const sharp = sharpLibrary || (await import("sharp")).default;
   const pipeline = sharp(sourceBuffer)
     .rotate()
@@ -461,18 +463,27 @@ async function createResponsiveVariantPipeline(sourceBuffer, outputPath, width, 
   if (extension === ".png") pipeline.png({ compressionLevel: 9, adaptiveFiltering: true });
   else if (extension === ".jpg" || extension === ".jpeg") pipeline.jpeg({ quality: 92, chromaSubsampling: "4:4:4", mozjpeg: true });
   else if (extension === ".avif") pipeline.avif({ quality: 75, effort: 4, chromaSubsampling: "4:4:4" });
-  else pipeline.webp({ quality: 96, alphaQuality: 100, effort: 4, smartSubsample: true });
+  else pipeline.webp({ quality: webpQuality, alphaQuality: 100, effort: 4, smartSubsample: true });
   return pipeline;
 }
 
 export async function renderResponsiveVariant(sourceBuffer, outputPath, width, sharpLibrary) {
-  const pipeline = await createResponsiveVariantPipeline(sourceBuffer, outputPath, width, sharpLibrary);
-  await pipeline.toFile(outputPath);
+  await writeFile(outputPath, await renderResponsiveVariantBuffer(sourceBuffer, outputPath, width, sharpLibrary));
 }
 
 export async function renderResponsiveVariantBuffer(sourceBuffer, outputPath, width, sharpLibrary) {
-  const pipeline = await createResponsiveVariantPipeline(sourceBuffer, outputPath, width, sharpLibrary);
-  return pipeline.toBuffer();
+  const extension = extname(outputPath).toLowerCase();
+  if (extension !== ".webp") {
+    const pipeline = await createResponsiveVariantPipeline(sourceBuffer, outputPath, width, sharpLibrary);
+    return pipeline.toBuffer();
+  }
+  let output;
+  for (const quality of responsiveWebpQualities) {
+    const pipeline = await createResponsiveVariantPipeline(sourceBuffer, outputPath, width, sharpLibrary, quality);
+    output = await pipeline.toBuffer();
+    if (output.byteLength <= MAX_RESPONSIVE_VARIANT_BYTES) break;
+  }
+  return output;
 }
 
 export function shouldKeepResponsiveVariant(originalBytes, variantBytes) {
