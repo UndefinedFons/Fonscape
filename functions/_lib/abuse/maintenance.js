@@ -6,6 +6,10 @@ import {
   policyKey,
 } from "./limits.js";
 
+/** @typedef {import("../../types").Database} Database */
+/** @typedef {import("../../types").RequestContext} RequestContext */
+
+/** @param {Database} db @param {number} [now] */
 export async function cleanupRuntimeData(db, now = Date.now()) {
   const [sessions, rateLimits] = await db.batch([
     db.prepare("DELETE FROM sessions WHERE expires_at <= ?").bind(now),
@@ -20,6 +24,7 @@ export async function cleanupRuntimeData(db, now = Date.now()) {
 // Trigger-maintained aggregates are authoritative during normal operation.
 // This full reconciliation is intentionally reserved for scheduled recovery;
 // it must never make an ordinary API write scan every runtime table.
+/** @param {Database} db @param {number} [now] */
 export async function reconcileRuntimeCounters(db, now = Date.now()) {
   const [accountUsage] = await db.batch([
     db.prepare(`UPDATE account_usage
@@ -54,6 +59,7 @@ export async function reconcileRuntimeCounters(db, now = Date.now()) {
   };
 }
 
+/** @param {RequestContext} context */
 async function maintenance(context) {
   const db = requireDatabase(context.env);
   const now = Date.now();
@@ -62,6 +68,7 @@ async function maintenance(context) {
   await cleanupRuntimeData(db, now);
 }
 
+/** @param {RequestContext} context */
 export function scheduleMaintenance(context) {
   context.waitUntil(maintenance(context).catch((error) => {
     console.error(JSON.stringify({ event: "background_maintenance_failed", error: error instanceof Error ? error.message : String(error) }));

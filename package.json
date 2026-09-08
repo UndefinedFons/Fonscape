@@ -45,7 +45,7 @@
     "test": "node --test",
     "test:e2e": "playwright test",
     "lint": "eslint . --max-warnings 0",
-    "typecheck": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json && tsc -p tsconfig.backend.json",
     "db:migrate:cloudflare": "wrangler d1 migrations apply DB --remote",
     "deploy": "pnpm db:migrate:cloudflare && wrangler deploy",
     "migrate:turso": "node scripts/migrate-turso.mjs",
@@ -70,10 +70,14 @@
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",
+    "@cloudflare/workers-types": "5.20260908.1",
+    "@types/react": "19.2.18",
+    "@types/react-dom": "19.2.7",
     "@playwright/test": "1.62.1",
     "eslint": "10.9.1",
     "eslint-plugin-react-hooks": "7.1.1",
     "globals": "17.11.0",
+    "jsdom": "26.1.0",
     "sharp": "0.35.2",
     "typescript": "^5.9.2",
     "wrangler": "4.120.0"

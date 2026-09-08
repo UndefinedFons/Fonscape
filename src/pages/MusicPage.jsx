@@ -1,4 +1,3 @@
-import { ArrowLeft } from "@phosphor-icons/react/ArrowLeft";
 import { ArrowRight } from "@phosphor-icons/react/ArrowRight";
 import { lazy, use, useEffect, useMemo, useState } from "react";
 import { MusicReviewCard, PostMeta } from "../components/Cards.jsx";
@@ -7,8 +6,8 @@ import { CommentsSection } from "../community/CommentsSection.jsx";
 import { loadMusicReview, siteConfig } from "../content/index.js";
 import { usePagination, useResponsivePageSize } from "../hooks.js";
 import { musicSections } from "../musicSections.js";
-import { parseRouteQuery, replaceRoute, returnFromDetail } from "../routeState.js";
-import { musicRoute, routeHref } from "../routes.js";
+import { parseRouteQuery, replaceRoute } from "../routeState.js";
+import { routeHref } from "../routes.js";
 import { setDocumentTitle } from "../navigation.js";
 import { detailImageSizes } from "../responsiveImages.ts";
 import { useResponsiveImage } from "../useResponsiveImage.js";
@@ -52,11 +51,11 @@ export function MusicDetailPage({ path, stats, onView, onStatsTargets }) {
   useEffect(() => { if (statsSlug) onView("music", statsSlug); }, [statsSlug, onView]);
   useEffect(() => { if (statsSlug) onStatsTargets([{ type: "music", slug: statsSlug }]); }, [statsSlug, onStatsTargets]);
   useEffect(() => { setDocumentTitle(review?.title || "页面不存在", siteConfig.title); }, [review?.title]);
-  if (!review) return <NotFound />;
-  return <main className="article-page music-detail-page material-panel page-width"><button className="back-button" onClick={() => returnFromDetail(musicRoute(section, slug))}><ArrowLeft size={17} />返回</button><article className="article-detail article-detail--music">
+  if (!review) return <NotFound embedded />;
+  return <><article className="article-detail article-detail--music">
     <div className="article-intro-copy"><span className="category">MUSIC NOTE</span><h1>{review.title}</h1>{review.excerpt && <p className="article-lede">{review.excerpt}</p>}<PostMeta post={review} showTags={false} stats={stats[statsSlug]} /></div>
     {review.url && <a className="music-source-card music-source-card--lead" href={review.url} target="_blank" rel="noreferrer">{review.image && <img {...sourceCardImage} alt={`${review.sourceTitle || review.title}专辑封面`} decoding="async" />}<span><small>网易云音乐 · {review.kind}</small><strong>{review.sourceTitle || review.title}</strong><em>{review.sourceMeta || review.kind}</em></span><b>{review.action || "前往收听"}<ArrowRight size={17} /></b></a>}
     {!review.url && review.image && <img className="music-detail-cover" {...detailCoverImage} alt={`${review.title}的封面`} decoding="async" />}
     {detailReview?.content && <RichArticleContent post={detailReview} />}
-  </article><CommentsSection targetType="music" slug={`${section}/${review.slug}`} /></main>;
+  </article><CommentsSection targetType="music" slug={`${section}/${review.slug}`} /></>;
 }

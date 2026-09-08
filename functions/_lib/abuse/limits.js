@@ -1,9 +1,17 @@
 import { ApiError, requireDatabase, sha256 } from "../community.js";
 
+/** @typedef {import("../../types").AppEnv} AppEnv */
+/** @typedef {import("../../types").Database} Database */
+/** @typedef {import("../../types").RequestContext} RequestContext */
+/** @typedef {import("../../types").RateLimitDecision} RateLimitDecision */
+/** @typedef {import("../../types").RateLimitPolicy} RateLimitPolicy */
+/** @typedef {import("../../types").UserRow} UserRow */
+
 export const MINUTE = 60 * 1000;
 export const HOUR = 60 * MINUTE;
 export const DAY = 24 * HOUR;
 
+/** @type {Readonly<Record<string, number>>} */
 export const DEFAULT_ABUSE_LIMITS = Object.freeze({
   // Capacity values are emergency fuses, not ordinary user quotas.
   MAX_MEMBER_ACCOUNTS: 5000,
@@ -32,6 +40,11 @@ export const DEFAULT_ABUSE_LIMITS = Object.freeze({
 
 const RATE_LIMIT_SECRET_BYTES = 32;
 
+/**
+ * @param {AppEnv} env
+ * @param {string} name
+ * @param {number} [fallback]
+ */
 export function limitFromEnv(env, name, fallback = DEFAULT_ABUSE_LIMITS[name]) {
   const configured = env?.[name];
   if (configured === undefined || configured === null || String(configured).trim() === "") return fallback;
@@ -49,6 +62,7 @@ function randomSecret() {
   return Array.from(bytes, (value) => value.toString(16).padStart(2, "0")).join("");
 }
 
+/** @param {RequestContext} context */
 export async function rateLimitSecret(context) {
   context.data ||= {};
   if (context.data.rateLimitSecret) return context.data.rateLimitSecret;
@@ -71,12 +85,14 @@ export async function rateLimitSecret(context) {
   return secret;
 }
 
+/** @param {string} address */
 function ipv4Prefix(address) {
   const parts = address.split(".");
   if (parts.length !== 4 || parts.some((part) => !/^\d{1,3}$/u.test(part) || Number(part) > 255)) return null;
   return `${parts[0]}.${parts[1]}.${parts[2]}.0/24`;
 }
 
+/** @param {string} address */
 function expandIpv6(address) {
   const clean = address.toLowerCase().split("%")[0];
   if (!clean.includes(":")) return null;
@@ -84,6 +100,7 @@ function expandIpv6(address) {
   if (halves.length > 2) return null;
   const head = halves[0] ? halves[0].split(":") : [];
   const tail = halves[1] ? halves[1].split(":") : [];
+  /** @param {string[]} parts */
   const convertIpv4Tail = (parts) => {
     const last = parts.at(-1);
     const prefix = last && ipv4Prefix(last);
@@ -102,6 +119,7 @@ function expandIpv6(address) {
   return parts.map((part) => Number.parseInt(part, 16).toString(16));
 }
 
+/** @param {string} address */
 export function networkPrefix(address) {
   const ipv4 = ipv4Prefix(address);
   if (ipv4) return ipv4;
@@ -109,11 +127,21 @@ export function networkPrefix(address) {
   return ipv6 ? `${ipv6.slice(0, 4).join(":")}::/64` : "unknown";
 }
 
+/** @param {Request} request */
 export function clientSubjects(request) {
   const address = String(request.headers.get("CF-Connecting-IP") || "local").trim().slice(0, 96) || "local";
   return { address, network: networkPrefix(address) };
 }
 
+/**
+ * @param {boolean} allowed
+ * @param {number} limit
+ * @param {number} count
+ * @param {number} windowStartedAt
+ * @param {number} windowMs
+ * @param {number} now
+ * @returns {RateLimitDecision}
+ */
 export function rateLimitDecision(allowed, limit, count, windowStartedAt, windowMs, now) {
   const resetAt = windowStartedAt + windowMs;
   return {
@@ -125,6 +153,7 @@ export function rateLimitDecision(allowed, limit, count, windowStartedAt, window
   };
 }
 
+/** @param {RequestContext} context @param {RateLimitDecision} decision */
 export function recordRateLimitDecision(context, decision) {
   context.data ||= {};
   const current = context.data.rateLimit;
@@ -134,6 +163,13 @@ export function recordRateLimitDecision(context, decision) {
   }
 }
 
+/**
+ * @param {Database} db
+ * @param {string} key
+ * @param {number} limit
+ * @param {number} windowMs
+ * @param {number} [now]
+ */
 export async function consumeFixedWindowDecision(db, key, limit, windowMs, now = Date.now()) {
   const resetBefore = now - windowMs;
   const result = await db.prepare(`INSERT INTO rate_limits (key, window_started_at, count, updated_at)
@@ -157,20 +193,39 @@ export async function consumeFixedWindowDecision(db, key, limit, windowMs, now =
   return rateLimitDecision(false, limit, Number(current.count), Number(current.window_started_at), windowMs, now);
 }
 
+/**
+ * @param {Database} db
+ * @param {string} key
+ * @param {number} limit
+ * @param {number} windowMs
+ * @param {number} [now]
+ */
 export async function consumeFixedWindow(db, key, limit, windowMs, now = Date.now()) {
   return (await consumeFixedWindowDecision(db, key, limit, windowMs, now)).allowed;
 }
 
+/**
+ * @param {RequestContext} context
+ * @param {string} action
+ * @param {string} scope
+ * @param {string} subject
+ * @param {number} windowMs
+ */
 export async function policyKey(context, action, scope, subject, windowMs) {
   const secret = await rateLimitSecret(context);
   return sha256(`${secret}:${action}:${scope}:${windowMs}:${subject}`);
 }
 
+/**
+ * @param {RequestContext} context
+ * @param {string} action
+ * @param {RateLimitPolicy[]} policies
+ */
 export async function enforcePolicies(context, action, policies) {
   const db = requireDatabase(context.env);
   context.data ||= {};
   for (const policy of policies) {
-    const limit = limitFromEnv(context.env, policy.limitName, policy.limit);
+    const limit = limitFromEnv(context.env, policy.limitName || "", policy.limit);
     const key = await policyKey(context, action, policy.scope, policy.subject, policy.windowMs);
     const decision = await consumeFixedWindowDecision(db, key, limit, policy.windowMs);
     recordRateLimitDecision(context, decision);
@@ -185,6 +240,7 @@ export async function enforcePolicies(context, action, policies) {
   }
 }
 
+/** @param {RequestContext} context @param {UserRow} user */
 export function commentPolicyDefinitions(context, user) {
   if (user.role === "admin") return [];
   const { address } = clientSubjects(context.request);
@@ -197,6 +253,7 @@ export function commentPolicyDefinitions(context, user) {
   ];
 }
 
+/** @param {RequestContext} context */
 export async function protectRegistration(context) {
   const { address, network } = clientSubjects(context.request);
   await enforcePolicies(context, "register", [
@@ -206,6 +263,7 @@ export async function protectRegistration(context) {
   ]);
 }
 
+/** @param {RequestContext} context */
 export async function protectAdminBootstrap(context) {
   const { address } = clientSubjects(context.request);
   await enforcePolicies(context, "admin-bootstrap", [
@@ -214,6 +272,7 @@ export async function protectAdminBootstrap(context) {
   ]);
 }
 
+/** @param {RequestContext} context @param {string} username */
 export async function protectLogin(context, username) {
   const { address } = clientSubjects(context.request);
   await enforcePolicies(context, "login", [
@@ -224,10 +283,12 @@ export async function protectLogin(context, username) {
   ]);
 }
 
+/** @param {RequestContext} context @param {UserRow} user */
 export async function protectComment(context, user) {
   await enforcePolicies(context, "comment", commentPolicyDefinitions(context, user));
 }
 
+/** @param {RequestContext} context @param {UserRow} user */
 export async function protectAvatar(context, user) {
   if (user.role === "admin") return;
   const { address } = clientSubjects(context.request);
@@ -238,6 +299,7 @@ export async function protectAvatar(context, user) {
   ]);
 }
 
+/** @param {RequestContext} context @param {UserRow} user */
 export async function protectProfileUpdate(context, user) {
   if (user.role === "admin") return;
   await enforcePolicies(context, "profile", [
@@ -245,6 +307,7 @@ export async function protectProfileUpdate(context, user) {
   ]);
 }
 
+/** @param {RequestContext} context */
 export async function protectContentView(context) {
   await enforcePolicies(context, "content-view", [
     { scope: "global-hour", subject: "global", limitName: "VIEW_GLOBAL_HOURLY", limit: DEFAULT_ABUSE_LIMITS.VIEW_GLOBAL_HOURLY, windowMs: HOUR },

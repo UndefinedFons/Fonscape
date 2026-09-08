@@ -61,6 +61,7 @@
       "src/**",
       "test/**",
       "tsconfig.json",
+      "tsconfig.backend.json",
       "vite.config.mjs",
       "worker/**"
     ]

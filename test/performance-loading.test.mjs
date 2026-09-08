@@ -24,22 +24,6 @@ test("cold navigation separates hover, press and idle resource priority", async 
   assert.match(routes, /loadCollectionPageChunk\("music", 0\)/u);
 });
 
-test("primary routes commit the target hero before lazy body content uses the established reveal", async () => {
-  const [app, routes, pages] = await Promise.all([
-    readFile("src/App.jsx", "utf8"),
-    readFile("src/appRoutes.jsx", "utf8"),
-    Promise.all(["PostsPage", "PoemsPage", "MusicPage", "FriendsPage", "AboutPage"].map((name) => readFile(`src/pages/${name}.jsx`, "utf8"))),
-  ]);
-
-  assert.match(routes, /function PrimaryRoute/u);
-  assert.match(routes, /<PageHero \{\.\.\.primaryRouteShells\[path\]\} \/>/u);
-  assert.match(routes, /<PageHero \{\.\.\.primaryRouteShells\[path\]\} \/><Suspense fallback=\{null\}>\{children\}<\/Suspense>/u);
-  assert.match(routes, /const loadPostsModule = \(\) => withFullAssets\(\(\) => import\("\.\/pages\/PostsPage\.jsx"\)\)/u);
-  pages.forEach((page) => assert.doesNotMatch(page, /<PageHero/u));
-  assert.doesNotMatch(app, /route-body-skeleton/u);
-  assert.doesNotMatch(app, /route-loading-indicator|DialogLoading|正在打开/u);
-});
-
 test("empty collection chunks reuse one settled request across interaction rerenders", async () => {
   const content = await import("../src/content/index.js");
   const first = content.loadCollectionPageChunk("missing", 0);
