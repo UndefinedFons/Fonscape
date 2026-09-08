@@ -56,3 +56,51 @@ test("a direct primary route shows its hero before the lazy page arrives", async
     content.resolve();
   }
 });
+
+for (const width of [320, 768, 1280]) {
+  test(`detail handoff follows changing content height without overlapping the footer at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 800 });
+    await page.route('**/src/main.jsx', (route) => route.fulfill({ contentType: 'text/javascript', body: `
+      import React, { use, useState } from '/node_modules/.vite/deps/react.js';
+      import { createRoot } from '/node_modules/.vite/deps/react-dom_client.js';
+      import { DetailPageFrame } from '/src/components/RoutePageFrame.tsx';
+      import '/src/styles.css';
+      let release;
+      const ready = new Promise(resolve => { release = resolve; });
+      function Body() {
+        use(ready);
+        const [height, setHeight] = useState(800);
+        return React.createElement('article', null,
+          React.createElement('button', {onClick: () => setHeight(100)}, 'Shrink content'),
+          React.createElement('div', {style: {height}}, 'Content'));
+      }
+      createRoot(document.getElementById('root')).render(
+        React.createElement('div', {className: 'app-shell'},
+          React.createElement('button', {onClick: () => release()}, 'Resolve content'),
+          React.createElement('div', {className: 'route-view'},
+            React.createElement(DetailPageFrame, {kind: 'music', onReturn() {}}, React.createElement(Body))),
+          React.createElement('footer', null, 'Footer')));
+    ` }));
+    await page.goto('/');
+    await expect(page.getByRole('status')).toBeVisible();
+    await page.evaluate(() => {
+      window.heightSamples = [];
+      const start = performance.now();
+      function sample() {
+        const main = document.querySelector('main').getBoundingClientRect();
+        const footer = document.querySelector('footer').getBoundingClientRect();
+        window.heightSamples.push({ height: main.height, gap: footer.top - main.bottom });
+        if (performance.now() - start < 1000) requestAnimationFrame(sample);
+      }
+      requestAnimationFrame(sample);
+    });
+    await page.getByRole('button', { name: 'Resolve content' }).click();
+    await page.getByRole('button', { name: 'Shrink content' }).evaluate(button => button.click());
+    await expect.poll(() => page.evaluate(() => document.querySelector('main').style.height)).toBe('');
+    const samples = await page.evaluate(() => window.heightSamples);
+    expect(samples.length).toBeGreaterThan(2);
+    expect(Math.min(...samples.map(sample => sample.gap))).toBeGreaterThanOrEqual(0);
+    await expect(page.locator('main')).not.toHaveAttribute('style', /height/u);
+    expect(await page.locator('main').evaluate(node => node.offsetHeight)).toBeLessThan(500);
+  });
+}

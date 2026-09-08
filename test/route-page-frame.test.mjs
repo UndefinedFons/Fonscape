@@ -8,7 +8,11 @@ import { createServer } from "vite";
 test("detail pages retain their final container and usable return control through suspension", async () => {
   const dom = new JSDOM('<div id="root"></div>', { url: "http://localhost/" });
   const originals = new Map();
-  for (const [key, value] of Object.entries({ window: dom.window, document: dom.window.document, HTMLElement: dom.window.HTMLElement, IS_REACT_ACT_ENVIRONMENT: true })) {
+  const frames = new Map();
+  let nextFrame = 0;
+  let naturalHeight = 700;
+
+  for (const [key, value] of Object.entries({ window: dom.window, document: dom.window.document, HTMLElement: dom.window.HTMLElement, IS_REACT_ACT_ENVIRONMENT: true, requestAnimationFrame: (callback) => { frames.set(++nextFrame, callback); return nextFrame; }, cancelAnimationFrame: (id) => frames.delete(id) })) {
     originals.set(key, Object.getOwnPropertyDescriptor(globalThis, key));
     Object.defineProperty(globalThis, key, { configurable: true, writable: true, value });
   }
@@ -20,9 +24,12 @@ test("detail pages retain their final container and usable return control throug
     animations.push(record);
     return { cancel() { record.cancelled = true; } };
   };
-  dom.window.HTMLElement.prototype.getBoundingClientRect = function () {
-    return { height: this.querySelector('[role="status"]') ? 400 : 700 };
-  };
+  Object.defineProperty(dom.window.HTMLElement.prototype, "offsetHeight", { get() {
+    if (this.querySelector('[role="status"]')) return 400;
+    return this.style.getPropertyValue("height") === "auto" ? naturalHeight : (Number.parseFloat(this.style.height) || naturalHeight);
+  } });
+  // A route transform must not influence the height animation's layout pixels.
+  dom.window.HTMLElement.prototype.getBoundingClientRect = () => ({ height: 999 });
   const server = await createServer({
     configFile: false, appType: "custom", optimizeDeps: { noDiscovery: true },
     esbuild: { jsx: "automatic" }, server: { middlewareMode: true, ws: false, watch: null },
@@ -33,6 +40,7 @@ test("detail pages retain their final container and usable return control throug
     for (const [kind, reduce] of [["post", false], ["poem", false], ["music", false], ["poem", true]]) {
       reducedMotion = reduce;
       animations.length = 0;
+      naturalHeight = 700;
       let resolve;
       const content = new Promise((done) => { resolve = done; });
       function Body() { return createElement(kind === "poem" ? "p" : "article", null, use(content)); }
@@ -56,14 +64,35 @@ test("detail pages retain their final container and usable return control throug
       assert.equal(kind === "poem" ? frame.querySelector("article") : frame, surface, "the content surface must survive loading");
       assert.equal(frame.querySelector("article").textContent, "正文已到达");
       assert.equal(frame.querySelector('[role="status"]'), null);
-      assert.equal(animations.length, reduce ? 0 : 2);
+      assert.equal(animations.length, reduce ? 0 : 1);
       if (!reduce) {
-        assert.equal(animations[0].element, surface);
-        assert.deepEqual(animations[0].frames.map(({ height }) => height), ["400px", "700px"]);
-        assert.deepEqual(animations[1].frames, [{ opacity: 0 }, { opacity: 1 }]);
+        assert.deepEqual(animations[0].frames, [{ opacity: 0 }, { opacity: 1 }]);
+        assert.equal(surface.style.height, "400px", "height uses layout pixels, not transformed bounds");
+        let time = performance.now();
+        const step = () => {
+          const [id, callback] = frames.entries().next().value;
+          frames.delete(id);
+          time += 16;
+          callback(time);
+        };
+        step();
+        const first = Number.parseFloat(surface.style.height);
+        assert.ok(first > 400 && first < 700);
+        naturalHeight = 450;
+        step();
+        assert.ok(Math.abs(Number.parseFloat(surface.style.height) - first) < 40, "a new target must not jump to its final size");
+        if (kind !== "music") {
+          for (let i = 0; i < 100 && frames.size; i++) step();
+          assert.equal(frames.size, 0, "the spring settles instead of measuring indefinitely");
+          assert.equal(surface.style.height, "", "settling restores intrinsic layout");
+          assert.equal(surface.style.overflow, "");
+        }
       }
       await act(async () => { root.unmount(); });
       root = null;
+      assert.equal(frames.size, 0, "unmount cancels height tracking");
+      assert.equal(surface.style.height, "", "unmount restores height even during a running transition");
+      assert.equal(surface.style.overflow, "");
       assert.ok(animations.every(({ cancelled }) => cancelled), "unmount cancels transition resources");
     }
   } finally {

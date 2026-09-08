@@ -70,7 +70,6 @@
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",
-    "@cloudflare/workers-types": "5.20260908.1",
     "@types/react": "19.2.18",
     "@types/react-dom": "19.2.7",
     "@playwright/test": "1.62.1",

@@ -30,7 +30,10 @@ export function LoadingSurface({ as: Container, className, before, children }: L
   const surface = useRef<HTMLElement>(null);
   const pendingHeight = useRef<number | null>(null);
   const animations = useRef<Animation[]>([]);
+  const stopHeight = useRef<(() => void) | null>(null);
   const cancelAnimations = useCallback(() => {
+    stopHeight.current?.();
+    stopHeight.current = null;
     animations.current.forEach((animation) => animation.cancel());
     animations.current = [];
   }, []);
@@ -39,7 +42,7 @@ export function LoadingSurface({ as: Container, className, before, children }: L
     cancelAnimations();
     const node = surface.current;
     if (!node) return;
-    const measure = () => { pendingHeight.current = node.getBoundingClientRect().height; };
+    const measure = () => { pendingHeight.current = node.offsetHeight; };
     measure();
     const observer = typeof ResizeObserver === "function" ? new ResizeObserver(measure) : null;
     observer?.observe(node);
@@ -51,10 +54,48 @@ export function LoadingSurface({ as: Container, className, before, children }: L
     pendingHeight.current = null;
     if (!node || fromHeight === null || typeof node.animate !== "function" || window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
     cancelAnimations();
-    const options = { duration: 240, easing: "ease-out" };
-    const toHeight = node.getBoundingClientRect().height;
+    const options = { duration: 360, easing: "cubic-bezier(.16, 1, .3, 1)" };
+    const toHeight = node.offsetHeight;
     if (fromHeight > 0 && toHeight > 0 && fromHeight !== toHeight) {
-      animations.current.push(node.animate([{ height: `${fromHeight}px`, overflow: "clip" }, { height: `${toHeight}px`, overflow: "clip" }], options));
+      const previousHeight = node.style.getPropertyValue("height");
+      const previousPriority = node.style.getPropertyPriority("height");
+      const previousOverflow = node.style.getPropertyValue("overflow");
+      const overflowPriority = node.style.getPropertyPriority("overflow");
+      let height = fromHeight;
+      let velocity = 0;
+      let lastTime = performance.now();
+      let frame: number;
+      const restore = () => {
+        if (previousHeight) node.style.setProperty("height", previousHeight, previousPriority);
+        else node.style.removeProperty("height");
+        if (previousOverflow) node.style.setProperty("overflow", previousOverflow, overflowPriority);
+        else node.style.removeProperty("overflow");
+      };
+      // A critically damped spring preserves velocity when fonts, comments or
+      // images resize the content. It never restarts an easing curve mid-flight.
+      const advance = (time: number) => {
+        node.style.setProperty("height", "auto", "important");
+        const target = node.offsetHeight;
+        const seconds = Math.max(0, (time - lastTime) / 1000);
+        lastTime = time;
+        const stiffness = 24;
+        const displacement = height - target;
+        const coefficient = velocity + stiffness * displacement;
+        const decay = Math.exp(-stiffness * seconds);
+        height = target + (displacement + coefficient * seconds) * decay;
+        velocity = (velocity - stiffness * coefficient * seconds) * decay;
+        if (Math.abs(height - target) < 0.5 && Math.abs(velocity) < 5) {
+          restore();
+          stopHeight.current = null;
+          return;
+        }
+        node.style.setProperty("height", `${height}px`);
+        frame = requestAnimationFrame(advance);
+      };
+      node.style.setProperty("overflow", "clip");
+      node.style.setProperty("height", `${height}px`);
+      frame = requestAnimationFrame(advance);
+      stopHeight.current = () => { cancelAnimationFrame(frame); restore(); };
     }
     for (const child of node.children) {
       if (!child.hasAttribute("data-loading-persistent")) {
