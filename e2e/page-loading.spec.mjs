@@ -1,5 +1,11 @@
 import { test, expect } from "@playwright/test";
 
+// These tests deliberately delay module requests. Disable the development
+// client's optimizer-triggered full reload so it cannot replace the test page.
+test.beforeEach(async ({ page }) => {
+  await page.route('**/@vite/client', route => route.fulfill({ contentType: 'text/javascript', body: 'export function createHotContext() { return { accept() {}, dispose() {}, invalidate() {} }; }' }));
+});
+
 function deferred() {
   let resolve;
   const promise = new Promise((done) => { resolve = done; });
@@ -61,8 +67,10 @@ for (const width of [320, 768, 1280]) {
   test(`detail handoff follows changing content height without overlapping the footer at ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height: 800 });
     await page.route('**/src/main.jsx', (route) => route.fulfill({ contentType: 'text/javascript', body: `
-      import React, { use, useState } from '/node_modules/.vite/deps/react.js';
-      import { createRoot } from '/node_modules/.vite/deps/react-dom_client.js';
+      import React from '/node_modules/.vite/deps/react.js';
+      const { use, useState } = React;
+      import ReactDOM from '/node_modules/.vite/deps/react-dom_client.js';
+      const { createRoot } = ReactDOM;
       import { DetailPageFrame } from '/src/components/RoutePageFrame.tsx';
       import '/src/styles.css';
       let release;
