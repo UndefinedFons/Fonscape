@@ -1,14 +1,5 @@
 import { test, expect } from "@playwright/test";
 
-// These tests deliberately delay module requests. Disable the development
-// client's optimizer-triggered full reload so it cannot replace the test page.
-test.beforeEach(async ({ page }) => {
-  await page.route('**/@vite/client', async route => {
-    const response = await route.fetch();
-    await route.fulfill({ response, body: (await response.text()).replaceAll('location.reload()', 'void 0') });
-  });
-});
-
 function deferred() {
   let resolve;
   const promise = new Promise((done) => { resolve = done; });

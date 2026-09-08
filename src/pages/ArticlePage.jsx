@@ -25,7 +25,7 @@ export function ArticlePage({ slug, stats, onView, onOutline, onStatsTargets }) 
   useEffect(() => { if (post?.slug) onStatsTargets([{ type: "post", slug: post.slug }]); }, [post?.slug, onStatsTargets]);
   useEffect(() => { setDocumentTitle(post?.title || "页面不存在", siteConfig.title); }, [post?.title]);
   useEffect(() => {
-    onOutline(getPostOutline(post));
+    onOutline(post ? getPostOutline(post) : []);
     return () => onOutline([]);
   }, [post, onOutline]);
   if (!post) return <NotFound embedded />;
