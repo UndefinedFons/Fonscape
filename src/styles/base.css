@@ -489,6 +489,7 @@ footer::before { content:""; position:absolute; top:0; left:50%; width:min(1180p
 .footer-theme-link:hover,.footer-theme-link:focus-visible { color:var(--accent); outline:none; }
 .footer-theme-link:hover::after,.footer-theme-link:focus-visible::after { opacity:1; transform:scaleX(1); }
 .footer-theme-link:active { transform:translateY(1px) scale(.98); }
+.route-loading-content { width:min(790px,100%); min-height:320px; margin:0 auto; padding:28px 0; }
 .route-view { min-width:0; flex:1 0 auto; }
 .route-view > main > .inner-hero + * {
   /* The only hero-to-content rhythm for primary routes. New sections inherit it structurally. */

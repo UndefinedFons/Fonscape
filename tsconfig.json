@@ -8,6 +8,7 @@
     "target": "ES2022",
     "module": "ESNext",
     "moduleResolution": "Bundler",
+    "jsx": "react-jsx",
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "resolveJsonModule": true,
     "skipLibCheck": true
@@ -24,6 +25,7 @@
     "src/siteConfig.js",
     "src/siteUrl.js",
     "src/siteUtils.js",
-    "src/types.d.ts"
+    "src/types.d.ts",
+    "src/components/RoutePageFrame.tsx"
   ]
 }

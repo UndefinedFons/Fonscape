@@ -70,7 +70,7 @@ export function AdminSetupPage() {
         <h1>创建管理员</h1>
         <p>仅首次部署需要完成一次。请输入部署时由你设置的管理员令牌，再创建登录账户。</p>
       </header>
-      <form className="community-form admin-setup-form" onSubmit={submit}>
+      <form className="community-form admin-setup-form" onSubmit={submit} aria-busy={busy}>
         <label htmlFor="admin-setup-token">
           <span>管理员令牌</span>
           <span className="community-input">
@@ -108,5 +108,5 @@ export function AdminSetupPage() {
     </>;
   }
 
-  return <main className="admin-setup-page"><section className="admin-setup-panel material-panel" aria-busy={state.loading || busy}>{content}</section></main>;
+  return content;
 }

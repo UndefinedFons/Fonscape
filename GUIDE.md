@@ -500,6 +500,7 @@ pnpm fonscape update --rollback .fonscape-update/backups/<备份目录>
 - 评论容量与公开统计由数据库聚合表和触发器维护；`account_usage` 保留为低成本的单账户评论存储熔断，`comment_target_usage` 同时承担页面评论统计与容量判断，内容列表只按当前可见条目查询统计，不随全站评论总量扫描。
 - 普通 API 写请求的后台维护只清理过期会话和陈旧限频行，不扫描评论表。Cloudflare 的定时任务每周执行一次完整聚合对账，作为迁移、人工数据库操作或异常中断后的恢复手段；正常正确性仍由同一事务内的触发器保证。
 - 头像输入与存储限制以 `functions/api/[[path]].js` 中的 `AVATAR_MAX_BYTES`、`AVATAR_TOTAL_MAX_BYTES` 为准。
+- 详情页的加载与内容过渡统一使用 `src/components/RoutePageFrame.tsx` 中的 `LoadingSurface`，由调用处提供最终容器与内容。容器在加载前后保持同一节点，加载占位、内容淡入、高度过渡和减少动态效果偏好由共用组件处理；板块列表页沿用 Hero 与内容分块的呈现方式。
 - 主题改动在合并前运行 `pnpm check`，关键评论路径另运行 `pnpm test:e2e`；涉及布局时检查桌面、平板、手机与窄屏，数据库迁移先在独立测试数据库演练。
 
 <details>

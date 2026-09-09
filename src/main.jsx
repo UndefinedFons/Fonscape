@@ -12,9 +12,7 @@ const legacyRoute = legacyHashRoute(window.location.hash);
 if (legacyRoute) window.history.replaceState(window.history.state || {}, "", legacyRoute);
 
 const initialRoute = parseRoutePath();
-const render = () => createRoot(document.getElementById("root")).render(
+if (initialRoute !== "/") void preloadRoute(initialRoute).catch(() => {});
+createRoot(document.getElementById("root")).render(
   <React.StrictMode><AppErrorBoundary><React.Suspense fallback={null}><CommunityProvider><App /></CommunityProvider></React.Suspense></AppErrorBoundary></React.StrictMode>,
 );
-const initialLoader = initialRoute === "/" ? null : preloadRoute(initialRoute);
-if (initialLoader) initialLoader.then(render, render);
-else render();

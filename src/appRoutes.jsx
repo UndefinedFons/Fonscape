@@ -6,11 +6,12 @@ import { UserCircle } from "@phosphor-icons/react/UserCircle";
 import { lazy, Suspense } from "react";
 import { loadCollectionPageChunk, loadMusicReview, loadPoem, loadPost, siteConfig } from "./content/index.js";
 import { PageHero } from "./components/PageHero.jsx";
-import { replaceRouteWithHome } from "./routeState.js";
+import { replaceRouteWithHome, returnFromDetail } from "./routeState.js";
 import { setRouteDocumentTitle } from "./navigation.js";
 import { isSiteRouteEnabled, normalizeRoutePath } from "./sectionAvailability.js";
 import { HomePage } from "./pages/HomePage.jsx";
 import { NotFound } from "./pages/NotFound.jsx";
+import { AdminSetupFrame, DetailPageFrame } from "./components/RoutePageFrame.tsx";
 
 const withFullFonts = (loader) => {
   void ensureFullFontStylesheet();
@@ -23,16 +24,12 @@ const withFullAssets = (loader) => {
 const loadAboutModule = () => withFullAssets(() => import("./pages/AboutPage.jsx"));
 const loadAdminSetupModule = () => withFullFonts(() => import("./pages/AdminSetupPage.jsx"));
 const loadRichArticleModule = () => import("./RichArticleContent.jsx");
-// Detail routes keep the 1.15.1 handoff: resolve the page module, rich body
-// renderer and fonts before React commits the detail view. Responsive image
-// candidates are bundled in the current catalog and therefore need no second
-// manifest request here.
-const loadArticleModule = () => Promise.all([import("./pages/ArticlePage.jsx"), loadRichArticleModule(), ensureFullFontStylesheet()]).then(([module]) => module);
+const loadArticleModule = () => withFullFonts(() => Promise.all([import("./pages/ArticlePage.jsx"), loadRichArticleModule()]).then(([module]) => module));
 const loadDialogsModule = () => withFullFonts(() => import("./components/Dialogs.jsx"));
 const loadFriendsModule = () => withFullAssets(() => import("./pages/FriendsPage.jsx"));
 const loadMusicModule = () => withFullAssets(() => import("./pages/MusicPage.jsx"));
-const loadMusicDetailModule = () => Promise.all([loadMusicModule(), loadRichArticleModule(), ensureFullFontStylesheet()]).then(([module]) => module);
-const loadPoemModule = () => Promise.all([import("./pages/PoemPage.jsx"), ensureFullFontStylesheet()]).then(([module]) => module);
+const loadMusicDetailModule = () => Promise.all([loadMusicModule(), loadRichArticleModule()]).then(([module]) => module);
+const loadPoemModule = () => withFullFonts(() => import("./pages/PoemPage.jsx"));
 const loadPoemsModule = () => withFullAssets(() => import("./pages/PoemsPage.jsx"));
 const loadPostsModule = () => withFullAssets(() => import("./pages/PostsPage.jsx"));
 const loadAccountModule = () => withFullFonts(() => import("./community/AccountDialog.jsx"));
@@ -58,6 +55,7 @@ export const FriendsPage = lazy(() => loadFriendsModule().then((module) => ({ de
 export const MusicPage = lazy(() => loadMusicModule().then((module) => ({ default: module.MusicPage })));
 export const MusicDetailPage = lazy(() => loadMusicDetailModule().then((module) => ({ default: module.MusicDetailPage })));
 export const PoemPage = lazy(() => loadPoemModule().then((module) => ({ default: module.PoemPage })));
+const PoemComments = lazy(() => loadPoemModule().then((module) => ({ default: module.PoemComments })));
 export const PoemsPage = lazy(() => loadPoemsModule().then((module) => ({ default: module.PoemsPage })));
 export const PostsPage = lazy(() => loadPostsModule().then((module) => ({ default: module.PostsPage })));
 export const AccountDialog = lazy(() => loadAccountModule().then((module) => ({ default: module.AccountDialog })));
@@ -163,16 +161,16 @@ export function preloadRoute(path) {
  */
 export function RouteContent({ route, routeQuery, stats, onView, onOutline, onRequestStats, isRetiredAdminRoute, routeEnabled }) {
   if (!routeEnabled || isRetiredAdminRoute) return <HomePage stats={stats.post || {}} onStatsTargets={onRequestStats} />;
-  if (route.startsWith("/post/")) return <ArticlePage slug={decodeRoutePath(route.slice("/post/".length))} stats={stats.post || {}} onView={onView} onOutline={onOutline} onStatsTargets={onRequestStats} />;
-  if (route.startsWith("/poem/")) return <PoemPage slug={decodeRoutePath(route.slice("/poem/".length))} stats={stats.poem || {}} onView={onView} onStatsTargets={onRequestStats} />;
-  if (route.startsWith("/music/")) return <MusicDetailPage path={decodeRoutePath(route.slice("/music/".length))} stats={stats.music || {}} onView={onView} onStatsTargets={onRequestStats} />;
+  if (route.startsWith("/post/")) return <DetailPageFrame kind="post" onReturn={() => returnFromDetail(route)}><ArticlePage slug={decodeRoutePath(route.slice("/post/".length))} stats={stats.post || {}} onView={onView} onOutline={onOutline} onStatsTargets={onRequestStats} /></DetailPageFrame>;
+  if (route.startsWith("/poem/")) return <DetailPageFrame kind="poem" onReturn={() => returnFromDetail(route)} afterContent={<PoemComments slug={decodeRoutePath(route.slice("/poem/".length))} />}><PoemPage slug={decodeRoutePath(route.slice("/poem/".length))} stats={stats.poem || {}} onView={onView} onStatsTargets={onRequestStats} /></DetailPageFrame>;
+  if (route.startsWith("/music/")) return <DetailPageFrame kind="music" onReturn={() => returnFromDetail(route)}><MusicDetailPage path={decodeRoutePath(route.slice("/music/".length))} stats={stats.music || {}} onView={onView} onStatsTargets={onRequestStats} /></DetailPageFrame>;
   if (route === "/") return <HomePage stats={stats.post || {}} onStatsTargets={onRequestStats} />;
   if (route === "/posts") return <PrimaryRoute path={route}><PostsPage query={routeQuery} stats={stats.post || {}} onStatsTargets={onRequestStats} /></PrimaryRoute>;
   if (route === "/poems") return <PrimaryRoute path={route}><PoemsPage stats={stats.poem || {}} onStatsTargets={onRequestStats} /></PrimaryRoute>;
   if (route === "/music") return <PrimaryRoute path={route}><MusicPage stats={stats.music || {}} onStatsTargets={onRequestStats} /></PrimaryRoute>;
   if (route === "/friends") return <PrimaryRoute path={route}><FriendsPage /></PrimaryRoute>;
   if (route === "/about") return <PrimaryRoute path={route}><AboutPage /></PrimaryRoute>;
-  if (route === "/admin/setup") return <AdminSetupPage />;
+  if (route === "/admin/setup") return <AdminSetupFrame><AdminSetupPage /></AdminSetupFrame>;
   return <NotFound />;
 }
 

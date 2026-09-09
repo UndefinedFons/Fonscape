@@ -3,7 +3,20 @@ const SESSION_TTL_SECONDS = 60 * 60 * 24 * 30;
 // Cloudflare Workers Web Crypto caps PBKDF2 at 100,000 iterations.
 const PASSWORD_ITERATIONS = 100000;
 
+/** @typedef {import("../types").AppEnv} AppEnv */
+/** @typedef {import("../types").Database} Database */
+/** @typedef {import("../types").DatabaseRow} DatabaseRow */
+/** @typedef {import("../types").RequestContext} RequestContext */
+/** @typedef {import("../types").UserRow} UserRow */
+/** @typedef {import("../types").ContentTarget} ContentTarget */
+
 export class ApiError extends Error {
+  /**
+   * @param {number} status
+   * @param {string} message
+   * @param {string} [code]
+   * @param {Record<string, string>} [headers]
+   */
   constructor(status, message, code = "request_error", headers = {}) {
     super(message);
     this.status = status;
@@ -12,6 +25,11 @@ export class ApiError extends Error {
   }
 }
 
+/**
+ * @param {unknown} data
+ * @param {number} [status]
+ * @param {Record<string, string>} [headers]
+ */
 export function json(data, status = 200, headers = {}) {
   return new Response(JSON.stringify(data), {
     status,
@@ -24,6 +42,7 @@ export function json(data, status = 200, headers = {}) {
   });
 }
 
+/** @param {unknown} error */
 export function errorResponse(error) {
   if (error instanceof ApiError) {
     return json({ error: error.message, code: error.code }, error.status, error.headers);
@@ -35,11 +54,13 @@ export function errorResponse(error) {
   return json({ error: "服务暂时不可用，请稍后再试。", code: "internal_error" }, 500);
 }
 
+/** @param {AppEnv} env @returns {Database} */
 export function requireDatabase(env) {
   if (!env.DB) throw new ApiError(503, "评论服务尚未完成数据库配置。", "database_unavailable");
   return env.DB;
 }
 
+/** @param {Request} request */
 export function assertSameOrigin(request) {
   if (["GET", "HEAD", "OPTIONS"].includes(request.method)) return;
   if (request.headers.get("Sec-Fetch-Site") === "cross-site") {
@@ -51,6 +72,11 @@ export function assertSameOrigin(request) {
   }
 }
 
+/**
+ * @param {Request} request
+ * @param {number} maximumBytes
+ * @returns {Promise<Uint8Array>}
+ */
 export async function readLimitedBody(request, maximumBytes) {
   const declaredLength = request.headers.get("Content-Length");
   if (declaredLength !== null) {
@@ -87,6 +113,11 @@ export async function readLimitedBody(request, maximumBytes) {
   return body;
 }
 
+/**
+ * @param {Request} request
+ * @param {number} [maximumBytes]
+ * @returns {Promise<Record<string, unknown>>}
+ */
 export async function readJson(request, maximumBytes = 16 * 1024) {
   const type = request.headers.get("Content-Type") || "";
   if (!type.includes("application/json")) throw new ApiError(415, "请使用 JSON 提交数据。", "invalid_content_type");
@@ -103,29 +134,37 @@ export async function readJson(request, maximumBytes = 16 * 1024) {
   }
 }
 
+/** @param {Uint8Array} bytes */
 function bytesToBase64Url(bytes) {
   let binary = "";
   for (const byte of bytes) binary += String.fromCharCode(byte);
   return btoa(binary).replaceAll("+", "-").replaceAll("/", "_").replace(/=+$/u, "");
 }
 
+/** @param {string} value */
 function base64UrlToBytes(value) {
   const normalized = value.replaceAll("-", "+").replaceAll("_", "/");
   const binary = atob(normalized + "=".repeat((4 - normalized.length % 4) % 4));
   return Uint8Array.from(binary, (character) => character.charCodeAt(0));
 }
 
+/** @param {number} [size] */
 export function randomToken(size = 32) {
   const bytes = new Uint8Array(size);
   crypto.getRandomValues(bytes);
   return bytesToBase64Url(bytes);
 }
 
+/** @param {string | Uint8Array<ArrayBuffer>} value */
 export async function sha256(value) {
   const input = typeof value === "string" ? new TextEncoder().encode(value) : value;
   return bytesToBase64Url(new Uint8Array(await crypto.subtle.digest("SHA-256", input)));
 }
 
+/**
+ * @param {string} password
+ * @param {string | null} [encodedSalt]
+ */
 export async function hashPassword(password, encodedSalt = null) {
   const salt = encodedSalt ? base64UrlToBytes(encodedSalt) : crypto.getRandomValues(new Uint8Array(16));
   const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(password), "PBKDF2", false, ["deriveBits"]);
@@ -133,14 +172,16 @@ export async function hashPassword(password, encodedSalt = null) {
   return { hash: bytesToBase64Url(new Uint8Array(bits)), salt: bytesToBase64Url(salt) };
 }
 
+/** @param {string} left @param {string} right */
 export async function constantTimeEqual(left, right) {
   const encoder = new TextEncoder();
   const [leftHash, rightHash] = await Promise.all([
     crypto.subtle.digest("SHA-256", encoder.encode(left)),
     crypto.subtle.digest("SHA-256", encoder.encode(right)),
   ]);
-  if (typeof crypto.subtle.timingSafeEqual === "function") {
-    return crypto.subtle.timingSafeEqual(leftHash, rightHash);
+  const subtle = /** @type {SubtleCrypto & { timingSafeEqual?: (left: ArrayBuffer, right: ArrayBuffer) => boolean }} */ (crypto.subtle);
+  if (typeof subtle.timingSafeEqual === "function") {
+    return subtle.timingSafeEqual(leftHash, rightHash);
   }
   const leftBytes = new Uint8Array(leftHash);
   const rightBytes = new Uint8Array(rightHash);
@@ -151,6 +192,7 @@ export async function constantTimeEqual(left, right) {
   return difference === 0;
 }
 
+/** @param {unknown} value */
 export function normalizeUsername(value) {
   const username = String(value || "").trim();
   if (!/^[A-Za-z0-9]{3,20}$/u.test(username)) {
@@ -159,6 +201,7 @@ export function normalizeUsername(value) {
   return username;
 }
 
+/** @param {unknown} value */
 export function normalizeNickname(value) {
   const nickname = String(value || "").trim().replace(/\s+/gu, " ");
   if (nickname.length < 1 || nickname.length > 10 || !/^[\p{L}\p{N}]+(?: [\p{L}\p{N}]+)*$/u.test(nickname)) {
@@ -167,6 +210,7 @@ export function normalizeNickname(value) {
   return nickname;
 }
 
+/** @param {unknown} value */
 export function validatePassword(value) {
   const password = String(value || "");
   if (password.length < 6 || password.length > 20 || !/^[A-Za-z0-9]{6,20}$/u.test(password)) {
@@ -175,12 +219,18 @@ export function validatePassword(value) {
   return password;
 }
 
+/** @param {unknown} value */
 export function normalizeComment(value) {
   const body = String(value || "").trim().replace(/\r\n?/gu, "\n");
   if (!body || body.length > 500) throw new ApiError(400, "评论需为 1–500 个字符。", "invalid_comment");
   return body;
 }
 
+/**
+ * @param {unknown} type
+ * @param {unknown} slug
+ * @returns {ContentTarget}
+ */
 export function validateTarget(type, slug) {
   const normalizedType = String(type || "").trim();
   if (!/^[a-z][a-z0-9_-]{0,31}$/u.test(normalizedType)) throw new ApiError(400, "内容类型无效。", "invalid_target");
@@ -189,6 +239,7 @@ export function validateTarget(type, slug) {
   return { type: normalizedType, slug: normalizedSlug };
 }
 
+/** @param {Request} request @returns {Record<string, string>} */
 export function parseCookies(request) {
   const entries = [];
   for (const part of (request.headers.get("Cookie") || "").split(";")) {
@@ -206,15 +257,27 @@ export function parseCookies(request) {
   return Object.fromEntries(entries);
 }
 
+/**
+ * @param {string} token
+ * @param {Request} request
+ * @param {number} [maxAge]
+ */
 export function sessionCookie(token, request, maxAge = SESSION_TTL_SECONDS) {
   const secure = new URL(request.url).protocol === "https:" ? "; Secure" : "";
   return `${SESSION_COOKIE}=${encodeURIComponent(token)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${maxAge}${secure}`;
 }
 
+/** @param {Request} request */
 export function clearSessionCookie(request) {
   return sessionCookie("", request, 0);
 }
 
+/**
+ * @param {Database} db
+ * @param {string} userId
+ * @param {Request} request
+ * @param {number} [maximumActiveSessions]
+ */
 export async function createSession(db, userId, request, maximumActiveSessions = 6) {
   const token = randomToken();
   const now = Date.now();
@@ -230,15 +293,18 @@ export async function createSession(db, userId, request, maximumActiveSessions =
   return { token, cookie: sessionCookie(token, request) };
 }
 
+/** @param {Database} db @param {Request} request */
 export async function destroySession(db, request) {
   const token = parseCookies(request)[SESSION_COOKIE];
   if (token) await db.prepare("DELETE FROM sessions WHERE id_hash = ?").bind(await sha256(token)).run();
 }
 
+/** @param {UserRow} user */
 function effectiveRole(user) {
   return user.role;
 }
 
+/** @param {UserRow} user */
 export function publicUser(user) {
   const role = effectiveRole(user);
   const avatarUpdatedAt = user.avatar_user_id === user.id && user.avatar_updated_at ? Number(user.avatar_updated_at) : null;
@@ -256,23 +322,25 @@ export function publicUser(user) {
   };
 }
 
+/** @param {RequestContext} context @returns {Promise<UserRow | null>} */
 export async function currentUser(context) {
   if (context.data.currentUser !== undefined) return context.data.currentUser;
   const db = requireDatabase(context.env);
   const token = parseCookies(context.request)[SESSION_COOKIE];
   if (!token) return (context.data.currentUser = null);
   const now = Date.now();
-  const row = await db.prepare(`SELECT u.id, u.username, u.nickname, u.role, u.status, u.created_at, u.updated_at,
+  const row = /** @type {UserRow | null} */ (await db.prepare(`SELECT u.id, u.username, u.nickname, u.role, u.status, u.created_at, u.updated_at,
     u.notifications_seen_at, u.admin_comments_seen_at, ua.user_id AS avatar_user_id, ua.updated_at AS avatar_updated_at
     FROM sessions s JOIN users u ON u.id = s.user_id
     LEFT JOIN user_avatars ua ON ua.user_id = u.id
     WHERE s.id_hash = ? AND s.expires_at > ? LIMIT 1`)
-    .bind(await sha256(token), now).first();
+    .bind(await sha256(token), now).first());
   if (!row) return (context.data.currentUser = null);
   context.data.currentUser = row;
   return row;
 }
 
+/** @param {RequestContext} context @returns {Promise<UserRow>} */
 export async function requireUser(context) {
   const user = await currentUser(context);
   if (!user) throw new ApiError(401, "请先登录。", "authentication_required");
@@ -280,12 +348,18 @@ export async function requireUser(context) {
   return user;
 }
 
+/** @param {RequestContext} context @returns {Promise<UserRow>} */
 export async function requireAdmin(context) {
   const user = await requireUser(context);
   if (effectiveRole(user) !== "admin") throw new ApiError(403, "仅管理员可以访问。", "admin_required");
   return user;
 }
 
+/**
+ * @param {DatabaseRow} row
+ * @param {string | null} [viewerId]
+ * @param {"member" | "admin" | null} [viewerRole]
+ */
 export function commentRow(row, viewerId = null, viewerRole = null) {
   const authorAvatarUpdatedAt = row.avatar_user_id === row.user_id && row.avatar_updated_at ? Number(row.avatar_updated_at) : null;
   const replyAvatarUpdatedAt = row.reply_to_avatar_user_id === row.reply_to_user_id && row.reply_to_avatar_updated_at

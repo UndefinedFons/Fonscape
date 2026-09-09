@@ -7,11 +7,35 @@ import {
   rateLimitSecret,
 } from "./limits.js";
 
+/** @typedef {import("../../types").AppEnv} AppEnv */
+/** @typedef {import("../../types").ContentTarget} ContentTarget */
+/** @typedef {import("../../types").Database} Database */
+/** @typedef {import("../../types").RateLimitDecision} RateLimitDecision */
+/** @typedef {import("../../types").RateLimitPolicy} RateLimitPolicy */
+/** @typedef {import("../../types").RateLimitPolicyResult} RateLimitPolicyResult */
+/** @typedef {import("../../types").RequestContext} RequestContext */
+/** @typedef {import("../../types").UserRole} UserRole */
+/**
+ * @typedef {object} CommentInsertInput
+ * @property {string} id
+ * @property {string} userId
+ * @property {UserRole} role
+ * @property {ContentTarget} target
+ * @property {string} body
+ * @property {string | null} [parentId]
+ * @property {string | null} [replyToUserId]
+ * @property {string | null} [replyToCommentId]
+ * @property {number} [now]
+ */
+
 /**
  * Insert and validate one comment in a single SQLite write statement. D1 and
  * libSQL serialize the conditional INSERT together with its counter triggers,
  * so concurrent writers cannot pass a stale read-side capacity check. The
  * comment rate-limit windows remain enforced before this capacity write.
+ * @param {Database} db
+ * @param {CommentInsertInput} input
+ * @param {AppEnv} env
  */
 export async function insertCommentAtomically(db, {
   id,
@@ -72,6 +96,11 @@ export async function insertCommentAtomically(db, {
   throw new ApiError(503, "评论区暂时无法接收更多内容。", "comment_capacity_reached");
 }
 
+/**
+ * @param {Database} db
+ * @param {CommentInsertInput & { env: AppEnv; requestHash: string }} input
+ * @param {RateLimitPolicyResult[]} policies
+ */
 export async function insertCommentWithRateLimitsAtomically(db, {
   id,
   userId,
@@ -163,27 +192,41 @@ export async function insertCommentWithRateLimitsAtomically(db, {
     if (isCommentMutationRollback(error)) throw new ApiError(503, "评论区暂时无法接收更多内容。", "comment_mutation_not_created");
     throw error;
   }
-  const rateLimit = policies.reduce((current, policy, index) => {
+  /** @type {RateLimitDecision | null} */
+  const rateLimit = policies.reduce(
+    /**
+     * @param {RateLimitDecision | null} current
+     * @param {RateLimitPolicyResult} policy
+     * @param {number} index
+     * @returns {RateLimitDecision | null}
+     */
+    (current, policy, index) => {
     const row = results[index + 1]?.results?.[0];
     if (!row) return current;
     const decision = rateLimitDecision(true, policy.limit, Number(row.count), Number(row.window_started_at), policy.windowMs, now);
     if (!current || decision.remaining / decision.limit < current.remaining / current.limit
       || (decision.remaining / decision.limit === current.remaining / current.limit && decision.resetAt < current.resetAt)) return decision;
     return current;
-  }, null);
+    }, null);
   return {
     created: Number(results[policies.length + 1]?.meta?.changes || 0),
     rateLimit,
   };
 }
 
+/** @param {unknown} error */
 export function isCommentMutationRollback(error) {
-  const code = String(error?.code || "");
+  const code = String(error && typeof error === "object" && "code" in error ? error.code : "");
   const message = error instanceof Error ? error.message : String(error);
   return /SQLITE_CONSTRAINT(?:_CHECK)?/iu.test(code)
     && /comment_mutations|pending|completed/iu.test(message);
 }
 
+/**
+ * @param {RequestContext} context
+ * @param {import("../../types").UserRow} user
+ * @returns {Promise<RateLimitPolicyResult[]>}
+ */
 export async function prepareCommentRatePolicies(context, user) {
   const definitions = commentPolicyDefinitions(context, user);
   const secret = definitions.length ? await rateLimitSecret(context) : "";
@@ -194,6 +237,10 @@ export async function prepareCommentRatePolicies(context, user) {
   })));
 }
 
+/**
+ * @param {Database} db
+ * @param {{ role: UserRole; userId: string; target: ContentTarget; env: AppEnv }} input
+ */
 export async function commentCapacityFailure(db, { role, userId, target, env }) {
   const userMaximum = limitFromEnv(env, "MAX_COMMENTS_PER_USER");
   const targetMaximum = limitFromEnv(env, "MAX_COMMENTS_PER_TARGET");
@@ -216,6 +263,11 @@ export async function commentCapacityFailure(db, { role, userId, target, env }) 
   return null;
 }
 
+/**
+ * @param {Database} db
+ * @param {RateLimitPolicyResult[]} policies
+ * @param {number} [now]
+ */
 export async function commentRateLimitFailure(db, policies, now = Date.now()) {
   for (const policy of policies) {
     const row = await db.prepare("SELECT window_started_at, count FROM rate_limits WHERE key = ? LIMIT 1").bind(policy.key).first();
@@ -227,6 +279,7 @@ export async function commentRateLimitFailure(db, policies, now = Date.now()) {
   return null;
 }
 
+/** @param {Database} db @param {ContentTarget} target */
 export async function assertTargetExists(db, target) {
   if (isStaticContentTarget(target.type, target.slug)) return;
   throw new ApiError(404, "目标内容不存在。", "content_not_found");

@@ -272,6 +272,7 @@ export async function generateContentArtifacts({ check = false } = {}) {
     + `  Object.entries(targets).map(([type, slugs]) => [type, new Set(slugs)]),\n`
     + `);\n\n`
     + `const audioAssetSizes = Object.freeze(${JSON.stringify(audioAssetSizes, null, 2)});\n\n`
+    + `/** @param {string} type @param {string} slug */\n`
     + `export function isStaticContentTarget(type, slug) {\n`
     + `  return targetSets[type]?.has(slug) || false;\n`
     + `}\n\n`
