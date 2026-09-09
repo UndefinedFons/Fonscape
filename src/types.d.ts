@@ -46,6 +46,7 @@ export interface SiteConfig {
   postCategories?: string[];
   showPoems?: boolean;
   showMusic?: boolean;
+  showCommunity?: boolean;
   home: {
     eyebrow: string;
     title: string;

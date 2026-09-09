@@ -75,6 +75,9 @@ export function getSectionAvailability(config = {}) {
  * @returns {boolean}
  */
 export function isSiteRouteEnabled(path, config = {}) {
+  const route = normalizeRoutePath(path);
+  if (route === "/friends") return config.showCommunity !== false;
+  if (route === "/admin" || route.startsWith("/admin/")) return config.showCommunity !== false;
   const section = getSectionDefinition(path);
   return !section || config?.[section.flag] === true;
 }

@@ -1,3 +1,4 @@
+import { siteConfig } from "../siteConfig.js";
 import { CopySimple } from "@phosphor-icons/react/CopySimple";
 import { LinkSimple } from "@phosphor-icons/react/LinkSimple";
 import { useEffect, useState } from "react";
@@ -98,7 +99,7 @@ export function FriendsPage() {
             })}
           </div>
         ) : <div className="friends-empty material-panel"><LinkSimple size={38} weight="duotone" /><h2>暂无友链</h2></div>}
-        <FriendRequestGuide />
+        {siteConfig.showCommunity && <FriendRequestGuide />}
         <CommentsPanel targetType="post" slug="site-friends" />
       </section>
   );

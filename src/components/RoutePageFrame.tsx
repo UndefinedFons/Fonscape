@@ -1,3 +1,4 @@
+import { siteConfig } from "../siteConfig.js";
 import { ArrowLeft } from "@phosphor-icons/react/ArrowLeft";
 import { Suspense, useCallback, useEffect, useLayoutEffect, useRef, type ReactNode } from "react";
 
@@ -121,7 +122,7 @@ export function DetailPageFrame({ kind, onReturn, children, afterContent }: Deta
     <LoadingSurface as="article">{children}</LoadingSurface>
     <Suspense fallback={null}>{afterContent}</Suspense>
   </main>;
-  const className = `article-page${kind === "music" ? " music-detail-page" : ""} material-panel page-width`;
+  const className = `article-page${kind === "music" ? " music-detail-page" : ""} material-panel page-width${siteConfig.showCommunity ? "" : " article-page--without-comments"}`;
   return <LoadingSurface as="main" className={className} before={back}>{children}</LoadingSurface>;
 }
 

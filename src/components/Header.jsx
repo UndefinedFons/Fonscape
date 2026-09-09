@@ -1,3 +1,4 @@
+import { siteConfig } from "../siteConfig.js";
 import { flushSync } from "react-dom";
 import { CaretDown } from "@phosphor-icons/react/CaretDown";
 import { CaretUp } from "@phosphor-icons/react/CaretUp";
@@ -224,7 +225,7 @@ export function Header({ route, theme, menuOpen, onMenu, onTheme, onSearch, onSe
       </nav>
       <div className="header-actions">
         <button className="icon-button" onClick={onSearch} onPointerEnter={onSearchIntent} onFocus={onSearchIntent} aria-label="打开搜索"><MagnifyingGlass size={21} /></button>
-        <button className={`icon-button account-nav-button${viewer ? " is-signed-in" : " is-signed-out"}`} onClick={onAccount} onPointerEnter={onAccountIntent} onFocus={onAccountIntent} aria-label={viewer ? `打开 ${viewer.nickname} 的个人中心${viewer.unreadReplies || viewer.unreadAdminComments ? `，有 ${Number(viewer.unreadReplies || 0) + Number(viewer.unreadAdminComments || 0)} 条未读消息` : ""}` : "登录或注册"}>{viewer ? <UserCircleCheck size={22} weight="duotone" /> : <UserCircle size={22} />}{Number(viewer?.unreadReplies || 0) + Number(viewer?.unreadAdminComments || 0) > 0 && <span className="account-notification-dot" aria-hidden="true" />}</button>
+        {siteConfig.showCommunity && <button className={`icon-button account-nav-button${viewer ? " is-signed-in" : " is-signed-out"}`} onClick={onAccount} onPointerEnter={onAccountIntent} onFocus={onAccountIntent} aria-label={viewer ? `打开 ${viewer.nickname} 的个人中心${viewer.unreadReplies || viewer.unreadAdminComments ? `，有 ${Number(viewer.unreadReplies || 0) + Number(viewer.unreadAdminComments || 0)} 条未读消息` : ""}` : "登录或注册"}>{viewer ? <UserCircleCheck size={22} weight="duotone" /> : <UserCircle size={22} />}{Number(viewer?.unreadReplies || 0) + Number(viewer?.unreadAdminComments || 0) > 0 && <span className="account-notification-dot" aria-hidden="true" />}</button>}
         <button className="icon-button theme-button" onClick={onTheme} aria-label="切换主题">{theme === "light" ? <Moon size={21} /> : <Sun size={21} />}</button>
         <button className="icon-button menu-button" onClick={onMenu} aria-label={menuOpen ? "关闭菜单" : "打开菜单"}>{menuOpen ? <X size={21} /> : <List size={21} />}</button>
         <button className={`icon-button article-outline-nav-button${hasArticleOutline ? " is-available" : ""}`} onClick={hasArticleOutline ? onArticleOutline : undefined} aria-label={hasArticleOutline ? (articleOutlineOpen ? "关闭文章导览" : "打开文章导览") : undefined} aria-expanded={hasArticleOutline ? articleOutlineOpen : undefined} aria-hidden={!hasArticleOutline} tabIndex={hasArticleOutline ? 0 : -1}><span className="icon-swap" key={articleOutlineOpen ? "close" : "outline"}>{articleOutlineOpen ? <X size={21} /> : <ListNumbers size={21} />}</span></button>

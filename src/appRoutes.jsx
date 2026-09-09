@@ -65,6 +65,7 @@ export function preloadDialogs() {
 }
 
 export function preloadAccount() {
+  if (!siteConfig.showCommunity) return Promise.resolve();
   return loadAccountModule().catch(() => {});
 }
 
@@ -162,7 +163,7 @@ export function preloadRoute(path) {
 export function RouteContent({ route, routeQuery, stats, onView, onOutline, onRequestStats, isRetiredAdminRoute, routeEnabled }) {
   if (!routeEnabled || isRetiredAdminRoute) return <HomePage stats={stats.post || {}} onStatsTargets={onRequestStats} />;
   if (route.startsWith("/post/")) return <DetailPageFrame kind="post" onReturn={() => returnFromDetail(route)}><ArticlePage slug={decodeRoutePath(route.slice("/post/".length))} stats={stats.post || {}} onView={onView} onOutline={onOutline} onStatsTargets={onRequestStats} /></DetailPageFrame>;
-  if (route.startsWith("/poem/")) return <DetailPageFrame kind="poem" onReturn={() => returnFromDetail(route)} afterContent={<PoemComments slug={decodeRoutePath(route.slice("/poem/".length))} />}><PoemPage slug={decodeRoutePath(route.slice("/poem/".length))} stats={stats.poem || {}} onView={onView} onStatsTargets={onRequestStats} /></DetailPageFrame>;
+  if (route.startsWith("/poem/")) return <DetailPageFrame kind="poem" onReturn={() => returnFromDetail(route)} afterContent={siteConfig.showCommunity && <PoemComments slug={decodeRoutePath(route.slice("/poem/".length))} />}><PoemPage slug={decodeRoutePath(route.slice("/poem/".length))} stats={stats.poem || {}} onView={onView} onStatsTargets={onRequestStats} /></DetailPageFrame>;
   if (route.startsWith("/music/")) return <DetailPageFrame kind="music" onReturn={() => returnFromDetail(route)}><MusicDetailPage path={decodeRoutePath(route.slice("/music/".length))} stats={stats.music || {}} onView={onView} onStatsTargets={onRequestStats} /></DetailPageFrame>;
   if (route === "/") return <HomePage stats={stats.post || {}} onStatsTargets={onRequestStats} />;
   if (route === "/posts") return <PrimaryRoute path={route}><PostsPage query={routeQuery} stats={stats.post || {}} onStatsTargets={onRequestStats} /></PrimaryRoute>;
