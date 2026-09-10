@@ -1,3 +1,4 @@
+import { siteConfig } from "../siteConfig.js";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { api } from "./api.js";
 
@@ -5,12 +6,13 @@ const CommunityContext = createContext(null);
 
 export function CommunityProvider({ children }) {
   const [viewer, setViewer] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(siteConfig.showCommunity);
   const [accountOpen, setAccountOpen] = useState(false);
   const [authMode, setAuthMode] = useState("login");
   const [accountNotice, setAccountNotice] = useState("");
 
   const refresh = useCallback(async () => {
+    if (!siteConfig.showCommunity) return;
     try {
       const result = await api("/auth/session");
       setViewer(result.user);
@@ -23,6 +25,7 @@ export function CommunityProvider({ children }) {
   }, []);
 
   useEffect(() => {
+    if (!siteConfig.showCommunity) return undefined;
     refresh();
     const timer = window.setInterval(refresh, 90000);
     const onVisible = () => { if (!document.hidden) refresh(); };
@@ -32,6 +35,7 @@ export function CommunityProvider({ children }) {
   }, [refresh]);
 
   const openAccount = useCallback((mode = "login") => {
+    if (!siteConfig.showCommunity) return;
     setAuthMode(mode);
     setAccountOpen(true);
   }, []);

@@ -121,7 +121,7 @@ export function HomePage({ stats, onStatsTargets }) {
       <span className="home-refresh-feature-meta">
         <span><TextAa size={14} />{getPostWordCount(post)} 字</span>
         <span><Eye size={14} />{stats[post.slug]?.views || 0}</span>
-        <span><ChatCircleDots size={14} />{stats[post.slug]?.comments || 0}</span>
+        {siteConfig.showCommunity && <span><ChatCircleDots size={14} />{stats[post.slug]?.comments || 0}</span>}
         <b>阅读全文</b>
       </span>
     </span>

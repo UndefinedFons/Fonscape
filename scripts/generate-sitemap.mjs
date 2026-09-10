@@ -74,7 +74,7 @@ function sitemapDate(value) {
 /**
  * @param {Record<string, Array<Record<string, any>>>} collections
  * @param {string} siteUrl
- * @param {{ showPoems?: boolean, showMusic?: boolean }} [config]
+ * @param {{ showPoems?: boolean, showMusic?: boolean, showCommunity?: boolean }} [config]
  * @returns {string}
  */
 export function buildSitemap(collections, siteUrl, config = {}) {
@@ -94,7 +94,7 @@ export function buildSitemap(collections, siteUrl, config = {}) {
 
   add(routeHref("/"), latest(posts));
   add(routeHref("/posts"), latest(posts));
-  add(routeHref("/friends"), "");
+  if (config.showCommunity !== false) add(routeHref("/friends"), "");
   add(routeHref("/about"), "");
   if (config.showPoems === true) add(routeHref("/poems"), latest(poems));
   if (config.showMusic === true) add(routeHref("/music"), latest(music));

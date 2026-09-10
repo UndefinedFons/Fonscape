@@ -40,6 +40,7 @@ export const siteConfig = /** @type {Readonly<import("./types.js").SiteConfig>} 
   postCategories: normalizePostCategories(configuredSiteInput.postCategories),
   showPoems: configuredSiteInput.showPoems === true,
   showMusic: configuredSiteInput.showMusic === true,
+  showCommunity: configuredSiteInput.showCommunity !== false,
   footer: {
     ...configuredSiteInput.footer,
     themeName: "Fonscape",

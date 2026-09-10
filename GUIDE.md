@@ -20,6 +20,7 @@
 | `pages.*Description` | 文章、小诗、音乐、友链页面简介 |
 | `showPoems` | 是否在主导航、首页显示小诗板块，默认 `false` |
 | `showMusic` | 是否在主导航、首页显示音乐板块，默认 `false` |
+| `showCommunity` | 是否显示账户、评论与友链板块，默认 `true` |
 | `footer.owner` | 页脚版权所有者名称 |
 
 `footer.themeName` 与 `footer.themeRepository` 用于显示 Fonscape 主题署名，应保留默认主题名称与仓库链接。页脚年份和站点运行时间会根据当前站点数据库中的建立时间自动生成。
@@ -50,6 +51,18 @@ showMusic: false,
 ```
 
 各板块开关彼此独立，可按需自由组合；`true` 表示显示，`false` 表示隐藏。
+
+### 账户、评论与友链显示开关
+
+在 `fonscape.config.js` 的根级 `siteConfig` 对象中配置：
+
+```js
+showCommunity: true,
+```
+
+默认开启；设为 `false` 后，账户入口、账户弹窗、评论区、评论数和整个友链板块一起隐藏，账户会话轮询与友链预加载同时停止。友链地址不再进入站点地图；直接访问 `/friends` 或管理员初始化地址会返回首页。浏览量仍显示。
+
+修改配置后重新构建部署。显示开关不删除账户、评论或友链数据，也不关闭后端 API。
 
 ### 个人渠道
 
