@@ -4,8 +4,10 @@ import { fileURLToPath } from "node:url";
 import { JSDOM } from "jsdom";
 import { act, createElement } from "react";
 import { createServer } from "vite";
+import { siteConfig } from "../src/siteConfig.js";
 
 const sourceRoot = new URL("../", import.meta.url);
+const communityTest = siteConfig.showCommunity ? test : test.skip;
 
 let viteServer;
 let createRoot;
@@ -196,7 +198,7 @@ async function setInputValue(input, value) {
   });
 }
 
-test("the admin setup route renders its frame without the public shell", async () => {
+communityTest("the admin setup route renders its frame without the public shell", async () => {
   const { document } = installDom();
   installFetch();
   await mountApp();
@@ -217,7 +219,7 @@ test("the admin setup route renders its frame without the public shell", async (
   assert.equal(token.hasAttribute("hidden"), false);
 });
 
-test("the password control toggles visibility while retaining the entered value", async () => {
+communityTest("the password control toggles visibility while retaining the entered value", async () => {
   const { document } = installDom();
   installFetch();
   await mountApp();
@@ -241,7 +243,7 @@ test("the password control toggles visibility while retaining the entered value"
   assert.equal(visibilityButton.getAttribute("aria-pressed"), "false");
 });
 
-test("an asynchronous setup status failure is shown in the form", async () => {
+communityTest("an asynchronous setup status failure is shown in the form", async () => {
   const { document } = installDom();
   installFetch({ setup: { status: 503, payload: { error: "初始化服务暂时不可用" } } });
   await mountApp();
@@ -254,7 +256,7 @@ test("an asynchronous setup status failure is shown in the form", async () => {
   assert.ok(document.querySelector("#admin-setup-token"));
 });
 
-test("an already initialized site redirects away from setup", async () => {
+communityTest("an already initialized site redirects away from setup", async () => {
   const { document, replaceCalls } = installDom();
   installFetch({ setup: { initialized: true } });
   await mountApp();
