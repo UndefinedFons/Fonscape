@@ -1,7 +1,9 @@
 import { defineConfig, devices } from "@playwright/test";
+import siteConfig from "./fonscape.config.js";
 
 export default defineConfig({
   testDir: "./e2e",
+  testIgnore: siteConfig.showCommunity === false ? ["**/comment-reliability.spec.mjs"] : [],
   fullyParallel: false,
   workers: 1,
   retries: process.env.CI ? 1 : 0,
