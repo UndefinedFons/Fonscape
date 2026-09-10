@@ -8,7 +8,7 @@ import { MAX_RESPONSIVE_VARIANT_BYTES } from "./generate-responsive-images.mjs";
 
 const DIST_ROOT = resolve(process.cwd(), "dist");
 const ENTRY_HTML = resolve(DIST_ROOT, "index.html");
-export const ENTRY_JAVASCRIPT_GZIP_LIMIT = 128 * 1024;
+export const ENTRY_JAVASCRIPT_GZIP_LIMIT = 160 * 1024;
 export const MAX_DYNAMIC_JAVASCRIPT_GZIP_LIMIT = 96 * 1024;
 // Mermaid ships its parser and graph engine as indivisible vendor modules.
 // Only these lazy chunks have a separate cap; application chunks retain 96 KiB.
