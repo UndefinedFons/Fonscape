@@ -8,7 +8,7 @@ const siteConfig = {
   postCategories: ["随笔", "评谈", "记录", "笔记", "指南"],
   showPoems: false,
   showMusic: false,
-  showCommunity: true,
+  showCommunity: false,
   home: {
     eyebrow: "PERSONAL BLOG",
     title: "我的博客",
