@@ -49,7 +49,6 @@
       "GUIDE.md",
       "LICENSE",
       "README.md",
-      "TESTING.md",
       "playwright.config.mjs",
       "api/**",
       "functions/**",
