@@ -1,8 +1,14 @@
+/** @typedef {{ src: string }} ArticleAudioTrack */
+
+/** @type {HTMLAudioElement | null} */
 let primedAudio = null;
 let primedAudioSrc = "";
+/** @type {HTMLAudioElement | null} */
 let playingAudio = null;
+/** @type {Set<HTMLAudioElement>} */
 const audioPool = new Set();
 
+/** @param {ArticleAudioTrack} track */
 function createAudio(track) {
   const audio = new Audio(track.src);
   audio.preload = "auto";
@@ -13,11 +19,13 @@ function createAudio(track) {
   return audio;
 }
 
+/** @param {ArticleAudioTrack} track */
 function acquireAudio(track) {
   if (primedAudio && primedAudioSrc === track.src) return primedAudio;
   return createAudio(track);
 }
 
+/** @param {HTMLAudioElement} audio */
 function activateAudio(audio) {
   audioPool.forEach((item) => {
     if (item !== audio && !item.paused) item.pause();
@@ -25,6 +33,7 @@ function activateAudio(audio) {
   playingAudio = audio;
 }
 
+/** @param {HTMLAudioElement} audio */
 function releaseAudio(audio) {
   audio.pause();
   audio.currentTime = 0;
@@ -36,6 +45,7 @@ function releaseAudio(audio) {
   }
 }
 
+/** @param {HTMLAudioElement} audio */
 function deactivateAudio(audio) {
   if (playingAudio === audio) playingAudio = null;
 }
@@ -51,6 +61,7 @@ export function stopArticleAudio() {
   playingAudio = null;
 }
 
+/** @param {ArticleAudioTrack} track */
 export function primeArticleAudio(track) {
   if (!track || typeof Audio === "undefined") return;
   stopArticleAudio();

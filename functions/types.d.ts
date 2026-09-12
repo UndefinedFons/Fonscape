@@ -136,3 +136,72 @@ export interface RateLimitFailure {
   resetAt?: number;
   retryAfterSeconds?: number;
 }
+
+export interface PublicUser {
+  id: string;
+  username: string;
+  nickname: string;
+  role: UserRole;
+  status: UserStatus;
+  unreadReplies: number;
+  unreadAdminComments: number;
+  avatarUrl: string | null;
+  avatarUpdatedAt: number | null;
+  createdAt: number;
+}
+
+export interface PublicCommentAuthor {
+  id: string;
+  nickname: string | null;
+  role: UserRole | null;
+  avatarUrl: string | null;
+  avatarUpdatedAt: number | null;
+}
+
+export interface PublicReplyUser {
+  id: string;
+  nickname: string;
+  avatarUrl: string | null;
+  avatarUpdatedAt: number | null;
+}
+
+export interface PublicComment {
+  id: string;
+  parentId: string | null;
+  replyTo: string | null;
+  replyToUser: PublicReplyUser | null;
+  body: string;
+  status: string;
+  createdAt: number;
+  updatedAt: number | null;
+  editedAt: number | null;
+  canDelete: boolean;
+  author: PublicCommentAuthor;
+}
+
+export interface SessionResponse {
+  user: PublicUser | null;
+  accountNotice?: string;
+}
+
+export interface CommentListResponse {
+  comments: PublicComment[];
+  total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+}
+
+export interface CreateCommentResponse {
+  comment: PublicComment;
+  replayed?: boolean;
+}
+
+export interface DeleteCommentResponse {
+  ok: true;
+}
+
+export interface ApiErrorPayload {
+  error: string;
+  code: string;
+}

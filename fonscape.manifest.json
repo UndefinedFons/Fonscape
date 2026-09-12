@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "version": "1.17.0",
+  "version": "1.17.1",
   "ownership": {
     "user": [
       ".env",
@@ -49,6 +49,7 @@
       "GUIDE.md",
       "LICENSE",
       "README.md",
+      "TESTING.md",
       "playwright.config.mjs",
       "api/**",
       "functions/**",

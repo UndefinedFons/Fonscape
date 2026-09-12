@@ -1,6 +1,11 @@
 import { contentRoute, routeHref } from "../routes.js";
 
 export class ApiClientError extends Error {
+  /**
+   * @param {string} message
+   * @param {number} status
+   * @param {string} code
+   */
   constructor(message, status, code) {
     super(message);
     this.status = status;
@@ -8,19 +13,37 @@ export class ApiClientError extends Error {
   }
 }
 
+/**
+ * @typedef {Omit<RequestInit, "body" | "headers"> & {
+ *   body?: BodyInit | Record<string, unknown> | null,
+ *   headers?: HeadersInit,
+ * }} ApiRequestOptions
+ */
+
+/**
+ * @template T
+ * @param {string} path
+ * @param {ApiRequestOptions} [options]
+ * @returns {Promise<T>}
+ */
 export async function api(path, options = {}) {
   const headers = new Headers(options.headers || {});
   if (options.body && typeof options.body !== "string" && !(options.body instanceof Blob) && !(options.body instanceof ArrayBuffer)) {
     headers.set("Content-Type", "application/json");
     options = { ...options, body: JSON.stringify(options.body) };
   }
-  const response = await fetch(`/api${path}`, { ...options, headers, credentials: "same-origin" });
+  const response = await fetch(`/api${path}`, /** @type {RequestInit} */ ({ ...options, headers, credentials: "same-origin" }));
   const type = response.headers.get("Content-Type") || "";
   const payload = type.includes("application/json") ? await response.json() : null;
   if (!response.ok) throw new ApiClientError(payload?.error || "请求失败，请稍后再试。", response.status, payload?.code || "request_error");
-  return payload;
+  return /** @type {T} */ (payload);
 }
 
+/**
+ * @param {HTMLCanvasElement} canvas
+ * @param {number} quality
+ * @returns {Promise<Blob | null>}
+ */
 function canvasBlob(canvas, quality) {
   return new Promise((resolve) => canvas.toBlob(resolve, "image/webp", quality));
 }
@@ -32,6 +55,7 @@ const AVATAR_INPUT_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 const AVATAR_OUTPUT_SIZES = [AVATAR_OUTPUT_SIZE, 448, 384, 320];
 const AVATAR_QUALITY_STEPS = [.92, .86, .8, .74, .68, .62, .56, .5];
 
+/** @param {Uint8Array} bytes @returns {string} */
 function detectedImageType(bytes) {
   if (bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) return "image/jpeg";
   if (bytes.length >= 8 && [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a].every((value, index) => bytes[index] === value)) return "image/png";
@@ -41,6 +65,7 @@ function detectedImageType(bytes) {
   return "";
 }
 
+/** @param {Blob} file @returns {Promise<string>} */
 export async function validateAvatarFile(file) {
   if (!(file instanceof Blob)) throw new ApiClientError("请选择图片文件。", 400, "invalid_avatar");
   if (!file.size || file.size > AVATAR_INPUT_MAX_BYTES) {
@@ -54,6 +79,20 @@ export async function validateAvatarFile(file) {
   return actualType;
 }
 
+/**
+ * @typedef {object} AvatarCrop
+ * @property {number} [rotation]
+ * @property {number} [stageAspect]
+ * @property {number} [cropX]
+ * @property {number} [cropY]
+ * @property {number} [cropSize]
+ */
+
+/**
+ * @param {Blob} file
+ * @param {AvatarCrop} [crop]
+ * @returns {Promise<Blob>}
+ */
 export async function compressAvatar(file, crop = {}) {
   await validateAvatarFile(file);
   const bitmap = await createImageBitmap(file);
@@ -111,12 +150,18 @@ export async function compressAvatar(file, crop = {}) {
   }
 }
 
+/**
+ * @param {string} type
+ * @param {string} slug
+ * @returns {string}
+ */
 export function contentHref(type, slug) {
   if (type === "post" && slug === "site-friends") return routeHref("/friends");
   if (type === "post" && slug === "site-about") return routeHref("/about");
   return routeHref(contentRoute(type, { key: slug, slug }));
 }
 
+/** @param {string | number | Date} value @returns {string} */
 export function formatCommunityTime(value) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "";

@@ -3,10 +3,27 @@ import { api } from "./api.js";
 import { useCommunity } from "./CommunityProvider.jsx";
 import { consumeCommentTarget, groupCommentThreads, readCommentTarget } from "./commentUtils.js";
 
+/**
+ * @typedef {object} CommentSectionState
+ * @property {boolean} loading
+ * @property {boolean} loadingPage
+ * @property {boolean} refreshing
+ * @property {string} error
+ * @property {number | boolean} retryPage
+ * @property {import("../types.js").PublicComment[]} comments
+ * @property {number} total
+ * @property {number} page
+ * @property {number} totalPages
+ */
+
+/** @returns {CommentSectionState} */
 function initialCommentState() {
   return { loading: true, loadingPage: false, refreshing: false, error: "", retryPage: false, comments: [], total: 0, page: 1, totalPages: 1 };
 }
 
+/**
+ * @param {{ targetType: string, slug: string }} options
+ */
 export function useCommentsSection({ targetType, slug }) {
   const { viewer } = useCommunity();
   const viewerId = viewer?.id || "";
@@ -20,8 +37,8 @@ export function useCommentsSection({ targetType, slug }) {
   const [locationTarget, setLocationTarget] = useState(locationTargetRef.current);
   const [locatedCommentId, setLocatedCommentId] = useState("");
   const [replyState, setReplyState] = useState({ activeId: "", closingId: "", switching: false });
-  const pageTopRef = useRef(null);
-  const pageSwitchRef = useRef(null);
+  const pageTopRef = useRef(/** @type {HTMLDivElement | null} */ (null));
+  const pageSwitchRef = useRef(/** @type {symbol | null} */ (null));
   const pageRef = useRef(state.page);
   const totalPagesRef = useRef(state.totalPages);
   const loadingPageRef = useRef(state.loadingPage);
@@ -49,7 +66,7 @@ export function useCommentsSection({ targetType, slug }) {
     setReplyState({ activeId: "", closingId: "", switching: false });
   }, [targetType, slug]);
 
-  const openReply = useCallback((commentId) => {
+  const openReply = useCallback((/** @type {string} */ commentId) => {
     setReplyState((current) => {
       if (!current.activeId) return { activeId: commentId, closingId: "", switching: false };
       if (current.activeId === commentId) return current;
@@ -57,13 +74,13 @@ export function useCommentsSection({ targetType, slug }) {
     });
   }, []);
 
-  const closeReply = useCallback((commentId) => {
+  const closeReply = useCallback((/** @type {string} */ commentId) => {
     setReplyState((current) => current.activeId === commentId && !current.closingId
       ? { activeId: commentId, closingId: commentId, switching: false }
       : current);
   }, []);
 
-  const finishReplyClose = useCallback((commentId) => {
+  const finishReplyClose = useCallback((/** @type {string} */ commentId) => {
     setReplyState((current) => {
       if (current.closingId !== commentId) return current;
       return current.switching
@@ -77,7 +94,7 @@ export function useCommentsSection({ targetType, slug }) {
    * mounted until its replacement is ready, while an initial request may
    * clear the list to show its skeleton.
    */
-  const loadPage = useCallback(async (requestedPage = 1, includeLocation = true, options = {}) => {
+  const loadPage = useCallback(async (requestedPage = 1, includeLocation = true, options = /** @type {{ clear?: boolean, background?: boolean }} */ ({})) => {
     const { clear = false, background = false } = options;
     const requestId = ++requestIdRef.current;
     const requestTargetKey = `${targetType}:${slug}:${viewerId}`;
@@ -85,6 +102,7 @@ export function useCommentsSection({ targetType, slug }) {
       && requestId === requestIdRef.current
       && targetKeyRef.current === requestTargetKey;
     setState((current) => {
+      /** @type {import("../types.js").PublicComment[]} */
       const comments = clear ? [] : current.comments;
       return {
         ...current,
@@ -98,7 +116,7 @@ export function useCommentsSection({ targetType, slug }) {
     try {
       const query = new URLSearchParams({ type: targetType, slug, page: String(requestedPage) });
       if (includeLocation && locationTargetRef.current) query.set("comment", locationTargetRef.current);
-      const result = await api(`/comments?${query}`);
+      const result = /** @type {import("../types.d.ts").CommentListResponse} */ (await api(`/comments?${query}`));
       if (!isCurrentRequest()) return false;
       setState({
         loading: false,
@@ -112,7 +130,7 @@ export function useCommentsSection({ targetType, slug }) {
         totalPages: Math.max(1, Number(result?.totalPages || 1)),
       });
       return true;
-    } catch (error) {
+    } catch (/** @type {any} */ error) {
       if (!isCurrentRequest()) return false;
       setState((current) => ({
         ...current,
@@ -126,13 +144,13 @@ export function useCommentsSection({ targetType, slug }) {
     }
   }, [slug, targetType, viewerId]);
 
-  const changePage = useCallback(async (nextPage) => {
+  const changePage = useCallback(async (/** @type {number} */ nextPage) => {
     const pageTargetKey = `${targetType}:${slug}:${viewerId}`;
     if (!mountedRef.current || targetKeyRef.current !== pageTargetKey) return;
     if (pageSwitchRef.current || loadingPageRef.current || nextPage === pageRef.current) return;
     const page = Math.max(1, Math.min(totalPagesRef.current, nextPage));
     if (page === pageRef.current) return;
-    const switchToken = Symbol("comment-page-switch");
+    const switchToken = /** @type {symbol} */ (Symbol("comment-page-switch"));
     pageSwitchRef.current = switchToken;
     locationTargetRef.current = "";
     setLocationTarget("");
@@ -148,7 +166,7 @@ export function useCommentsSection({ targetType, slug }) {
     }
   }, [loadPage, slug, targetType, viewerId]);
 
-  const refreshComments = useCallback((createdComment) => {
+  const refreshComments = useCallback((/** @type {import("../types.js").PublicComment | undefined} */ createdComment) => {
     const refreshTargetKey = `${targetType}:${slug}:${viewerId}`;
     if (!mountedRef.current || targetKeyRef.current !== refreshTargetKey || pageSwitchRef.current) return;
     const createdId = typeof createdComment?.id === "string" ? createdComment.id.trim() : "";
@@ -174,11 +192,11 @@ export function useCommentsSection({ targetType, slug }) {
   }, [loadPage]);
 
   useEffect(() => {
-    const requestLocation = (event) => {
-      if (event.detail?.expandOnly) return;
+    const requestLocation = (/** @type {Event} */ event) => {
+      if (/** @type {CustomEvent<{ expandOnly?: boolean }>} */ (event).detail?.expandOnly) return;
       const locationTargetKey = `${targetType}:${slug}:${viewerId}`;
       if (!mountedRef.current || targetKeyRef.current !== locationTargetKey) return;
-      const id = event.detail?.id || "";
+      const id = /** @type {CustomEvent<{ id?: string }>} */ (event).detail?.id || "";
       if (!id) return;
       locationTargetRef.current = id;
       setLocationTarget(id);
@@ -202,10 +220,10 @@ export function useCommentsSection({ targetType, slug }) {
     let scrollFrame = 0;
     let missingFrames = 0;
     let stableLayoutFrames = 0;
-    let lastAbsoluteTop = null;
-    let lastDocumentHeight = null;
-    let lastScrolledAbsoluteTop = null;
-    let lastScrolledDocumentHeight = null;
+    let lastAbsoluteTop = /** @type {number | null} */ (null);
+    let lastDocumentHeight = /** @type {number | null} */ (null);
+    let lastScrolledAbsoluteTop = /** @type {number | null} */ (null);
+    let lastScrolledDocumentHeight = /** @type {number | null} */ (null);
     let lastScrollStartedAt = 0;
     let hasScrolled = false;
     let hasHighlighted = false;
@@ -217,7 +235,7 @@ export function useCommentsSection({ targetType, slug }) {
       expansionRequestRef.current = "";
       setLocationTarget("");
     };
-    const locate = (timestamp) => {
+    const locate = (/** @type {number} */ timestamp) => {
       if (cancelled) return;
       const target = document.getElementById(`comment-${locationTarget}`);
       const collapsedReplies = target?.closest(".comment-replies-extra:not(.is-open)");
@@ -241,16 +259,20 @@ export function useCommentsSection({ targetType, slug }) {
       const documentHeight = document.documentElement.scrollHeight;
       const layoutStable = !collapsedReplies
         && lastAbsoluteTop !== null
+        && lastDocumentHeight !== null
         && Math.abs(absoluteTop - lastAbsoluteTop) < 1
         && Math.abs(documentHeight - lastDocumentHeight) < 1;
       stableLayoutFrames = layoutStable ? stableLayoutFrames + 1 : 0;
       lastAbsoluteTop = absoluteTop;
       lastDocumentHeight = documentHeight;
 
-      const layoutMovedSinceScroll = hasScrolled && (
-        Math.abs(absoluteTop - lastScrolledAbsoluteTop) >= 1
-        || Math.abs(documentHeight - lastScrolledDocumentHeight) >= 1
-      );
+      const layoutMovedSinceScroll = hasScrolled
+        && lastScrolledAbsoluteTop !== null
+        && lastScrolledDocumentHeight !== null
+        && (
+          Math.abs(absoluteTop - lastScrolledAbsoluteTop) >= 1
+          || Math.abs(documentHeight - lastScrolledDocumentHeight) >= 1
+        );
       if (stableLayoutFrames >= 5 && (!hasScrolled || layoutMovedSinceScroll)) {
         target.focus({ preventScroll: true });
         const headerBottom = document.querySelector(".site-header")?.getBoundingClientRect().bottom || 0;
@@ -306,7 +328,7 @@ export function useCommentsSection({ targetType, slug }) {
     friendApplicationEnabled: targetType === "post" && slug === "site-friends",
   }), [closeReply, finishReplyClose, openReply, replyState, slug, targetType]);
   const retry = useCallback(() => {
-    const requestedPage = Number.isFinite(state.retryPage) ? state.retryPage : state.page;
+    const requestedPage = typeof state.retryPage === "number" && Number.isFinite(state.retryPage) ? state.retryPage : state.page;
     void loadPage(requestedPage, Boolean(locationTargetRef.current), { background: state.comments.length > 0 });
   }, [loadPage, state.comments.length, state.page, state.retryPage]);
 

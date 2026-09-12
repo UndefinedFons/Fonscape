@@ -410,7 +410,7 @@ pnpm deploy
 
 ### Vercel + Turso
 
-点击 README 中的 **Deploy with Vercel**。部署流程会添加 Turso Cloud 的数据库集成并自动注入数据库连接；在部署表单中填写 `ADMIN_BOOTSTRAP_TOKEN` 即可。Vercel 使用 `pnpm build:vercel` 在构建前应用数据库迁移，并通过 Git 集成部署后续提交。
+点击 README 中的 **Deploy with Vercel**。部署流程会添加 Turso Cloud 的数据库集成并自动注入数据库连接；在部署表单中填写 `ADMIN_BOOTSTRAP_TOKEN` 即可。Vercel 使用 `pnpm build:vercel` 在构建完成后应用数据库迁移，并通过 Git 集成部署后续提交。
 
 Production 与 Preview 应使用不同数据库，真实密钥只保存在平台的服务器端环境变量中。
 

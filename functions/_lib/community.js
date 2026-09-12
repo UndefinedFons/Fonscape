@@ -304,7 +304,7 @@ function effectiveRole(user) {
   return user.role;
 }
 
-/** @param {UserRow} user */
+/** @param {UserRow} user @returns {import("../types").PublicUser} */
 export function publicUser(user) {
   const role = effectiveRole(user);
   const avatarUpdatedAt = user.avatar_user_id === user.id && user.avatar_updated_at ? Number(user.avatar_updated_at) : null;
@@ -359,6 +359,7 @@ export async function requireAdmin(context) {
  * @param {DatabaseRow} row
  * @param {string | null} [viewerId]
  * @param {"member" | "admin" | null} [viewerRole]
+ * @returns {import("../types").PublicComment}
  */
 export function commentRow(row, viewerId = null, viewerRole = null) {
   const authorAvatarUpdatedAt = row.avatar_user_id === row.user_id && row.avatar_updated_at ? Number(row.avatar_updated_at) : null;
@@ -366,25 +367,25 @@ export function commentRow(row, viewerId = null, viewerRole = null) {
     ? Number(row.reply_to_avatar_updated_at)
     : null;
   return {
-    id: row.id,
-    parentId: row.parent_id,
-    replyTo: row.reply_to_nickname || null,
+    id: String(row.id),
+    parentId: row.parent_id == null ? null : String(row.parent_id),
+    replyTo: row.reply_to_nickname == null ? null : String(row.reply_to_nickname),
     replyToUser: row.reply_to_user_id ? {
-      id: row.reply_to_user_id,
-      nickname: row.reply_to_nickname || "该用户",
+      id: String(row.reply_to_user_id),
+      nickname: String(row.reply_to_nickname || "该用户"),
       avatarUrl: replyAvatarUpdatedAt ? `/api/avatar/${row.reply_to_user_id}?v=${replyAvatarUpdatedAt}` : null,
       avatarUpdatedAt: replyAvatarUpdatedAt,
     } : null,
-    body: row.body,
-    status: row.status,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
-    editedAt: row.edited_at,
+    body: String(row.body),
+    status: String(row.status),
+    createdAt: Number(row.created_at),
+    updatedAt: row.updated_at == null ? null : Number(row.updated_at),
+    editedAt: row.edited_at == null ? null : Number(row.edited_at),
     canDelete: Boolean(viewerId) && (viewerId === row.user_id || viewerRole === "admin"),
     author: {
-      id: row.user_id,
-      nickname: row.nickname,
-      role: row.user_role,
+      id: String(row.user_id),
+      nickname: row.nickname === undefined ? null : String(row.nickname),
+      role: row.user_role === undefined ? null : /** @type {import("../types").UserRole | null} */ (row.user_role),
       avatarUrl: authorAvatarUpdatedAt ? `/api/avatar/${row.user_id}?v=${authorAvatarUpdatedAt}` : null,
       avatarUpdatedAt: authorAvatarUpdatedAt,
     },

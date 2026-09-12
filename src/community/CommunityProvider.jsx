@@ -2,11 +2,32 @@ import { siteConfig } from "../siteConfig.js";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { api } from "./api.js";
 
-const CommunityContext = createContext(null);
+/**
+ * @typedef {object} CommunityContextValue
+ * @property {import("../types.js").PublicUser | null} viewer
+ * @property {boolean} loading
+ * @property {boolean} accountOpen
+ * @property {string} authMode
+ * @property {string} accountNotice
+ * @property {() => void} dismissAccountNotice
+ * @property {(mode?: string) => void} openAccount
+ * @property {() => void} closeAccount
+ * @property {(mode: string) => void} setAuthMode
+ * @property {(credentials: Record<string, unknown>) => Promise<import("../types.js").PublicUser | null>} login
+ * @property {(details: Record<string, unknown>) => Promise<import("../types.js").PublicUser | null>} register
+ * @property {() => Promise<void>} logout
+ * @property {(user: import("../types.js").PublicUser | null) => void} updateViewer
+ * @property {(commentId: string) => Promise<void>} markReplyRead
+ * @property {(commentId: string) => Promise<void>} markAdminCommentRead
+ * @property {() => Promise<void>} refresh
+ */
 
+const CommunityContext = createContext(/** @type {CommunityContextValue | null} */ (null));
+
+/** @param {{ children?: import("react").ReactNode }} props */
 export function CommunityProvider({ children }) {
-  const [viewer, setViewer] = useState(null);
-  const [loading, setLoading] = useState(siteConfig.showCommunity);
+  const [viewer, setViewer] = useState(/** @type {import("../types.js").PublicUser | null} */ (null));
+  const [loading, setLoading] = useState(/** @type {boolean} */ (siteConfig.showCommunity));
   const [accountOpen, setAccountOpen] = useState(false);
   const [authMode, setAuthMode] = useState("login");
   const [accountNotice, setAccountNotice] = useState("");
@@ -14,7 +35,7 @@ export function CommunityProvider({ children }) {
   const refresh = useCallback(async () => {
     if (!siteConfig.showCommunity) return;
     try {
-      const result = await api("/auth/session");
+      const result = /** @type {import("../types.d.ts").SessionResponse} */ (await api("/auth/session"));
       setViewer(result.user);
       if (result.accountNotice) setAccountNotice(result.accountNotice);
     } catch {
@@ -39,16 +60,16 @@ export function CommunityProvider({ children }) {
     setAuthMode(mode);
     setAccountOpen(true);
   }, []);
-  const markReplyRead = useCallback(async (commentId) => {
+  const markReplyRead = useCallback(async (/** @type {string} */ commentId) => {
     await api(`/me/notifications/${encodeURIComponent(commentId)}`, { method: "PATCH" });
     setViewer((current) => current?.unreadReplies ? { ...current, unreadReplies: Math.max(0, Number(current.unreadReplies) - 1) } : current);
   }, []);
-  const markAdminCommentRead = useCallback(async (commentId) => {
+  const markAdminCommentRead = useCallback(async (/** @type {string} */ commentId) => {
     await api(`/me/admin-comments/${encodeURIComponent(commentId)}`, { method: "PATCH" });
     setViewer((current) => current?.unreadAdminComments ? { ...current, unreadAdminComments: Math.max(0, Number(current.unreadAdminComments) - 1) } : current);
   }, []);
 
-  const value = useMemo(() => ({
+  const value = useMemo(/** @returns {CommunityContextValue} */ () => ({
     viewer,
     loading,
     accountOpen,
@@ -58,13 +79,17 @@ export function CommunityProvider({ children }) {
     openAccount,
     closeAccount: () => setAccountOpen(false),
     setAuthMode,
-    login: async (credentials) => {
-      const result = await api("/auth/login", { method: "POST", body: credentials });
+    login: async (/** @type {Record<string, unknown>} */ credentials) => {
+      const result = /** @type {import("../types.d.ts").SessionResponse} */ (
+        await api("/auth/login", { method: "POST", body: credentials })
+      );
       setViewer(result.user);
       return result.user;
     },
-    register: async (details) => {
-      const result = await api("/auth/register", { method: "POST", body: details });
+    register: async (/** @type {Record<string, unknown>} */ details) => {
+      const result = /** @type {import("../types.d.ts").SessionResponse} */ (
+        await api("/auth/register", { method: "POST", body: details })
+      );
       setViewer(result.user);
       return result.user;
     },
@@ -81,6 +106,7 @@ export function CommunityProvider({ children }) {
   return <CommunityContext.Provider value={value}>{children}</CommunityContext.Provider>;
 }
 
+/** @returns {CommunityContextValue} */
 export function useCommunity() {
   const value = useContext(CommunityContext);
   if (!value) throw new Error("useCommunity must be used inside CommunityProvider");

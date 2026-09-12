@@ -1,5 +1,12 @@
 import { useState } from "react";
 
+/**
+ * @param {{
+ *   user?: { nickname?: string | null, avatarUrl?: string | null } | null,
+ *   size?: string,
+ *   className?: string,
+ * }} props
+ */
 export function Avatar({ user, size = "medium", className = "" }) {
   const label = user?.nickname || "访客";
   const source = user?.avatarUrl || "";
