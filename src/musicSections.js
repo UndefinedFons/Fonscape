@@ -8,6 +8,7 @@ export const musicSections = [
   { id: "albums", label: "专辑", icon: Disc },
 ];
 
+/** @param {string} section */
 export function getMusicSectionIcon(section) {
   return musicSections.find((item) => item.id === section)?.icon || Disc;
 }

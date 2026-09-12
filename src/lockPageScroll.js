@@ -1,4 +1,5 @@
 let lockCount = 0;
+/** @type {{ scrollY: number, htmlOverflow: string, bodyOverflow: string } | null} */
 let saved = null;
 
 export function lockPageScroll() {

@@ -4,6 +4,7 @@ const DETAIL_READING_TARGETS = [
   ["/music/", ".music-detail-page .article-detail"],
 ];
 
+/** @param {string} route */
 export function getDetailReadingTarget(route) {
   return DETAIL_READING_TARGETS.find(([prefix]) => route.startsWith(prefix))?.[1] || "";
 }

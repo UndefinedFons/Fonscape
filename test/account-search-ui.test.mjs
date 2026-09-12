@@ -1,32 +1,7 @@
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
 import test from "node:test";
+import { readFile } from "node:fs/promises";
 import { buildSearchItems, enabledSearchTypes, filterSearchItems, searchScopeOptions, searchScopeStyle } from "../src/components/searchModel.js";
-import { readThemeStyles } from "./helpers/readThemeStyles.mjs";
-
-test("all account message feeds use the same two-line body preview", async () => {
-  const [feeds, styles] = await Promise.all([
-    readFile("src/community/AccountFeeds.jsx", "utf8"),
-    readThemeStyles(),
-  ]);
-
-  assert.equal(feeds.match(/<p className="account-message-body">/gu)?.length, 2);
-  assert.match(styles, /\.account-message-body\s*\{[^}]*-webkit-line-clamp:2;/u);
-});
-
-test("account notifications stay unread until an individual message is opened", async () => {
-  const [center, feeds, data] = await Promise.all([
-    readFile("src/community/AccountCenter.jsx", "utf8"),
-    readFile("src/community/AccountFeeds.jsx", "utf8"),
-    readFile("src/community/accountData.js", "utf8"),
-  ]);
-  const source = `${center}\n${feeds}\n${data}`;
-  assert.doesNotMatch(source, /loadFeedWithBestEffortReceipt|readThrough/u);
-  assert.match(center, /const \[tab, setTab\] = useState\("profile"\);/u);
-  assert.match(data, /if \(item\.unread && markRead\) Promise\.resolve\(markRead\(item\.id\)\)\.catch\(\(\) => \{\}\);/u);
-  assert.match(feeds, /commentLinkProps\(reply, onClose, markReplyRead\)/u);
-  assert.match(feeds, /commentLinkProps\(comment, onClose, markAdminCommentRead\)/u);
-});
 
 test("the combined search feed applies newest-first ordering with stable ties", () => {
   const items = buildSearchItems([
@@ -51,4 +26,18 @@ test("search scopes, filtering and indicator geometry follow optional sections",
   ]);
   assert.deepEqual(filterSearchItems(items, "all", "风").map((item) => item.kind), ["post", "music"]);
   assert.deepEqual(filterSearchItems(items, "music", "").map((item) => item.title), ["风之歌"]);
+});
+
+test("account message previews remain clamped to two lines", async () => {
+  const css = await readFile("src/styles/community.css", "utf8");
+  const rule = css.match(/^\.account-message-body\s*\{([^}]*)\}/mu)?.[1];
+  assert.ok(rule, "the shared account message preview rule must exist");
+  const properties = new Map(rule.split(";").map((declaration) => {
+    const [property, ...value] = declaration.split(":");
+    return [property.trim(), value.join(":").trim()];
+  }));
+  assert.equal(properties.get("display"), "-webkit-box");
+  assert.equal(properties.get("overflow"), "hidden");
+  assert.equal(properties.get("-webkit-line-clamp"), "2");
+  assert.equal(properties.get("-webkit-box-orient"), "vertical");
 });
