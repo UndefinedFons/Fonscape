@@ -12,7 +12,7 @@ import {
   isSiteRouteEnabled,
   normalizeRouteLocation,
 } from "../src/sectionAvailability.js";
-import { legacyHashRoute } from "../src/routes.js";
+import { contentRoute, legacyHashRoute, parseMusicContentKey } from "../src/routes.js";
 import {
   consumeDetailSource,
   consumeKnownPopNavigation,
@@ -70,6 +70,17 @@ test("optional section availability drives every collection entry point", () => 
   assert.equal(normalizeRouteLocation("#/posts?tag=reading"), "/posts?tag=reading");
   assert.equal(legacyHashRoute("#/posts?tag=reading"), "/posts?tag=reading");
   assert.equal(legacyHashRoute("#comments"), null);
+});
+
+test("music content keys preserve nested slug path segments", () => {
+  assert.deepEqual(parseMusicContentKey("albums/indigo/night-fishing"), {
+    section: "albums",
+    slug: "indigo/night-fishing",
+  });
+  assert.equal(
+    contentRoute("music", { section: "albums", slug: "indigo/night-fishing" }),
+    "/music/albums/indigo/night-fishing",
+  );
 });
 
 test("detail fallbacks and titles are derived from the route kind", () => {

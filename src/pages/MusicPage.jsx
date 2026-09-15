@@ -7,7 +7,7 @@ import { loadMusicReview, siteConfig } from "../content/index.js";
 import { usePagination, useResponsivePageSize } from "../hooks.js";
 import { musicSections } from "../musicSections.js";
 import { parseRouteQuery, replaceRoute } from "../routeState.js";
-import { routeHref } from "../routes.js";
+import { parseMusicContentKey, routeHref } from "../routes.js";
 import { setDocumentTitle } from "../navigation.js";
 import { detailImageSizes } from "../responsiveImages.ts";
 import { useResponsiveImage } from "../useResponsiveImage.js";
@@ -42,7 +42,7 @@ export function MusicPage({ stats, onStatsTargets }) {
 }
 
 export function MusicDetailPage({ path, stats, onView, onStatsTargets }) {
-  const [section, slug] = path.split("/");
+  const { section, slug } = parseMusicContentKey(path);
   const review = section && slug ? use(loadMusicReview(section, slug)) : null;
   const sourceCardImage = useResponsiveImage(review?.image || "", "(max-width: 760px) 88px, 104px");
   const detailCoverImage = useResponsiveImage(review?.image || "", detailImageSizes);
