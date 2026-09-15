@@ -24,19 +24,17 @@
     "src/musicSections.js",
     "src/navigation.js",
     "src/pages/homeContent.js",
-    "src/pagination.js",
     "src/routeState.js",
     "src/routes.js",
     "src/richContent.js",
     "src/sectionAvailability.js",
-    "src/responsiveImages.ts",
     "src/siteConfig.js",
     "src/siteUrl.js",
     "src/siteUtils.js",
-    "src/types.d.ts",
     "src/community/CommunityProvider.jsx",
     "src/community/CommentComposer.jsx",
     "src/community/useCommentsSection.js",
-    "src/components/RoutePageFrame.tsx"
+    "src/**/*.ts",
+    "src/**/*.tsx"
   ]
 }

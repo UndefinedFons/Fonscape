@@ -3,7 +3,7 @@ import { BellRinging } from "@phosphor-icons/react/BellRinging";
 import { Avatar } from "./Avatar.jsx";
 import { useCommunity } from "./CommunityProvider.jsx";
 import { cachedMyComments, cachedMyReplies, cachedReceivedComments, commentLinkProps, contentMeta, loadMyComments, loadMyReplies, loadReceivedComments } from "./accountData.js";
-import { formatCommunityTime } from "./api.js";
+import { formatCommunityTime } from "./api.ts";
 import { useEffect, useState } from "react";
 
 export function MyMessages({ contentLookup, onClose }) {

@@ -6,7 +6,7 @@ import { Check } from "@phosphor-icons/react/Check";
 import { CopySimple } from "@phosphor-icons/react/CopySimple";
 import { Trash } from "@phosphor-icons/react/Trash";
 import { Avatar } from "./Avatar.jsx";
-import { api, formatCommunityTime } from "./api.js";
+import { api, formatCommunityTime } from "./api.ts";
 import { useCommunity } from "./CommunityProvider.jsx";
 import { friendEntryJson, parseFriendApplication } from "./friendApplication.js";
 import { StableCommentComposer } from "./CommentComposer.jsx";

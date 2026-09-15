@@ -6,7 +6,7 @@ import { lazy, use, useEffect, useMemo } from "react";
 import { ArticleMusicPlayer } from "../ArticleMusicPlayer.jsx";
 import { CommentsSection } from "../community/CommentsSection.jsx";
 import { PostMeta } from "../components/Cards.jsx";
-import { contentRoute, loadCollectionFacets, loadPost, siteConfig } from "../content/index.js";
+import { contentRoute, loadCollectionFacets, loadPost, siteConfig } from "../content/index.ts";
 import { detailImageSizes } from "../responsiveImages.ts";
 import { setDocumentTitle } from "../navigation.js";
 import { getPostOutline } from "../richContent.js";

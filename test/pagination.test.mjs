@@ -4,7 +4,7 @@ import { JSDOM } from "jsdom";
 import { act, createElement } from "react";
 import { createRoot } from "react-dom/client";
 import { createServer } from "vite";
-import { FULL_PAGINATION_THRESHOLD, getVisiblePaginationPages } from "../src/pagination.js";
+import { FULL_PAGINATION_THRESHOLD, getVisiblePaginationPages } from "../src/pagination.ts";
 
 test("pagination shows every page through the five-page threshold", () => {
   assert.equal(FULL_PAGINATION_THRESHOLD, 5);
@@ -17,7 +17,7 @@ test("pagination compacts page lists once they exceed five pages", () => {
   assert.deepEqual(getVisiblePaginationPages(9, 10), [1, 8, 9, 10]);
 });
 
-test("pagination scroll follows the reduced-motion preference", async () => {
+test("pagination restores filters without stale pages and respects reduced motion", async () => {
   const dom = new JSDOM('<div id="root"></div>', { url: "http://localhost/" });
   const originals = new Map();
   for (const [key, value] of Object.entries({
@@ -57,8 +57,10 @@ test("pagination scroll follows the reduced-motion preference", async () => {
   let root;
   try {
     const { usePagination } = await server.ssrLoadModule("/src/hooks.js");
-    function PaginationProbe() {
-      const pagination = usePagination([1, 2, 3], 1, "test", "pagination");
+    const renderedPages = [];
+    function PaginationProbe({ filter = "test", ready = true } = {}) {
+      const pagination = usePagination(ready ? [1, 2, 3] : [], 1, filter, "pagination", ready);
+      renderedPages.push([filter, pagination.page]);
       pagination.topRef.current = { scrollIntoView(options) { scrollIntoViewCalls.push(options); } };
       return createElement("button", { onClick: () => pagination.changePage(2) }, "下一页");
     }
@@ -67,6 +69,12 @@ test("pagination scroll follows the reduced-motion preference", async () => {
     const button = dom.window.document.querySelector("button");
     await act(async () => button.click());
     assert.deepEqual(scrollIntoViewCalls.at(-1), { behavior: "auto", block: "start" });
+    renderedPages.length = 0;
+    await act(async () => root.render(createElement(PaginationProbe, { filter: "other" })));
+    assert.ok(renderedPages.every(([, page]) => page === 1), "new filter never renders the old page");
+    await act(async () => root.render(createElement(PaginationProbe, { ready: false })));
+    await act(async () => root.render(createElement(PaginationProbe)));
+    assert.deepEqual(renderedPages.at(-1), ["test", 2], "loading the index preserves the remembered page");
   } finally {
     if (root) await act(async () => root.unmount());
     await server.close();

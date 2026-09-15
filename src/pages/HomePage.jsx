@@ -7,7 +7,7 @@ import { MusicNotes } from "@phosphor-icons/react/MusicNotes";
 import { TextAa } from "@phosphor-icons/react/TextAa";
 import { UserCircle } from "@phosphor-icons/react/UserCircle";
 import { useEffect, useState } from "react";
-import { authorProfile, contentRoute, homeContent, loadFeaturedChunk, siteConfig } from "../content/index.js";
+import { authorProfile, contentRoute, homeContent, loadFeaturedChunk, siteConfig } from "../content/index.ts";
 import { ArticleCover } from "../components/Cards.jsx";
 import { HeroShell } from "../components/PageHero.jsx";
 import { useHorizontalScroller } from "../hooks.js";

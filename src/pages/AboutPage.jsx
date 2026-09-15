@@ -4,7 +4,7 @@ import { GithubLogo } from "@phosphor-icons/react/GithubLogo";
 import { UserCircle } from "@phosphor-icons/react/UserCircle";
 import { XLogo } from "@phosphor-icons/react/XLogo";
 import { CommentsPanel } from "../community/CommentsPanel.jsx";
-import { authorProfile, siteConfig } from "../content/index.js";
+import { authorProfile, siteConfig } from "../content/index.ts";
 import { useResponsiveImage } from "../useResponsiveImage.js";
 
 function BilibiliLogo({ size = 24 }) {
