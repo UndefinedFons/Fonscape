@@ -1,6 +1,6 @@
 import { countWords, getArticleOutline, getFirstParagraph, getPoemLines } from "./markdown.js";
 
-const SLUG_PATTERN = /^[a-z0-9][a-z0-9_-]{0,119}$/u;
+const SLUG_PATTERN = /^[a-z0-9][a-z0-9/_-]{0,119}$/u;
 
 /**
  * @param {string} rawValue

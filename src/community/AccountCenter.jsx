@@ -4,7 +4,7 @@ import { Camera } from "@phosphor-icons/react/Camera";
 import { SignOut } from "@phosphor-icons/react/SignOut";
 import { UserCircle } from "@phosphor-icons/react/UserCircle";
 import { Avatar } from "./Avatar.jsx";
-import { AVATAR_MAX_BYTES, api, compressAvatar, validateAvatarFile } from "./api.ts";
+import { AVATAR_MAX_BYTES, api, compressAvatar, validateAvatarFile } from "./api.js";
 import { useCommunity } from "./CommunityProvider.jsx";
 import { loadMyComments, loadMyReplies, loadReceivedComments } from "./accountData.js";
 import { MyMessages, MyReplies, ReceivedComments } from "./AccountFeeds.jsx";

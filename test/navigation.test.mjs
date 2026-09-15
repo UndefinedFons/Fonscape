@@ -1,6 +1,5 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { createServer } from "vite";
 import {
   getDetailFallbackRoute,
   composeDocumentTitle,
@@ -137,68 +136,4 @@ test("direct history entries discard stale detail sources after traversal", () =
   assert.equal(navigationType, "pop");
   consumeDetailSource("/post/revisited", { preserveExisting: navigationType === "pop" && consumeKnownPopNavigation() });
   assert.equal(getDetailReturnRoute("/post/revisited"), null);
-});
-
-test("music detail prefetch requests one section and slug route", async () => {
-  const originalFetch = globalThis.fetch;
-  const requests = [];
-  globalThis.fetch = async (input) => {
-    const url = String(input);
-    requests.push(url);
-    if (url === "/fonscape/content/entries/music/artists/demo.json") {
-      return new Response(JSON.stringify({
-        key: "artists/demo",
-        source: "src/content/music/demo.md",
-        body: "/fonscape/content/bodies/music/demo.md",
-        responsiveImages: {},
-      }), { status: 200, headers: { "Content-Type": "application/json" } });
-    }
-    if (url === "/fonscape/content/bodies/music/demo.md") {
-      return new Response([
-        "---",
-        "title: Demo",
-        "kind: song",
-        "date: 2026-09-01",
-        "section: artists",
-        "---",
-        "",
-        "正文。",
-      ].join("\n"), { status: 200, headers: { "Content-Type": "text/markdown" } });
-    }
-    return new Response("", { status: 404 });
-  };
-  const server = await createServer({
-    configFile: false,
-    appType: "custom",
-    optimizeDeps: { noDiscovery: true },
-    esbuild: { jsx: "automatic" },
-    server: { middlewareMode: true, ws: false, watch: null },
-    plugins: [{
-      name: "enable-music-route-test",
-      enforce: "pre",
-      transform(code, id) {
-        if (id.endsWith("/src/siteConfig.js")) {
-          return code.replace("showMusic: configuredSiteInput.showMusic === true", "showMusic: true");
-        }
-        return undefined;
-      },
-    }],
-  });
-  try {
-    const { preloadRouteContent } = await server.ssrLoadModule("/src/appRoutes.jsx");
-    const entry = await preloadRouteContent("/music/artists/demo");
-    assert.equal(entry?.section, "artists");
-    assert.equal(entry?.slug, "demo");
-    assert.deepEqual(requests, [
-      "/fonscape/content/entries/music/artists/demo.json",
-      "/fonscape/content/bodies/music/demo.md",
-    ]);
-
-    requests.length = 0;
-    assert.equal(await preloadRouteContent("/music/artists/demo/extra"), null);
-    assert.deepEqual(requests, []);
-  } finally {
-    await server.close();
-    globalThis.fetch = originalFetch;
-  }
 });

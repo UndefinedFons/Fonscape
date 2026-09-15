@@ -1,4 +1,3 @@
-import { CollectionLoadStatus } from "../components/CollectionLoadStatus.tsx";
 import { ArrowLeft } from "@phosphor-icons/react/ArrowLeft";
 import { BookOpenText } from "@phosphor-icons/react/BookOpenText";
 import { ChatCircleDots } from "@phosphor-icons/react/ChatCircleDots";
@@ -10,18 +9,16 @@ import { X } from "@phosphor-icons/react/X";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ArticleCard } from "../components/Cards.jsx";
 import { Pagination } from "../components/Pagination.jsx";
-import { contentRoute, siteConfig } from "../content/index.ts";
+import { contentRoute, siteConfig } from "../content/index.js";
 import { usePagination, useResponsivePageSize } from "../hooks.js";
 import { lockPageScroll } from "../lockPageScroll.js";
 import { ARTICLE_INDEX_DEFAULTS, articleIndexState, parseRoutePath, parseRouteQuery, replaceRoute, updateArticleIndexState } from "../routeState.js";
 import { routeHref } from "../routes.js";
 import { getPostCategories } from "../siteConfig.js";
-import { useCollectionIndex } from "../useCollectionIndex.ts";
-import { useCollectionPage } from "../useCollectionPage.ts";
+import { useProgressiveCollection } from "../useProgressiveCollection.js";
 
 export function PostsPage({ query, stats, onStatsTargets }) {
-  const collection = useCollectionIndex("post");
-  const posts = collection.items;
+  const posts = useProgressiveCollection("post");
   const parameters = useMemo(() => new URLSearchParams(query), [query]);
   const allTags = [...new Set(posts.flatMap((post) => post.tags || []))].sort((a, b) => a.localeCompare(b, "zh-CN"));
   const allSeries = [...new Set(posts.map((post) => post.series).filter(Boolean))].sort((a, b) => a.localeCompare(b, "zh-CN"));
@@ -62,8 +59,7 @@ export function PostsPage({ query, stats, onStatsTargets }) {
   }, []);
   const filtered = posts.filter((post) => (category === "全部" || post.category === category) && (!selectedTag || post.tags?.includes(selectedTag)) && (!selectedSeries || post.series === selectedSeries));
   const filterKey = `${category}|${selectedTag}|${selectedSeries}`;
-  const pagination = usePagination(filtered, useResponsivePageSize(6, 3), filterKey, "posts", !collection.loading && !collection.error);
-  const pageContent = useCollectionPage("post", view === "cards" ? pagination.pageItems : []);
+  const pagination = usePagination(filtered, useResponsivePageSize(6, 3), filterKey, "posts");
   const pageStatsKey = JSON.stringify(pagination.pageItems.map((post) => post.slug));
   const pageStatsTargets = useMemo(
     () => JSON.parse(pageStatsKey).map((slug) => ({ type: "post", slug })),
@@ -139,7 +135,7 @@ export function PostsPage({ query, stats, onStatsTargets }) {
     <section className={`article-index page-width${view === "archive" ? " article-index--archive" : ""}${viewSwitching ? " is-view-switching" : ""}`}>
       {view === "cards" && <div className="article-index-toolbar article-index-toolbar--cards"><div className="article-type-tabs" role="tablist" aria-label="文章类型" style={{ "--type-count": categories.length, "--type-index": activeCategoryIndex }}><span className="article-type-indicator" aria-hidden="true" />{categories.map((item) => <button type="button" role="tab" aria-selected={category === item} key={item} className={category === item ? "active" : ""} onClick={() => setCategory(item)} title={item}>{item}</button>)}</div><div className="article-index-actions"><button type="button" className={filterOpen ? "active" : ""} onClick={() => setFilterOpen(true)}><Funnel size={17} />筛选</button><button type="button" onClick={toggleArchive}><FolderOpen size={17} />文章归档</button></div></div>}
       {view === "cards" && (selectedTag || selectedSeries) && <div className={`active-filter-summary${filterSummaryClosing ? " is-leaving" : ""}`}><div className="active-filter-current">{selectedTag ? <Hash size={18} weight="duotone" /> : <FolderOpen size={18} weight="duotone" />}<span><small>{selectedTag ? "当前标签" : "当前系列"}</small><strong>{selectedTag || selectedSeries}</strong></span></div><button type="button" className="clear-filter" onClick={clearSelectedFilter} disabled={filterSummaryClosing}><X size={14} />清除筛选</button></div>}
-      {view === "archive" ? collection.loading ? <div className="section-empty" role="status">正在加载…</div> : collection.error ? <CollectionLoadStatus {...collection} /> : <ArticleArchive posts={posts} stats={stats} onBack={toggleArchive} onStatsTargets={onStatsTargets} /> : <><div key={filterKey} ref={pagination.topRef} className={`article-grid paginated-view${pagination.leaving ? " is-leaving" : ""}${filterResultsLeaving ? " is-filter-leaving" : ""}`}><CollectionLoadStatus {...pageContent} />{collection.loading || (pageContent.loading && !pageContent.items.length && !pageContent.error) ? <div className="section-empty" role="status">正在加载…</div> : collection.error ? <CollectionLoadStatus {...collection} /> : pageContent.error && !pageContent.items.length ? null : pageContent.items.length ? pageContent.items.map((post, index) => <ArticleCard key={post.slug} post={post} stats={stats[post.slug]} imageLoading={index === 0 ? "eager" : "lazy"} />) : posts.length ? <div className="section-empty"><Funnel size={34} weight="duotone" /><h2>没有符合条件的文章</h2><p>换一种类型、标签或系列试试。</p></div> : <div className="section-empty"><BookOpenText size={34} weight="duotone" /><h2>暂无文章</h2></div>}</div><Pagination page={pagination.page} totalPages={pagination.totalPages} onChange={pagination.changePage} /></>}
+      {view === "archive" ? <ArticleArchive posts={posts} stats={stats} onBack={toggleArchive} onStatsTargets={onStatsTargets} /> : <><div key={filterKey} ref={pagination.topRef} className={`article-grid paginated-view${pagination.leaving ? " is-leaving" : ""}${filterResultsLeaving ? " is-filter-leaving" : ""}`}>{pagination.pageItems.length ? pagination.pageItems.map((post, index) => <ArticleCard key={post.slug} post={post} stats={stats[post.slug]} imageLoading={index === 0 ? "eager" : "lazy"} />) : posts.length ? <div className="section-empty"><Funnel size={34} weight="duotone" /><h2>没有符合条件的文章</h2><p>换一种类型、标签或系列试试。</p></div> : <div className="section-empty"><BookOpenText size={34} weight="duotone" /><h2>暂无文章</h2></div>}</div><Pagination page={pagination.page} totalPages={pagination.totalPages} onChange={pagination.changePage} /></>}
     </section>
     {filterOpen && view === "cards" && <ArticleFilterDialog tags={allTags} series={allSeries} selectedTag={selectedTag} selectedSeries={selectedSeries} onTag={selectTag} onSeries={selectSeries} onClose={closeFilter} />}
   </>;

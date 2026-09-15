@@ -4,7 +4,7 @@ import { Eye } from "@phosphor-icons/react/Eye";
 import { Feather } from "@phosphor-icons/react/Feather";
 import { use, useEffect } from "react";
 import { CommentsPanel } from "../community/CommentsPanel.jsx";
-import { loadPoem, siteConfig } from "../content/index.ts";
+import { loadPoem, siteConfig } from "../content/index.js";
 import { setDocumentTitle } from "../navigation.js";
 import { formatContentDate } from "../siteUtils.js";
 import { NotFound } from "./NotFound.jsx";

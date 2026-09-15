@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { api } from "./api.ts";
+import { api } from "./api.js";
 import { useCommunity } from "./CommunityProvider.jsx";
 import { consumeCommentTarget, groupCommentThreads, readCommentTarget } from "./commentUtils.js";
 
