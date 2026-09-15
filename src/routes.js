@@ -52,6 +52,17 @@ export function musicRoute(section, slug) {
 }
 
 /**
+ * Split the music content key into its fixed section and complete slug path.
+ * Nested slash-delimited slug segments are preserved as part of the slug.
+ * @param {unknown} value
+ * @returns {{ section: string, slug: string }}
+ */
+export function parseMusicContentKey(value) {
+  const [section, ...slugParts] = String(value ?? "").split("/");
+  return { section, slug: slugParts.join("/") };
+}
+
+/**
  * @param {string} type
  * @param {Record<string, any>} entry
  * @returns {string}
@@ -61,8 +72,8 @@ export function contentRoute(type, entry = {}) {
   if (type === "poem") return poemRoute(entry.slug || entry.key);
   if (type === "music") {
     const key = entry.key || `${entry.section || "songs"}/${entry.slug || ""}`;
-    const [section, ...slugParts] = String(key).split("/");
-    return musicRoute(section, slugParts.join("/"));
+    const { section, slug } = parseMusicContentKey(key);
+    return musicRoute(section, slug);
   }
   return "/";
 }
