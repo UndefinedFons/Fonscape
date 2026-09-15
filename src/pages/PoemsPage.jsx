@@ -1,4 +1,3 @@
-import { CollectionLoadStatus } from "../components/CollectionLoadStatus.tsx";
 import { siteConfig } from "../siteConfig.js";
 import { ArrowRight } from "@phosphor-icons/react/ArrowRight";
 import { CalendarBlank } from "@phosphor-icons/react/CalendarBlank";
@@ -7,22 +6,19 @@ import { Eye } from "@phosphor-icons/react/Eye";
 import { Feather } from "@phosphor-icons/react/Feather";
 import { useEffect, useMemo } from "react";
 import { Pagination } from "../components/Pagination.jsx";
-import { contentRoute } from "../content/index.ts";
+import { contentRoute } from "../content/index.js";
 import { usePagination, useResponsivePageSize } from "../hooks.js";
 import { formatContentDate } from "../siteUtils.js";
-import { useCollectionIndex } from "../useCollectionIndex.ts";
-import { useCollectionPage } from "../useCollectionPage.ts";
+import { useProgressiveCollection } from "../useProgressiveCollection.js";
 
 export function PoemsPage({ stats, onStatsTargets }) {
-  const collection = useCollectionIndex("poem");
-  const poems = collection.items;
-  const pagination = usePagination(poems, useResponsivePageSize(6, 3), "all", "poems", !collection.loading && !collection.error);
-  const pageContent = useCollectionPage("poem", pagination.pageItems);
+  const poems = useProgressiveCollection("poem");
+  const pagination = usePagination(poems, useResponsivePageSize(6, 3), "all", "poems");
   const pageStatsKey = JSON.stringify(pagination.pageItems.map((poem) => poem.slug));
   const pageStatsTargets = useMemo(
     () => JSON.parse(pageStatsKey).map((slug) => ({ type: "poem", slug })),
     [pageStatsKey],
   );
   useEffect(() => { onStatsTargets(pageStatsTargets); }, [onStatsTargets, pageStatsTargets]);
-  return <section className="listing page-width"><div ref={pagination.topRef} className={`poem-grid paginated-view${pagination.leaving ? " is-leaving" : ""}`}><CollectionLoadStatus {...pageContent} />{collection.loading || (pageContent.loading && !pageContent.items.length && !pageContent.error) ? <div className="section-empty" role="status">正在加载…</div> : collection.error ? <CollectionLoadStatus {...collection} /> : pageContent.error && !pageContent.items.length ? null : poems.length ? pageContent.items.map((poem) => <a className="poem-card" href={contentRoute("poem", poem)} key={poem.slug}><Feather size={24} /><h2>{poem.title}</h2>{poem.previewLines.slice(0, 3).map((line, index) => <p key={`${poem.slug}-${index}`}>{line}</p>)}{poem.lineCount > poem.previewLines.length && <p aria-hidden="true">……</p>}<div className="poem-card-footer"><span className="poem-card-stats"><span className="poem-card-date"><CalendarBlank size={14} /><time dateTime={poem.date}>{formatContentDate(poem.date)}</time></span><span><Eye size={14} />{stats[poem.slug]?.views || 0}</span>{siteConfig.showCommunity && <span><ChatCircleDots size={14} />{stats[poem.slug]?.comments || 0}</span>}</span><span className="poem-card-link">读完整首 <ArrowRight size={15} /></span></div></a>) : <div className="section-empty"><Feather size={34} weight="duotone" /><h2>暂无小诗</h2></div>}</div><Pagination page={pagination.page} totalPages={pagination.totalPages} onChange={pagination.changePage} /></section>;
+  return <section className="listing page-width"><div ref={pagination.topRef} className={`poem-grid paginated-view${pagination.leaving ? " is-leaving" : ""}`}>{poems.length ? pagination.pageItems.map((poem) => <a className="poem-card" href={contentRoute("poem", poem)} key={poem.slug}><Feather size={24} /><h2>{poem.title}</h2>{poem.previewLines.slice(0, 3).map((line, index) => <p key={`${poem.slug}-${index}`}>{line}</p>)}{poem.lineCount > poem.previewLines.length && <p aria-hidden="true">……</p>}<div className="poem-card-footer"><span className="poem-card-stats"><span className="poem-card-date"><CalendarBlank size={14} /><time dateTime={poem.date}>{formatContentDate(poem.date)}</time></span><span><Eye size={14} />{stats[poem.slug]?.views || 0}</span>{siteConfig.showCommunity && <span><ChatCircleDots size={14} />{stats[poem.slug]?.comments || 0}</span>}</span><span className="poem-card-link">读完整首 <ArrowRight size={15} /></span></div></a>) : <div className="section-empty"><Feather size={34} weight="duotone" /><h2>暂无小诗</h2></div>}</div><Pagination page={pagination.page} totalPages={pagination.totalPages} onChange={pagination.changePage} /></section>;
 }

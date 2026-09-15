@@ -1,4 +1,4 @@
-import { api, contentHref, formatCommunityTime } from "./api.ts";
+import { api, contentHref, formatCommunityTime } from "./api.js";
 import { go, parseRoutePath, replaceRoute } from "../routeState.js";
 import { routeHref } from "../routes.js";
 

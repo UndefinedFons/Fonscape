@@ -12,7 +12,7 @@ import { UserCircle } from "@phosphor-icons/react/UserCircle";
 import { UserCircleCheck } from "@phosphor-icons/react/UserCircleCheck";
 import { X } from "@phosphor-icons/react/X";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { navItems } from "../content/index.ts";
+import { navItems } from "../content/index.js";
 import { getDetailReadingTarget } from "../detailReading.js";
 import { routeHref } from "../routes.js";
 

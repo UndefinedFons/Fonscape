@@ -4,7 +4,7 @@ import { LinkSimple } from "@phosphor-icons/react/LinkSimple";
 import { MusicNotes } from "@phosphor-icons/react/MusicNotes";
 import { UserCircle } from "@phosphor-icons/react/UserCircle";
 import { lazy, Suspense } from "react";
-import { loadCollectionPageChunk, loadMusicReview, loadPoem, loadPost, siteConfig } from "./content/index.ts";
+import { loadCollectionPageChunk, loadMusicReview, loadPoem, loadPost, siteConfig } from "./content/index.js";
 import { PageHero } from "./components/PageHero.jsx";
 import { replaceRouteWithHome, returnFromDetail } from "./routeState.js";
 import { setRouteDocumentTitle } from "./navigation.js";
@@ -134,8 +134,8 @@ export function preloadRouteContent(path) {
   if (routePath.startsWith("/post/")) return loadPost(decodeRoutePath(routePath.slice("/post/".length))).catch(() => null);
   if (routePath.startsWith("/poem/")) return loadPoem(decodeRoutePath(routePath.slice("/poem/".length))).catch(() => null);
   if (routePath.startsWith("/music/")) {
-    const [section, slug, ...extraSegments] = routePath.slice("/music/".length).split("/");
-    if (section && slug && extraSegments.length === 0) return loadMusicReview(decodeRoutePath(section), decodeRoutePath(slug)).catch(() => null);
+    const [, section, ...slugParts] = routePath.split("/");
+    if (section && slugParts.length) return loadMusicReview(decodeRoutePath(section), decodeRoutePath(slugParts.join("/"))).catch(() => null);
   }
   if (routePath === "/posts") return loadCollectionPageChunk("post", 0).catch(() => null);
   if (routePath === "/poems") return loadCollectionPageChunk("poem", 0).catch(() => null);

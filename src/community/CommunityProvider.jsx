@@ -1,6 +1,6 @@
 import { siteConfig } from "../siteConfig.js";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
-import { api } from "./api.ts";
+import { api } from "./api.js";
 
 /**
  * @typedef {object} CommunityContextValue

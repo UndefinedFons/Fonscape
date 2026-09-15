@@ -9,7 +9,7 @@ import {
   AVATAR_MAX_BYTES,
   AVATAR_OUTPUT_SIZE,
   validateAvatarFile,
-} from "../src/community/api.ts";
+} from "../src/community/api.js";
 
 test("avatar limits keep raw input separate from the stored WebP", () => {
   assert.equal(AVATAR_INPUT_MAX_BYTES, 10 * 1024 * 1024);

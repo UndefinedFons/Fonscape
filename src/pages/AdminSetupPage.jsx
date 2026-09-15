@@ -8,7 +8,7 @@ import { LockKey } from "@phosphor-icons/react/LockKey";
 import { UserCircle } from "@phosphor-icons/react/UserCircle";
 import { WarningCircle } from "@phosphor-icons/react/WarningCircle";
 import { useEffect, useState } from "react";
-import { api, ApiClientError } from "../community/api.ts";
+import { api, ApiClientError } from "../community/api.js";
 import { useCommunity } from "../community/CommunityProvider.jsx";
 import { routeHref } from "../routes.js";
 
