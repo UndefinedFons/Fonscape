@@ -2,7 +2,7 @@ import { memo, useCallback, useEffect, useRef, useState } from "react";
 import { PaperPlaneTilt } from "@phosphor-icons/react/PaperPlaneTilt";
 import { X } from "@phosphor-icons/react/X";
 import { Avatar } from "./Avatar.jsx";
-import { api } from "./api.js";
+import { api } from "./api.ts";
 import { useCommunity } from "./CommunityProvider.jsx";
 
 /**

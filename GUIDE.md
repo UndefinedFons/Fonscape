@@ -180,7 +180,7 @@ musicPlacement: "inline"
 [[article-music]]
 ```
 
-文件名会自动成为 `slug`；需要自定义地址时可填写 `slug`。必填字段为 `title`、`category`、`date`。
+文件名会自动成为 `slug`；需要自定义地址时可填写 `slug`。slug 只能使用小写字母、数字、下划线和连字符，不能包含 `/`。必填字段为 `title`、`category`、`date`。
 
 #### 文章字段
 
@@ -189,7 +189,7 @@ musicPlacement: "inline"
 | `title` | 是 | 文章标题 |
 | `category` | 是 | `postCategories` 中配置的任意分类名称 |
 | `date` | 是 | 可被 JavaScript 解析的日期，建议使用 `YYYY-MM-DDTHH:mm` |
-| `slug` | 否 | 自定义地址；默认取文件名，只能使用小写字母、数字、`/`、`_`、`-` |
+| `slug` | 否 | 自定义地址；默认取文件名，只能使用小写字母、数字、`_`、`-` |
 | `excerpt` | 否 | 列表与详情页摘要；未填写时列表会尝试读取正文首段 |
 | `tags` | 否 | JSON 字符串数组 |
 | `series` | 否 | 系列名称 |
@@ -256,7 +256,7 @@ sourceMeta: "音乐人"
 | `kind` | 是 | 内容类型，例如 `歌曲`、`音乐人`、`专辑` |
 | `date` | 是 | 发布时间 |
 | `section` | 否 | `songs`、`artists` 或 `albums` |
-| `slug` | 否 | 自定义地址；默认取文件名 |
+| `slug` | 否 | 自定义地址；默认取文件名，只能使用小写字母、数字、`_`、`-`，不能包含 `/` |
 | `excerpt` | 否 | 手记摘要 |
 | `image` | 否 | 封面路径 |
 | `url` | 否 | 外部收听或资料地址 |
@@ -280,7 +280,7 @@ date: "2026-07-27T20:00"
 第四行
 ```
 
-正文按行显示，空行也会保留。必填字段为 `title` 和 `date`。文件名默认成为 `slug`；如需自定义地址，可在 Frontmatter 中填写 `slug`。
+正文按行显示，空行也会保留。必填字段为 `title` 和 `date`。文件名默认成为 `slug`；如需自定义地址，可在 Frontmatter 中填写 `slug`。slug 只能使用小写字母、数字、下划线和连字符，不能包含 `/`。
 
 可选字段 `note` 会显示在诗正文之后。小诗正文至少需要一行非空内容。
 

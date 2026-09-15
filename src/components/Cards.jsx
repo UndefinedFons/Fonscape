@@ -7,7 +7,7 @@ import { FolderOpen } from "@phosphor-icons/react/FolderOpen";
 import { Tag } from "@phosphor-icons/react/Tag";
 import { TextAa } from "@phosphor-icons/react/TextAa";
 import { getPostFirstParagraph } from "../richContent.js";
-import { contentRoute } from "../content/index.js";
+import { contentRoute } from "../content/index.ts";
 import { getMusicSectionIcon } from "../musicSections.js";
 import { formatContentDate, getPostWordCount } from "../siteUtils.js";
 import { useResponsiveImage } from "../useResponsiveImage.js";

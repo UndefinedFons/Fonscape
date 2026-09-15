@@ -1,6 +1,6 @@
 import { ArrowLeft } from "@phosphor-icons/react/ArrowLeft";
 import { ArrowRight } from "@phosphor-icons/react/ArrowRight";
-import { getVisiblePaginationPages } from "../pagination.js";
+import { getVisiblePaginationPages } from "../pagination.ts";
 
 export function Pagination({ page, totalPages, onChange, ariaLabel = "内容分页", className = "" }) {
   if (totalPages <= 1) return null;

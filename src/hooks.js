@@ -72,7 +72,7 @@ function useHorizontalScroller() {
     onDragStart,
   };
 }
-function usePagination(items, pageSize, resetKey, family) {
+function usePagination(items, pageSize, resetKey, family, ready = true) {
   const storageKey = `${family}:${resetKey}:${pageSize}`;
   const storageKeyRef = useRef(storageKey);
   const [page, setPage] = useState(() => paginationPositions.get(storageKey) || 1);
@@ -80,15 +80,17 @@ function usePagination(items, pageSize, resetKey, family) {
   const topRef = useRef(null);
   const timerRef = useRef(null);
   const totalPages = Math.max(1, Math.ceil(items.length / pageSize));
-  const safePage = Math.min(page, totalPages);
+  const currentPage = storageKeyRef.current === storageKey ? page : (paginationPositions.get(storageKey) || 1);
+  const safePage = Math.min(currentPage, totalPages);
   const pageItems = items.slice((safePage - 1) * pageSize, safePage * pageSize);
   useEffect(() => {
     if (storageKeyRef.current === storageKey) return;
     storageKeyRef.current = storageKey;
+    window.clearTimeout(timerRef.current);
     setPage(paginationPositions.get(storageKey) || 1);
     setLeaving(false);
   }, [storageKey]);
-  useEffect(() => { paginationPositions.set(storageKey, safePage); }, [storageKey, safePage]);
+  useEffect(() => { if (ready) paginationPositions.set(storageKey, safePage); }, [storageKey, safePage, ready]);
   useEffect(() => () => window.clearTimeout(timerRef.current), []);
   const changePage = (nextPage) => {
     const next = Math.max(1, Math.min(totalPages, nextPage));

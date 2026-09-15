@@ -611,3 +611,7 @@ footer::before { content:""; position:absolute; top:0; left:50%; width:min(1180p
   .article-grid .article-card,.paginated-view { animation:none; transition:none; }
 }
 @media (prefers-reduced-motion:reduce) { * { scroll-behavior:auto!important; transition:none!important; animation:none!important; } .footer-theme-link::after,.app-shell.theme-changing,.app-shell.theme-changing *,.app-shell.theme-changing *::before,.app-shell.theme-changing *::after { transition:none!important; } }
+
+.collection-load-status { display:flex; flex-wrap:wrap; align-items:center; justify-content:center; gap:8px; margin:0 0 16px; color:var(--muted); font-size:12px; }
+.collection-load-status button { min-height:34px; padding:0 13px; border:1px solid var(--line); border-radius:999px; background:var(--surface); color:var(--text); cursor:pointer; }
+.collection-load-status button:disabled { cursor:wait; opacity:.65; }

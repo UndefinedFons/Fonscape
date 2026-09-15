@@ -4,7 +4,7 @@ import { MagnifyingGlass } from "@phosphor-icons/react/MagnifyingGlass";
 import { MusicNotes } from "@phosphor-icons/react/MusicNotes";
 import { X } from "@phosphor-icons/react/X";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { loadSearchIndex, siteConfig } from "../content/index.js";
+import { loadSearchIndex, siteConfig } from "../content/index.ts";
 import { go } from "../routeState.js";
 import { getSectionAvailability } from "../sectionAvailability.js";
 import { formatContentDate } from "../siteUtils.js";

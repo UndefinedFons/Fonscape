@@ -25,7 +25,7 @@ test("cold navigation separates hover, press and idle resource priority", async 
 });
 
 test("empty collection chunks reuse one settled request across interaction rerenders", async () => {
-  const content = await import("../src/content/index.js");
+  const content = await import("../src/content/index.ts");
   const first = content.loadCollectionPageChunk("missing", 0);
   const second = content.loadCollectionPageChunk("missing", 0);
   assert.equal(first, second);
@@ -54,38 +54,122 @@ test("cold dialogs show the final shell immediately and preserve original close 
   assert.match(communityStyles, /\.account-backdrop\.is-closing \.account-dialog \{ animation:account-panel-out \.24s cubic-bezier\(\.4,0,1,1\) both; \}/u);
 });
 
-test("content image metadata travels with content and img src is never blocked", async () => {
-  const [generator, content, hook, responsive, routes] = await Promise.all([
-    readFile("scripts/generate-content-targets.mjs", "utf8"),
-    readFile("src/content/index.js", "utf8"),
-    readFile("src/useResponsiveImage.js", "utf8"),
-    readFile("src/responsiveImages.ts", "utf8"),
-    readFile("src/appRoutes.jsx", "utf8"),
-  ]);
-
-  assert.match(generator, /responsive-images-build\.json/u);
-  assert.match(generator, /responsiveImages: responsiveImagesFor/u);
-  assert.match(content, /registerResponsiveImages\(entry\?\.responsiveImages\)/u);
-  assert.match(content, /registerResponsiveImages\(metadata\.responsiveImages\)/u);
-  assert.match(hook, /return responsiveImageProps\(source, sizes\);/u);
-  assert.doesNotMatch(hook, /src: undefined|useEffect|useState/u);
-  assert.match(responsive, /const src = candidates\[0\]\?\.src \|\| source/u);
-  assert.doesNotMatch(responsive, /responsive-images-full|import\(/u);
-  assert.doesNotMatch(routes, /preloadResponsiveImageIndex/u);
+test("content image metadata reaches image props without blocking the original src", async () => {
+  const { createServer } = await import("vite");
+  const server = await createServer({
+    configFile: false, appType: "custom", optimizeDeps: { noDiscovery: true },
+    server: { middlewareMode: true, ws: false, watch: null },
+    plugins: [{ name: "image-content-fixture", enforce: "pre", transform(code, id) {
+      if (id.endsWith("/functions/_generated/content-metadata.js")) return 'export const contentManifest = { collections: { fixture: { pageChunkCount: 1 } } };';
+    } }],
+  });
+  const originalFetch = globalThis.fetch;
+  const source = "/fixture-original.webp";
+  const candidates = [{ src: "/fixture-small.webp", width: 480 }, { src: "/fixture-large.webp", width: 960 }];
+  const metadata = { [source]: { width: 960, height: 640, candidates } };
+  const calls = [];
+  try {
+    const content = await server.ssrLoadModule("/src/content/index.ts");
+    const { responsiveImageProps } = await server.ssrLoadModule("/src/responsiveImages.ts");
+    assert.equal(responsiveImageProps(source, "100vw").src, source);
+    globalThis.fetch = async (url) => {
+      calls.push(url);
+      return new Response(JSON.stringify([{ slug: "fixture", responsiveImages: metadata }]));
+    };
+    await content.loadCollectionPageChunk("fixture", 0);
+    assert.deepEqual(responsiveImageProps(source, "100vw"), {
+      src: candidates[0].src, srcSet: "/fixture-small.webp 480w, /fixture-large.webp 960w", sizes: "100vw",
+    });
+    assert.equal(calls.length, 1);
+    const detailSource = "/detail-original.webp";
+    assert.equal(responsiveImageProps(detailSource, "100vw").src, detailSource);
+    globalThis.fetch = async (url) => {
+      calls.push(url);
+      return url.endsWith(".md") ? new Response("body") : new Response(JSON.stringify({
+        body: "/fixture.md", responsiveImages: { [detailSource]: metadata[source] },
+      }));
+    };
+    await content.loadContentEntry("fixture", "detail");
+    assert.equal(responsiveImageProps(detailSource, "100vw").src, candidates[0].src);
+    assert.equal(calls.length, 3);
+  } finally {
+    globalThis.fetch = originalFetch;
+    await server.close();
+  }
 });
 
-test("collection pages render chunk zero and append later chunks serially while idle", async () => {
-  const progressive = await readFile("src/useProgressiveCollection.js", "utf8");
-  assert.match(progressive, /use\(loadCollectionPageChunk\(type, 0\)\)/u);
-  assert.match(progressive, /let nextIndex = 1/u);
-  assert.match(progressive, /await loadCollectionPageChunk\(type, nextIndex\)/u);
-  assert.match(progressive, /requestIdleCallback\(loadNext/u);
-  assert.doesNotMatch(progressive, /Promise\.all/u);
+test("visible collection pages retain cards on failure, retry and abandon obsolete work", async () => {
+  const { JSDOM } = await import("jsdom");
+  const { act, createElement } = await import("react");
+  const { createRoot } = await import("react-dom/client");
+  const { createServer } = await import("vite");
+  const dom = new JSDOM('<div id="root"></div>');
+  const originals = new Map();
+  const calls = [];
+  let resolveRetry;
+  let resolveAbandoned;
+  let failures = 1;
+  const load = async (type, index) => {
+    calls.push(index);
+    if (!index) return [{ key: "newest", slug: "newest" }];
+    if (index === 1 && failures-- > 0) throw new Error("offline");
+    if (index === 1) return new Promise((resolve) => { resolveRetry = resolve; });
+    if (index === 2) return new Promise((resolve) => { resolveAbandoned = resolve; });
+    return [{ key: "last", slug: "last" }];
+  };
+  for (const [key, value] of Object.entries({ window: dom.window, document: dom.window.document, IS_REACT_ACT_ENVIRONMENT: true, __collectionTestLoad: load })) {
+    originals.set(key, Object.getOwnPropertyDescriptor(globalThis, key));
+    Object.defineProperty(globalThis, key, { configurable: true, writable: true, value });
+  }
+  const server = await createServer({
+    configFile: false, appType: "custom", optimizeDeps: { noDiscovery: true },
+    esbuild: { jsx: "automatic" }, server: { middlewareMode: true, ws: false, watch: null },
+    plugins: [{ name: "collection-fixture", enforce: "pre", transform(code, id) {
+      if (id.endsWith("/src/content/index.ts")) return 'export const loadCollectionPageChunk = globalThis.__collectionTestLoad;';
+    } }],
+  });
+  const root = createRoot(document.getElementById("root"));
+  try {
+    const { useCollectionPage } = await server.ssrLoadModule("/src/useCollectionPage.ts");
+    const { CollectionLoadStatus } = await server.ssrLoadModule("/src/components/CollectionLoadStatus.tsx");
+    function Listing({ selection }) {
+      const collection = useCollectionPage("post", selection);
+      return createElement("section", null,
+        createElement("output", null, collection.items.map(({ slug }) => slug).join(",")),
+        createElement(CollectionLoadStatus, collection));
+    }
+    const render = (selection) => root.render(createElement(Listing, { selection }));
+    await act(async () => { render([{ key: "newest", page: 0 }, { key: "middle", page: 1 }]); });
+    assert.equal(document.querySelector("output").textContent, "newest");
+    assert.match(document.querySelector('[role="status"]').textContent, /加载失败/u);
+    assert.deepEqual(calls, [0, 1], "do not load unrelated chunks or silently skip failures");
+    await act(async () => { document.querySelector("button").click(); document.querySelector("button").click(); });
+    assert.equal(document.querySelector("button").disabled, true);
+    assert.equal(document.querySelector("output").textContent, "newest", "retry retains available cards");
+    assert.deepEqual(calls, [0, 1, 0, 1]);
+    await act(async () => { resolveRetry([{ key: "middle", slug: "middle" }]); });
+    assert.equal(document.querySelector("output").textContent, "newest,middle");
+    assert.equal(document.querySelector('[role="status"]'), null);
+    await act(async () => { render([{ key: "old", page: 2 }, { key: "last", page: 3 }]); });
+    assert.equal(document.querySelector("output").textContent, "", "previous page must not appear as the new page");
+    await act(async () => { render([{ key: "newest", page: 0 }]); });
+    await act(async () => { resolveAbandoned([{ key: "old", slug: "old" }]); });
+    assert.equal(document.querySelector("output").textContent, "newest");
+    assert.ok(!calls.includes(3), "abandoned selection must not expand its remaining chunks");
+  } finally {
+    await act(async () => root.unmount());
+    await server.close();
+    dom.window.close();
+    for (const [key, descriptor] of originals) {
+      if (descriptor) Object.defineProperty(globalThis, key, descriptor);
+      else delete globalThis[key];
+    }
+  }
 });
 
 test("Markdown bodies stay out of the initial module and retain the 1.15.1 detail handoff", async () => {
   const [contentIndex, generator] = await Promise.all([
-    readFile("src/content/index.js", "utf8"),
+    readFile("src/content/index.ts", "utf8"),
     readFile("scripts/generate-content-targets.mjs", "utf8"),
   ]);
   assert.doesNotMatch(contentIndex, /import\.meta\.glob/u);
@@ -98,7 +182,7 @@ test("Markdown bodies stay out of the initial module and retain the 1.15.1 detai
 });
 
 test("a cold detail entry resolves metadata and Markdown with the two 1.15.1 requests", async () => {
-  const { loadContentEntry } = await import("../src/content/index.js");
+  const { loadContentEntry } = await import("../src/content/index.ts");
   const originalFetch = globalThis.fetch;
   const requests = [];
   globalThis.fetch = async (input) => {

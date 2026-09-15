@@ -1,7 +1,6 @@
 export const FULL_PAGINATION_THRESHOLD = 5;
 
-/** @param {number} page @param {number} totalPages */
-export function getVisiblePaginationPages(page, totalPages) {
+export function getVisiblePaginationPages(page: number, totalPages: number): number[] {
   if (totalPages <= FULL_PAGINATION_THRESHOLD) {
     return Array.from({ length: totalPages }, (_, index) => index + 1);
   }

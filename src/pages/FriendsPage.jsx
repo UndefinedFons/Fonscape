@@ -4,8 +4,8 @@ import { LinkSimple } from "@phosphor-icons/react/LinkSimple";
 import { useEffect, useState } from "react";
 import { CommentsPanel } from "../community/CommentsPanel.jsx";
 import { useCommunity } from "../community/CommunityProvider.jsx";
-import { api } from "../community/api.js";
-import { friendLinks } from "../content/index.js";
+import { api } from "../community/api.ts";
+import { friendLinks } from "../content/index.ts";
 
 export function FriendRequestGuide() {
   const [values, setValues] = useState({ site: "", url: "", description: "", color: "#ffb7c5" });
