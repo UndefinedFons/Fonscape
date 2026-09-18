@@ -60,7 +60,7 @@ function DialogFrame({ kind, open, onClose, label, children }) {
     }, delay);
     return () => window.clearTimeout(closeTimer.current);
   }, [closing, kind, open]);
-  useEffect(() => visible ? lockPageScroll() : undefined, [visible]);
+  useLayoutEffect(() => visible ? lockPageScroll() : undefined, [visible]);
   const requestClose = useCallback((callback) => {
     if (!open || closing) return;
     afterClose.current = typeof callback === "function" ? callback : null;

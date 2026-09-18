@@ -8,7 +8,6 @@ export interface HeroConfig {
 }
 
 export interface ChannelConfig {
-  label?: string;
   url?: string;
 }
 
