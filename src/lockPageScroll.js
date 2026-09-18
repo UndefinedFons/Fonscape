@@ -1,6 +1,11 @@
 let lockCount = 0;
-/** @type {{ scrollY: number, htmlOverflow: string, bodyOverflow: string } | null} */
+/** @type {{ scrollY: number, htmlScrollBehavior: string } | null} */
 let saved = null;
+
+function maintainLockedScrollPosition() {
+  if (!saved || Math.abs(window.scrollY - saved.scrollY) <= 1) return;
+  window.scrollTo({ top: saved.scrollY, behavior: "instant" });
+}
 
 export function lockPageScroll() {
   lockCount += 1;
@@ -8,11 +13,12 @@ export function lockPageScroll() {
     const scrollY = window.scrollY;
     saved = {
       scrollY,
-      htmlOverflow: document.documentElement.style.overflow,
-      bodyOverflow: document.body.style.overflow,
+      htmlScrollBehavior: document.documentElement.style.scrollBehavior,
     };
-    document.documentElement.style.overflow = "hidden";
-    document.body.style.overflow = "hidden";
+    // The fixed backdrop owns dialog scrolling. Guard the page's scroll position
+    // without changing overflow or positioning on sticky-layout ancestors.
+    document.documentElement.style.scrollBehavior = "auto";
+    window.addEventListener("scroll", maintainLockedScrollPosition, { passive: true });
   }
 
   let released = false;
@@ -23,8 +29,8 @@ export function lockPageScroll() {
     if (lockCount !== 0 || !saved) return;
     const previous = saved;
     saved = null;
-    document.documentElement.style.overflow = previous.htmlOverflow;
-    document.body.style.overflow = previous.bodyOverflow;
+    window.removeEventListener("scroll", maintainLockedScrollPosition);
+    document.documentElement.style.scrollBehavior = previous.htmlScrollBehavior;
     if (Math.abs(window.scrollY - previous.scrollY) > 1) {
       window.scrollTo({ top: previous.scrollY, behavior: "instant" });
     }

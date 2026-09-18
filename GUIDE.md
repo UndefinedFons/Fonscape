@@ -70,14 +70,14 @@ showCommunity: true,
 
 ```js
 channels: {
-  github: { label: "@yourname", url: "https://github.com/yourname" },
-  bilibili: { label: "@yourname", url: "https://space.bilibili.com/你的UID" },
-  x: { label: "@yourname", url: "https://x.com/yourname" },
+  github: { url: "https://github.com/yourname" },
+  bilibili: { url: "https://space.bilibili.com/你的UID" },
+  x: { url: "https://x.com/yourname" },
   email: { address: "hello@example.com" },
 },
 ```
 
-外部渠道的 `label` 是关于页显示的名称，`url` 填写完整链接；邮箱只填写 `address`，主题会直接显示邮箱地址并自动生成邮件链接。删除不需要的渠道对象，或把对应地址留空，即可隐藏该入口。
+关于页统一使用渠道图标展示；外部渠道只填写完整 `url`，邮箱只填写 `address` 并自动生成邮件链接。删除不需要的渠道对象，或把对应地址留空，即可隐藏该入口。
 
 ### 页面头图
 

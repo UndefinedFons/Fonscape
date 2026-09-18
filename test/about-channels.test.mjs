@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { createServer } from "vite";
 
-test("email channels display their address and hide when it is absent", async () => {
+test("channels resolve accessible links without display labels", async () => {
   const server = await createServer({
     configFile: false,
     appType: "custom",
@@ -17,15 +17,35 @@ test("email channels display their address and hide when it is absent", async ()
       { address: " hello@example.com ", label: "Custom name" },
     ]) {
       const [channel] = resolveChannels({ channels: { email } });
-      assert.equal(channel.label, "hello@example.com");
+      assert.equal(channel.ariaLabel, "发送邮件至 hello@example.com");
+      assert.equal("label" in channel, false);
       assert.equal(channel.href, "mailto:hello@example.com");
     }
     for (const email of [undefined, {}, { address: " " }, { label: "Custom name" }]) {
       assert.deepEqual(resolveChannels({ channels: { email } }), []);
     }
-    const [github] = resolveChannels({ channels: { github: { label: " @name ", url: "https://github.com/name" } } });
-    assert.equal(github.label, "@name");
+    const [github] = resolveChannels({ name: "Fons", channels: { github: { label: " @name ", url: "https://github.com/name" } } });
+    assert.equal(github.ariaLabel, "访问 Fons 的 GITHUB 主页");
+    assert.equal("label" in github, false);
     assert.equal(github.href, "https://github.com/name");
+  } finally {
+    await server.close();
+  }
+});
+
+test("profile layout keeps a generous comparable-height range before becoming sticky", async () => {
+  const server = await createServer({
+    configFile: false,
+    appType: "custom",
+    server: { middlewareMode: true },
+  });
+  try {
+    const { shouldUseStickyProfileLayout } = await server.ssrLoadModule("/src/pages/AboutPage.jsx");
+    assert.equal(shouldUseStickyProfileLayout(539, 640), false);
+    assert.equal(shouldUseStickyProfileLayout(500, 680), false);
+    assert.equal(shouldUseStickyProfileLayout(500, 681), true);
+    assert.equal(shouldUseStickyProfileLayout(800, 1024), false);
+    assert.equal(shouldUseStickyProfileLayout(800, 1025), true);
   } finally {
     await server.close();
   }

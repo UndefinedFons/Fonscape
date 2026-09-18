@@ -23,15 +23,12 @@ const siteConfig = {
     interests: [],
     channels: {
       github: {
-        label: "",
         url: "",
       },
       bilibili: {
-        label: "",
         url: "",
       },
       x: {
-        label: "",
         url: "",
       },
       email: {
