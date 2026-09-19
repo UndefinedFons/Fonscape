@@ -79,8 +79,6 @@ channels: {
 
 关于页统一使用渠道图标展示；外部渠道只填写完整 `url`，邮箱只填写 `address` 并自动生成邮件链接。删除不需要的渠道对象，或把对应地址留空，即可隐藏该入口。
 
-可选的 `author.support` 使用 `image` 配置赞赏码图片，并用 `imageAlt` 提供替代文本；`image` 留空时不显示赞赏入口。
-
 ### 页面头图
 
 `siteConfig.heroes` 包含 `home`、`posts`、`poems`、`music`、`friends` 与 `about` 六个页面：

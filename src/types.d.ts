@@ -29,10 +29,6 @@ export interface AuthorConfig {
     x?: ChannelConfig;
     email?: EmailChannelConfig;
   };
-  support?: {
-    image: string;
-    imageAlt: string;
-  };
 }
 
 export interface SiteConfig {
