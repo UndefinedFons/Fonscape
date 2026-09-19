@@ -30,8 +30,6 @@ export interface AuthorConfig {
     email?: EmailChannelConfig;
   };
   support?: {
-    label: string;
-    handle: string;
     image: string;
     imageAlt: string;
   };

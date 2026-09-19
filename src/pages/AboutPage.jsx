@@ -56,20 +56,6 @@ export function resolveChannels(author) {
   });
 }
 
-function getLocalChannelDemo() {
-  if (import.meta.env?.DEV !== true || typeof window === "undefined") return "";
-  const params = new URLSearchParams(window.location.search);
-  const demo = params.get("channelDemo");
-  if (demo !== "left-heavy" && demo !== "right-heavy" && demo !== "profile-heavy") return "";
-  const requestedCount = Number.parseInt(params.get("channelCount") || "", 10);
-  return {
-    mode: demo,
-    channelCount: Number.isFinite(requestedCount)
-      ? Math.max(1, requestedCount)
-      : demo === "left-heavy" ? 10 : 0,
-  };
-}
-
 function useAdaptiveProfileLayout() {
   const layoutRef = useRef(null);
   const profileRef = useRef(null);
@@ -92,7 +78,6 @@ function useAdaptiveProfileLayout() {
         if (!active) return;
         if (window.matchMedia?.("(max-width:760px)")?.matches) {
           layout.classList.remove("is-profile-sticky");
-          layout.dataset.profileMode = "flow";
           profile.style.removeProperty("--about-sticky-top");
           scrollArea.scrollTop = 0;
           return;
@@ -106,7 +91,6 @@ function useAdaptiveProfileLayout() {
         // reserved for a story that is clearly taller by both measures.
         const shouldStick = shouldUseStickyProfileLayout(profileHeight, storyHeight);
         layout.classList.toggle("is-profile-sticky", shouldStick);
-        layout.dataset.profileMode = shouldStick ? "sticky" : "flow";
         if (!shouldStick) {
           profile.style.removeProperty("--about-sticky-top");
           scrollArea.scrollTop = 0;
@@ -140,26 +124,12 @@ function useAdaptiveProfileLayout() {
 
 export function AboutPage() {
   const channels = resolveChannels(authorProfile);
-  const localChannelDemo = getLocalChannelDemo();
-  const demoMode = typeof localChannelDemo === "object" ? localChannelDemo.mode : localChannelDemo;
-  const demoChannelCount = typeof localChannelDemo === "object" ? localChannelDemo.channelCount : 0;
-  const channelItems = demoChannelCount > 0 && channels.length > 0
-    ? Array.from({ length: demoChannelCount }, (_, index) => {
-      const channel = channels[index % channels.length];
-      return { ...channel };
-    })
-    : channels;
-  const aboutParagraphs = demoMode === "profile-heavy"
-    ? siteConfig.about.paragraphs.slice(0, 2)
-    : (demoMode === "left-heavy" || demoMode === "right-heavy") && siteConfig.about.paragraphs.length > 0
-        ? Array.from({ length: 14 }, (_, index) => siteConfig.about.paragraphs[index % siteConfig.about.paragraphs.length])
-        : siteConfig.about.paragraphs;
   const support = authorProfile.support || {};
-  const hasChannels = Boolean(support.image || channelItems.length > 0);
+  const hasChannels = Boolean(support.image || channels.length > 0);
   const portraitImage = useResponsiveImage(authorProfile.avatar, "(max-width: 760px) min(70vw, 320px), 320px");
   const { layoutRef, profileRef, storyRef } = useAdaptiveProfileLayout();
   return <>
-    <section ref={layoutRef} className="about-layout material-panel page-width" data-channel-mode="icon-only" data-profile-mode="flow">
+    <section ref={layoutRef} className="about-layout material-panel page-width">
       <aside className="about-profile">
         <div ref={profileRef} className="about-profile-scroll">
           <div className="about-profile-content">
@@ -171,15 +141,15 @@ export function AboutPage() {
               {authorProfile.interests.length > 0 && <div className="about-interest-list" aria-label="兴趣">{authorProfile.interests.map((interest) => <span key={interest}>{interest}</span>)}</div>}
               {hasChannels && <div className="about-channel-list" aria-label="个人渠道">
                 {support.image && <ZoomableImage src={support.image} alt={support.imageAlt || `${authorProfile.name} 的赞赏码`} showLightboxCaption={false} triggerClassName="about-channel about-channel--support" triggerAriaLabel={`打开${support.imageAlt || `${authorProfile.name} 的赞赏码`}`} triggerContent={<span className="about-channel-icon about-channel-icon--support"><HandHeart size={24} weight="duotone" /></span>} />}
-                {channelItems.map(({ key, Icon, href, ariaLabel }, index) => <a key={`${key}-${index}`} className="about-channel" data-channel={key} href={href} target={key === "email" ? undefined : "_blank"} rel={key === "email" ? undefined : "noreferrer"} aria-label={ariaLabel}><span className="about-channel-icon"><Icon size={24} weight="duotone" /></span></a>)}
+                {channels.map(({ key, Icon, href, ariaLabel }) => <a key={key} className="about-channel" data-channel={key} href={href} target={key === "email" ? undefined : "_blank"} rel={key === "email" ? undefined : "noreferrer"} aria-label={ariaLabel}><span className="about-channel-icon"><Icon size={24} weight="duotone" /></span></a>)}
               </div>}
             </div>
           </div>
         </div>
       </aside>
-      <article ref={storyRef} className={`about-story${aboutParagraphs.length === 0 ? " about-story--compact" : ""}`}>
+      <article ref={storyRef} className={`about-story${siteConfig.about.paragraphs.length === 0 ? " about-story--compact" : ""}`}>
         <header><span className="eyebrow">{siteConfig.about.eyebrow}</span><h2>{siteConfig.about.greeting}</h2><p>{siteConfig.about.summary}</p></header>
-        {aboutParagraphs.length > 0 && <div className="prose-block">{aboutParagraphs.map((paragraph, index) => <p key={`${paragraph}-${index}`}>{paragraph}</p>)}</div>}
+        {siteConfig.about.paragraphs.length > 0 && <div className="prose-block">{siteConfig.about.paragraphs.map((paragraph, index) => <p key={`${paragraph}-${index}`}>{paragraph}</p>)}</div>}
       </article>
     </section>
     <div className="about-comments page-width"><CommentsPanel targetType="post" slug="site-about" /></div>

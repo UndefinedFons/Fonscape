@@ -35,6 +35,10 @@ const siteConfig = {
         address: "",
       },
     },
+    support: {
+      image: "",
+      imageAlt: "赞赏码",
+    },
   },
   about: {
     heroDescription: "关于页简介",
