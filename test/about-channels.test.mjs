@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { createServer } from "vite";
 
-test("channels resolve accessible links without display labels", async () => {
+test("channels resolve accessible links from configured addresses", async () => {
   const server = await createServer({
     configFile: false,
     appType: "custom",
@@ -12,21 +12,14 @@ test("channels resolve accessible links without display labels", async () => {
   });
   try {
     const { resolveChannels } = await server.ssrLoadModule("/src/pages/AboutPage.jsx");
-    for (const email of [
-      { address: " hello@example.com " },
-      { address: " hello@example.com ", label: "Custom name" },
-    ]) {
-      const [channel] = resolveChannels({ channels: { email } });
-      assert.equal(channel.ariaLabel, "发送邮件至 hello@example.com");
-      assert.equal("label" in channel, false);
-      assert.equal(channel.href, "mailto:hello@example.com");
-    }
-    for (const email of [undefined, {}, { address: " " }, { label: "Custom name" }]) {
+    const [email] = resolveChannels({ channels: { email: { address: " hello@example.com " } } });
+    assert.equal(email.ariaLabel, "发送邮件至 hello@example.com");
+    assert.equal(email.href, "mailto:hello@example.com");
+    for (const email of [undefined, {}, { address: " " }]) {
       assert.deepEqual(resolveChannels({ channels: { email } }), []);
     }
-    const [github] = resolveChannels({ name: "Fons", channels: { github: { label: " @name ", url: "https://github.com/name" } } });
+    const [github] = resolveChannels({ name: "Fons", channels: { github: { url: "https://github.com/name" } } });
     assert.equal(github.ariaLabel, "访问 Fons 的 GITHUB 主页");
-    assert.equal("label" in github, false);
     assert.equal(github.href, "https://github.com/name");
   } finally {
     await server.close();

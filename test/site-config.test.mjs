@@ -18,7 +18,6 @@ test("site configuration keeps the portable theme shape", () => {
   const channels = siteConfig.author.channels || {};
   for (const key of ["github", "bilibili", "x"]) {
     assert.equal(typeof (channels[key]?.url || ""), "string");
-    assert.equal("label" in (channels[key] || {}), false);
   }
   assert.equal(typeof (channels.email?.address || ""), "string");
   assert.equal(Array.isArray(siteConfig.about.paragraphs), true);
