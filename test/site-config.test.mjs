@@ -21,10 +21,6 @@ test("site configuration keeps the portable theme shape", () => {
     assert.equal("label" in (channels[key] || {}), false);
   }
   assert.equal(typeof (channels.email?.address || ""), "string");
-  assert.equal(typeof (siteConfig.author.support?.image || ""), "string");
-  assert.equal(typeof (siteConfig.author.support?.imageAlt || ""), "string");
-  assert.equal("label" in (siteConfig.author.support || {}), false);
-  assert.equal("handle" in (siteConfig.author.support || {}), false);
   assert.equal(Array.isArray(siteConfig.about.paragraphs), true);
   assert.equal(siteConfig.footer.themeName, "Fonscape");
   assert.equal(siteConfig.footer.themeRepository, "https://github.com/UndefinedFons/Fonscape");

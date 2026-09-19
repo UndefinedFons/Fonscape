@@ -1,12 +1,10 @@
 import { EnvelopeSimple } from "@phosphor-icons/react/EnvelopeSimple";
 import { GithubLogo } from "@phosphor-icons/react/GithubLogo";
-import { HandHeart } from "@phosphor-icons/react/HandHeart";
 import { UserCircle } from "@phosphor-icons/react/UserCircle";
 import { XLogo } from "@phosphor-icons/react/XLogo";
 import { useLayoutEffect, useRef } from "react";
 import { CommentsPanel } from "../community/CommentsPanel.jsx";
 import { authorProfile, siteConfig } from "../content/index.js";
-import { ZoomableImage } from "../ZoomableImage.jsx";
 import { useResponsiveImage } from "../useResponsiveImage.js";
 
 function BilibiliLogo({ size = 24 }) {
@@ -124,8 +122,6 @@ function useAdaptiveProfileLayout() {
 
 export function AboutPage() {
   const channels = resolveChannels(authorProfile);
-  const support = authorProfile.support || {};
-  const hasChannels = Boolean(support.image || channels.length > 0);
   const portraitImage = useResponsiveImage(authorProfile.avatar, "(max-width: 760px) min(70vw, 320px), 320px");
   const { layoutRef, profileRef, storyRef } = useAdaptiveProfileLayout();
   return <>
@@ -139,8 +135,7 @@ export function AboutPage() {
               <h2>{authorProfile.name}</h2>
               <p>{authorProfile.tagline}</p>
               {authorProfile.interests.length > 0 && <div className="about-interest-list" aria-label="兴趣">{authorProfile.interests.map((interest) => <span key={interest}>{interest}</span>)}</div>}
-              {hasChannels && <div className="about-channel-list" aria-label="个人渠道">
-                {support.image && <ZoomableImage src={support.image} alt={support.imageAlt || `${authorProfile.name} 的赞赏码`} showLightboxCaption={false} triggerClassName="about-channel about-channel--support" triggerAriaLabel={`打开${support.imageAlt || `${authorProfile.name} 的赞赏码`}`} triggerContent={<span className="about-channel-icon about-channel-icon--support"><HandHeart size={24} weight="duotone" /></span>} />}
+              {channels.length > 0 && <div className="about-channel-list" aria-label="个人渠道">
                 {channels.map(({ key, Icon, href, ariaLabel }) => <a key={key} className="about-channel" data-channel={key} href={href} target={key === "email" ? undefined : "_blank"} rel={key === "email" ? undefined : "noreferrer"} aria-label={ariaLabel}><span className="about-channel-icon"><Icon size={24} weight="duotone" /></span></a>)}
               </div>}
             </div>
