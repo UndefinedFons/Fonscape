@@ -22,6 +22,7 @@
     "src/heroImages.js",
     "src/lockPageScroll.js",
     "src/musicSections.js",
+    "src/musicSources.js",
     "src/navigation.js",
     "src/pages/homeContent.js",
     "src/pagination.js",

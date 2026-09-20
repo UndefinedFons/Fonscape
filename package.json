@@ -52,6 +52,7 @@
   },
   "dependencies": {
     "@libsql/client": "0.17.4",
+    "@meting/core": "1.6.1",
     "@phosphor-icons/react": "^2.1.10",
     "@vercel/functions": "3.9.1",
     "@vitejs/plugin-react": "5.0.4",

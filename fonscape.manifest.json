@@ -50,6 +50,7 @@
       "LICENSE",
       "README.md",
       "playwright.config.mjs",
+      "patches/**",
       "api/**",
       "functions/**",
       "public/fonscape/**",

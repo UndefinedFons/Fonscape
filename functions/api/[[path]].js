@@ -28,6 +28,7 @@ import {
 } from "../_lib/handlers/_comments.js";
 import { contentStats, recordContentView, siteRuntime } from "../_lib/handlers/_stats.js";
 import { routeParts } from "../_lib/handlers/_shared.js";
+import { musicAudio, musicMetadata } from "../_lib/music.js";
 
 export { AVATAR_MAX_BYTES, AVATAR_TOTAL_MAX_BYTES };
 
@@ -55,6 +56,8 @@ async function handle(context) {
   if (method === "GET" && parts[0] === "content" && parts[1] === "stats" && parts.length === 2) return contentStats(context, url);
   if (method === "POST" && parts[0] === "content" && parts[1] === "view" && parts.length === 2) return recordContentView(context);
   if (method === "GET" && parts[0] === "site" && parts[1] === "runtime" && parts.length === 2) return siteRuntime(context);
+  if (method === "GET" && parts[0] === "music" && parts[1] === "resolve" && parts.length === 2) return musicMetadata(context, url);
+  if ((method === "GET" || method === "HEAD") && parts[0] === "music" && parts[1] === "audio" && parts.length === 2) return musicAudio(context, url);
   if (method === "GET" && parts[0] === "comments" && parts.length === 1) return listComments(context, url);
   if (method === "POST" && parts[0] === "comments" && parts.length === 1) return createComment(context);
   if (method === "DELETE" && parts[0] === "comments" && parts[1]) return deleteComment(context, parts[1]);

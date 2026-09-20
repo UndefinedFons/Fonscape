@@ -10,6 +10,9 @@ overrides:
   nanoid: 3.3.18
   postcss: 8.5.23
 
+patchedDependencies:
+  '@meting/core@1.6.1': edb911ab386f930755ea26e5727b0443aa3126f315df738dd3d4c3e9a590a9c4
+
 importers:
 
   .:
@@ -17,6 +20,9 @@ importers:
       '@libsql/client':
         specifier: 0.17.4
         version: 0.17.4
+      '@meting/core':
+        specifier: 1.6.1
+        version: 1.6.1(patch_hash=edb911ab386f930755ea26e5727b0443aa3126f315df738dd3d4c3e9a590a9c4)
       '@phosphor-icons/react':
         specifier: ^2.1.10
         version: 2.1.10(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
@@ -883,6 +889,9 @@ packages:
 
   '@mermaid-js/parser@1.2.1':
     resolution: {integrity: sha512-n12NohV3mrUyUL2o93IgG/ifeW9FTyeJn3zDxkhwa8MJ9Fxg3HQMlA3RiGmD/3UnJvheztkjjQAjA2T4LmUcpw==}
+
+  '@meting/core@1.6.1':
+    resolution: {integrity: sha512-6LPRZlZc8hUc0Jmg74tbMBLeoyXoyttPBLoNNpybLZ6GY+de95h9w3YQGh0yDwnrSivqcHMGZ5u5VJym5PdY1w==}
 
   '@neon-rs/load@0.0.4':
     resolution: {integrity: sha512-kTPhdZyTQxB+2wpiRcFWrDcejc4JI6tkPuS7UZCG4l6Zvc5kU/gGQ/ozvHTh1XR5tS+UlfAfGuPajjzQjCiHCw==}
@@ -3156,6 +3165,8 @@ snapshots:
   '@mermaid-js/parser@1.2.1':
     dependencies:
       '@chevrotain/types': 11.1.2
+
+  '@meting/core@1.6.1(patch_hash=edb911ab386f930755ea26e5727b0443aa3126f315df738dd3d4c3e9a590a9c4)': {}
 
   '@neon-rs/load@0.0.4': {}
 

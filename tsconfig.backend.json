@@ -5,8 +5,10 @@
   },
   "include": [
     "functions/types.d.ts",
+    "functions/meting-core.d.ts",
     "functions/_lib/community.js",
     "functions/_lib/abuse/**/*.js",
-    "functions/_lib/handlers/_shared.js"
+    "functions/_lib/handlers/_shared.js",
+    "functions/_lib/music.js"
   ]
 }
