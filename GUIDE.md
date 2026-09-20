@@ -171,7 +171,7 @@ featured: true
 featuredOrder: 10
 image: "/assets/my-note.webp"
 cardPosition: "50% 35%"
-music: {"src":"/audio/example.mp3","cover":"/assets/example.webp","title":"曲名","artist":"音乐人"}
+music: {"url":"https://music.163.com/song?id=123456"}
 musicPlacement: "inline"
 ---
 
@@ -213,11 +213,21 @@ musicPlacement: "inline"
 
 #### 文章配乐
 
-Frontmatter 中的对象必须写成一行合法 JSON：
+默认使用网易云音乐或 QQ 音乐的单曲 URL。Frontmatter 中的对象必须写成一行合法 JSON：
+
+```yaml
+music: {"url":"https://music.163.com/song?id=123456"}
+```
+
+Fonscape 会在文章打开时取得曲名、音乐人、封面和可播放地址。当前仅接受可直接识别歌曲 ID 的单曲链接，不接受专辑、歌单、歌手页面或跳转短链。
+
+需要使用仓库内的本地媒体时，改用 `src`，并填写 `title` 与 `artist`；`cover` 可省略：
 
 ```yaml
 music: {"src":"/audio/example.mp3","cover":"/assets/example.webp","title":"曲名","artist":"音乐人"}
 ```
+
+同一个配乐对象必须且只能配置 `url` 或 `src`，不能同时填写。
 
 默认播放器位于文章信息与正文之间。需要放入正文时，增加 `musicPlacement: "inline"`，再将下列标记单独写在正文一行：
 

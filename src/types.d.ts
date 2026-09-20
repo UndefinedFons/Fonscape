@@ -87,8 +87,29 @@ export interface Post extends DatedEntry {
   image?: string;
   cardPosition?: string;
   coverMode?: "wide" | "none";
+  music?: MusicTrack;
+  musicBlocks?: MusicTrack[];
   [key: string]: unknown;
 }
+
+export interface LocalMusicTrack {
+  src: string;
+  url?: never;
+  title: string;
+  artist: string;
+  cover?: string;
+  autoplay?: boolean;
+  id?: string;
+}
+
+export interface MetingMusicTrack {
+  url: string;
+  src?: never;
+  autoplay?: boolean;
+  id?: string;
+}
+
+export type MusicTrack = LocalMusicTrack | MetingMusicTrack;
 
 export interface ArticleOutlineItem {
   id: string;

@@ -1,4 +1,5 @@
 import { countWords, getArticleOutline, getFirstParagraph, getPoemLines } from "./markdown.js";
+import { parseMetingSongUrl } from "../musicSources.js";
 
 const SLUG_PATTERN = /^[a-z0-9][a-z0-9/_-]{0,119}$/u;
 
@@ -76,6 +77,23 @@ function validateCommonEntry(entry, path) {
   return entry;
 }
 
+/** @param {unknown} track @param {string} path @param {string} field */
+function validateMusicSource(track, path, field) {
+  if (!track || Array.isArray(track) || typeof track !== "object") {
+    throw new Error(`${path} 的 ${field} 必须是对象。`);
+  }
+  const music = /** @type {Record<string, any>} */ (track);
+  const hasUrl = typeof music.url === "string" && music.url.trim() !== "";
+  const hasSource = typeof music.src === "string" && music.src.trim() !== "";
+  if (hasUrl === hasSource) throw new Error(`${path} 的 ${field} 必须且只能配置 url 或 src。`);
+  if (hasUrl && !parseMetingSongUrl(music.url)) {
+    throw new Error(`${path} 的 ${field}.url 必须是网易云音乐或 QQ 音乐的单曲链接。`);
+  }
+  if (hasSource && (!music.title || !music.artist)) {
+    throw new Error(`${path} 的本地 ${field} 必须配置 title 和 artist。`);
+  }
+}
+
 /**
  * @param {string} path
  * @param {string} source
@@ -93,6 +111,11 @@ export function parsePost(path, source, options = {}) {
   if (!data.featured && Object.hasOwn(data, "featuredOrder")) throw new Error(`${path} 未置顶，不能配置 featuredOrder。`);
   if (Object.hasOwn(data, "featuredOrder") && (!Number.isInteger(data.featuredOrder) || data.featuredOrder < 1)) {
     throw new Error(`${path} 的 featuredOrder 必须是正整数。`);
+  }
+  if (Object.hasOwn(data, "music")) validateMusicSource(data.music, path, "music");
+  if (Object.hasOwn(data, "musicBlocks")) {
+    if (!Array.isArray(data.musicBlocks)) throw new Error(`${path} 的 musicBlocks 必须是数组。`);
+    data.musicBlocks.forEach((track, index) => validateMusicSource(track, path, `musicBlocks[${index}]`));
   }
   const post = {
     ...frontmatter,

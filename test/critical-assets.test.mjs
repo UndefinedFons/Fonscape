@@ -79,5 +79,5 @@ test("homepage and detail images use two responsive derivatives while lightboxes
   assert.match(generator, /post\.musicBlocks/iu);
   assert.match(generator, /track\?\.cover/iu);
   assert.match(generator, /addTarget\(targets, entry\.image, "thumbnail"\)/u);
-  assert.match(player, /useResponsiveImage\(track\.cover,/u);
+  assert.match(player, /useResponsiveImage\(displayTrack\.cover,/u);
 });
