@@ -90,6 +90,7 @@ class FakeAudio {
     this.paused = true;
     this.ended = false;
     this.volume = 1;
+    this.error = null;
     this.listeners = new Map();
     FakeAudio.instances.push(this);
   }
@@ -216,6 +217,41 @@ test("music player volume and track object updates stay on the existing audio li
     assert.equal(firstAudio.listeners.size, 0);
     runner.unmount();
     assert.equal(FakeAudio.instances[1].listeners.size, 0);
+  } finally {
+    stopArticleAudio();
+    await server.close();
+    if (previousAudio === undefined) delete globalThis.Audio;
+    else globalThis.Audio = previousAudio;
+  }
+});
+
+test("music player reports media load failures and clears the error after recovery", async () => {
+  const previousAudio = globalThis.Audio;
+  globalThis.Audio = FakeAudio;
+  const { server, ArticleMusicPlayer, stopArticleAudio } = await loadMediaComponents();
+  try {
+    stopArticleAudio();
+    FakeAudio.instances.length = 0;
+    const runner = createHookRunner();
+    const props = { track: { src: "/audio/failure.mp3", title: "Failure", artist: "Artist" }, autoplay: false };
+    let tree = runner.render(ArticleMusicPlayer, props);
+    runner.flushEffects();
+    const audio = FakeAudio.instances[0];
+    assert.ok(audio);
+
+    audio.error = { code: 4 };
+    audio.listeners.get("error")?.();
+    tree = runner.render(ArticleMusicPlayer, props);
+    runner.flushEffects();
+    assert.ok(findElement(tree, (element) => element.type === "em" && element.props?.children === "加载失败"));
+
+    audio.error = null;
+    audio.listeners.get("canplay")?.();
+    tree = runner.render(ArticleMusicPlayer, props);
+    runner.flushEffects();
+    assert.equal(findElement(tree, (element) => element.type === "em" && element.props?.children === "加载失败"), null);
+
+    runner.unmount();
   } finally {
     stopArticleAudio();
     await server.close();
