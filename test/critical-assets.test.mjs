@@ -70,6 +70,7 @@ test("homepage and detail images use two responsive derivatives while lightboxes
   assert.match(responsive, /detailImageSizes = "\(max-width: 760px\) calc\(100vw - 68px\), min\(calc\(100vw - 116px\), 790px\)"/u);
   assert.match(richArticle, /sizes=\{detailImageSizes\}/u);
   assert.match(article, /sizes=\{detailImageSizes\}/u);
+  assert.match(article, /post\?\.music && post\.musicPlacement === "inline" \? <ArticleMusicPlayer track=\{post\.music\} autoplay=\{false\}/u);
   assert.match(music, /useResponsiveImage\(review\?\.image \|\| "",/u);
   assert.match(generator, /detail: \[640, 1600\]/u);
   assert.match(generator, /MAX_RESPONSIVE_CANDIDATES_PER_SOURCE = 2/u);

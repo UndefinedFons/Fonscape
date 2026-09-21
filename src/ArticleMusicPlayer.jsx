@@ -6,6 +6,7 @@ import { Play } from "@phosphor-icons/react/Play";
 import { SpeakerHigh } from "@phosphor-icons/react/SpeakerHigh";
 import { X } from "@phosphor-icons/react/X";
 import { acquireAudio, activateAudio, deactivateAudio, releaseAudio } from "./articleAudio.js";
+import { parseMetingSongUrl } from "./musicSources.js";
 import { useResponsiveImage } from "./useResponsiveImage.js";
 
 export { primeArticleAudio, stopArticleAudio } from "./articleAudio.js";
@@ -41,9 +42,15 @@ export function ArticleMusicPlayer({ track, autoplay = true }) {
       return undefined;
     }
     const controller = new AbortController();
+    const target = parseMetingSongUrl(track.url);
+    if (!target) {
+      setResolvedTrack(null);
+      setResolutionState("error");
+      return undefined;
+    }
     setResolvedTrack(null);
     setResolutionState("loading");
-    fetch(`/api/music/resolve?url=${encodeURIComponent(track.url)}`, {
+    fetch(`/api/music/resolve?source=${encodeURIComponent(target.source)}&id=${encodeURIComponent(target.id)}`, {
       headers: { Accept: "application/json" },
       signal: controller.signal,
     }).then(async (response) => {

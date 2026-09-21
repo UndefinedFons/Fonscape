@@ -11,7 +11,7 @@ overrides:
   postcss: 8.5.23
 
 patchedDependencies:
-  '@meting/core@1.6.1': edb911ab386f930755ea26e5727b0443aa3126f315df738dd3d4c3e9a590a9c4
+  '@meting/core@1.6.1': 5a03bfb71ec59a9f71b7bd04260409ac9a24311077d653fa3f3dc9caf85ed1b9
 
 importers:
 
@@ -22,7 +22,7 @@ importers:
         version: 0.17.4
       '@meting/core':
         specifier: 1.6.1
-        version: 1.6.1(patch_hash=edb911ab386f930755ea26e5727b0443aa3126f315df738dd3d4c3e9a590a9c4)
+        version: 1.6.1(patch_hash=5a03bfb71ec59a9f71b7bd04260409ac9a24311077d653fa3f3dc9caf85ed1b9)
       '@phosphor-icons/react':
         specifier: ^2.1.10
         version: 2.1.10(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
@@ -3166,7 +3166,7 @@ snapshots:
     dependencies:
       '@chevrotain/types': 11.1.2
 
-  '@meting/core@1.6.1(patch_hash=edb911ab386f930755ea26e5727b0443aa3126f315df738dd3d4c3e9a590a9c4)': {}
+  '@meting/core@1.6.1(patch_hash=5a03bfb71ec59a9f71b7bd04260409ac9a24311077d653fa3f3dc9caf85ed1b9)': {}
 
   '@neon-rs/load@0.0.4': {}
 

@@ -7,6 +7,7 @@ import {
   HOME_FEATURED_CHUNK_SIZE,
   HOME_LATEST_LIMIT,
   buildContentDistribution,
+  collectMetingSongTargets,
   resolveCollectionDefinitions,
 } from "../scripts/generate-content-targets.mjs";
 
@@ -75,4 +76,18 @@ test("a fourth generic content collection reuses the distribution pipeline", () 
   assert.ok(files.has("entries/essay/essay-72.json"));
   assert.equal(JSON.parse(files.get("entries/essay/essay-72.json")).body, "/fonscape/content/bodies/essay/essay-72.md");
   assert.equal(files.get("bodies/essay/essay-72.md"), essay[72].raw);
+});
+
+test("Meting targets include only deduplicated songs referenced by content", () => {
+  const collections = mixedCollections(3);
+  collections[0][1][0].entry.music = { url: "https://music.163.com/song?id=27557102" };
+  collections[0][1][0].entry.musicBlocks = [
+    { url: "https://music.163.com/#/song?id=27557102" },
+    { url: "https://y.qq.com/n/ryqq/songDetail/0039MnYb0qxYhV" },
+    { src: "/audio/local.mp3", title: "Local", artist: "Artist" },
+  ];
+  assert.deepEqual(collectMetingSongTargets(collections), [
+    "netease:27557102",
+    "tencent:0039MnYb0qxYhV",
+  ]);
 });
