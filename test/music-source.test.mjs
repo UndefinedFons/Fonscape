@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { isMetingSongTarget } from "../functions/_generated/content-targets.js";
 import { ApiError } from "../functions/_lib/community.js";
 import { musicAudio, musicMetadata, resolveMetingAudioUrl, resolveMetingSong } from "../functions/_lib/music.js";
 import { parseMetingSongUrl } from "../src/musicSources.js";
@@ -69,12 +70,14 @@ test("Meting normalization produces the existing local-track contract", async ()
 });
 
 test("public music endpoints reject songs that are not referenced by content", async () => {
+  let unconfiguredId = "1";
+  while (isMetingSongTarget("netease", unconfiguredId)) unconfiguredId = String(Number(unconfiguredId) + 1);
   await assert.rejects(
-    musicMetadata({}, new URL("https://example.test/api/music/resolve?source=netease&id=27557102")),
+    musicMetadata({}, new URL(`https://example.test/api/music/resolve?source=netease&id=${unconfiguredId}`)),
     (error) => error instanceof ApiError && error.status === 404 && error.code === "music_not_configured",
   );
   await assert.rejects(
-    musicAudio({}, new URL("https://example.test/api/music/audio?source=netease&id=27557102")),
+    musicAudio({}, new URL(`https://example.test/api/music/audio?source=netease&id=${unconfiguredId}`)),
     (error) => error instanceof ApiError && error.status === 404 && error.code === "music_not_configured",
   );
   await assert.rejects(
