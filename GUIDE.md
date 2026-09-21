@@ -188,8 +188,8 @@ musicPlacement: "inline"
 | --- | --- | --- |
 | `title` | 是 | 文章标题 |
 | `category` | 是 | `postCategories` 中配置的任意分类名称 |
-| `date` | 是 | 可被 JavaScript 解析的日期，建议使用 `YYYY-MM-DDTHH:mm` |
-| `slug` | 否 | 自定义地址；默认取文件名，只能使用小写字母、数字、`/`、`_`、`-` |
+| `date` | 是 | ISO 日期；建议使用 `YYYY-MM-DDTHH:mm`，未写时区时统一按 UTC 解释 |
+| `slug` | 否 | 自定义地址；默认取文件名，只能使用小写字母、数字、`/`、`_`、`-`，`/` 只能分隔非空路径段且不能位于末尾 |
 | `excerpt` | 否 | 列表与详情页摘要；未填写时列表会尝试读取正文首段 |
 | `tags` | 否 | JSON 字符串数组 |
 | `series` | 否 | 系列名称 |
