@@ -4,6 +4,7 @@ import { createTursoD1Database } from "../server/turso-d1.js";
 
 let cachedDatabase = null;
 let cachedDatabaseKey = null;
+const VERCEL_ROUTE_PARAMETER = "__fonscape_path";
 
 function tursoConfiguration(environment) {
   const url = String(environment?.TURSO_DATABASE_URL || "").trim();
@@ -44,21 +45,30 @@ export function requestWithVercelClientAddress(request, environment = process.en
 
 export function vercelApiPath(request) {
   const url = new URL(request.url);
-  const rewrittenPath = url.searchParams.get("path");
+  const rewrittenPath = url.searchParams.get(VERCEL_ROUTE_PARAMETER);
   if (rewrittenPath !== null) return rewrittenPath.split("/").filter(Boolean);
   const pathname = url.pathname;
   const suffix = pathname === "/api" ? "" : pathname.replace(/^\/api\/?/u, "");
   return suffix.split("/").filter(Boolean);
 }
 
+export function requestWithoutVercelRouteParameter(request) {
+  const url = new URL(request.url);
+  if (!url.searchParams.has(VERCEL_ROUTE_PARAMETER)) return request;
+  url.searchParams.delete(VERCEL_ROUTE_PARAMETER);
+  return new Request(url, request);
+}
+
 export function createVercelApiContext(request, environment = process.env) {
   const env = { ...environment };
   const database = databaseFor(environment);
   if (database) env.DB = database;
+  const path = vercelApiPath(request);
+  const adaptedRequest = requestWithVercelClientAddress(requestWithoutVercelRouteParameter(request), environment);
   return {
-    request: requestWithVercelClientAddress(request, environment),
+    request: adaptedRequest,
     env,
-    params: { path: vercelApiPath(request) },
+    params: { path },
     data: {},
     // Keep non-critical maintenance inside Vercel's function lifetime instead
     // of leaving it as an unmanaged Promise after the response is sent.
