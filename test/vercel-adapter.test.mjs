@@ -5,6 +5,7 @@ import {
   createVercelApiContext,
   handleVercelApiRequest,
   requestWithVercelClientAddress,
+  requestWithoutVercelRouteParameter,
   vercelApiPath,
   vercelClientAddress,
 } from "../api/fonscape.js";
@@ -29,7 +30,27 @@ test("Vercel adapter translates catch-all API paths to Pages Function params", (
   assert.deepEqual(vercelApiPath(new Request("https://example.test/api/auth/session")), ["auth", "session"]);
   assert.deepEqual(vercelApiPath(new Request("https://example.test/api")), []);
   assert.deepEqual(vercelApiPath(new Request("https://example.test/api/avatar/user-1")), ["avatar", "user-1"]);
-  assert.deepEqual(vercelApiPath(new Request("https://example.test/api/fonscape?path=admin%2Fsetup")), ["admin", "setup"]);
+  assert.deepEqual(vercelApiPath(new Request("https://example.test/api/fonscape?__fonscape_path=admin%2Fsetup")), ["admin", "setup"]);
+});
+
+test("Vercel adapter removes only its internal route parameter before shared handlers", () => {
+  const request = new Request("https://example.test/api/fonscape?__fonscape_path=music%2Fresolve&source=netease&id=27557102");
+  const adapted = requestWithoutVercelRouteParameter(request);
+  const url = new URL(adapted.url);
+  assert.equal(url.searchParams.has("__fonscape_path"), false);
+  assert.deepEqual([...url.searchParams.entries()], [
+    ["source", "netease"],
+    ["id", "27557102"],
+  ]);
+
+  const context = createVercelApiContext(
+    new Request("https://example.test/api/fonscape?__fonscape_path=music%2Fresolve&source=netease&id=27557102&path=visitor"),
+    { VERCEL: "1" },
+  );
+  assert.deepEqual(context.params.path, ["music", "resolve"]);
+  const contextUrl = new URL(context.request.url);
+  assert.equal(contextUrl.searchParams.has("__fonscape_path"), false);
+  assert.equal(contextUrl.searchParams.get("path"), "visitor", "visitor query parameters must remain visible to strict shared validation");
 });
 
 test("Vercel adapter delegates database-missing responses to the existing Pages handler", async () => {
@@ -73,8 +94,8 @@ test("Vercel redirects retired admin paths before the API-safe SPA fallback", as
     { source: "/admin/", destination: "/", statusCode: 302 },
   ]);
   assert.deepEqual(config.rewrites.slice(0, 2), [
-    { source: "/api", destination: "/api/fonscape?path=" },
-    { source: "/api/:path*", destination: "/api/fonscape?path=:path*" },
+    { source: "/api", destination: "/api/fonscape?__fonscape_path=" },
+    { source: "/api/:path*", destination: "/api/fonscape?__fonscape_path=:path*" },
   ]);
   assert.equal(config.rewrites.length, 3);
   assert.match(config.rewrites.at(-1).source, /api/u);
