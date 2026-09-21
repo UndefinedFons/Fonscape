@@ -160,11 +160,11 @@ export function preloadRoute(path) {
  * Render the route selected by the canonical pathname state. Lazy route
  * modules remain behind the app's existing Suspense boundary.
  */
-export function RouteContent({ route, routeQuery, stats, onView, onOutline, onRequestStats, isRetiredAdminRoute, routeEnabled }) {
+export function RouteContent({ route, routeQuery, stats, onView, onOutline, onRequestStats, onCommentStats, isRetiredAdminRoute, routeEnabled }) {
   if (!routeEnabled || isRetiredAdminRoute) return <HomePage stats={stats.post || {}} onStatsTargets={onRequestStats} />;
-  if (route.startsWith("/post/")) return <DetailPageFrame kind="post" onReturn={() => returnFromDetail(route)}><ArticlePage slug={decodeRoutePath(route.slice("/post/".length))} stats={stats.post || {}} onView={onView} onOutline={onOutline} onStatsTargets={onRequestStats} /></DetailPageFrame>;
-  if (route.startsWith("/poem/")) return <DetailPageFrame kind="poem" onReturn={() => returnFromDetail(route)} afterContent={siteConfig.showCommunity && <PoemComments slug={decodeRoutePath(route.slice("/poem/".length))} />}><PoemPage slug={decodeRoutePath(route.slice("/poem/".length))} stats={stats.poem || {}} onView={onView} onStatsTargets={onRequestStats} /></DetailPageFrame>;
-  if (route.startsWith("/music/")) return <DetailPageFrame kind="music" onReturn={() => returnFromDetail(route)}><MusicDetailPage path={decodeRoutePath(route.slice("/music/".length))} stats={stats.music || {}} onView={onView} onStatsTargets={onRequestStats} /></DetailPageFrame>;
+  if (route.startsWith("/post/")) return <DetailPageFrame kind="post" onReturn={() => returnFromDetail(route)}><ArticlePage slug={decodeRoutePath(route.slice("/post/".length))} stats={stats.post || {}} onView={onView} onOutline={onOutline} onStatsTargets={onRequestStats} onCommentStats={onCommentStats} /></DetailPageFrame>;
+  if (route.startsWith("/poem/")) return <DetailPageFrame kind="poem" onReturn={() => returnFromDetail(route)} afterContent={siteConfig.showCommunity && <PoemComments slug={decodeRoutePath(route.slice("/poem/".length))} onCommentStats={onCommentStats} />}><PoemPage slug={decodeRoutePath(route.slice("/poem/".length))} stats={stats.poem || {}} onView={onView} onStatsTargets={onRequestStats} /></DetailPageFrame>;
+  if (route.startsWith("/music/")) return <DetailPageFrame kind="music" onReturn={() => returnFromDetail(route)}><MusicDetailPage path={decodeRoutePath(route.slice("/music/".length))} stats={stats.music || {}} onView={onView} onStatsTargets={onRequestStats} onCommentStats={onCommentStats} /></DetailPageFrame>;
   if (route === "/") return <HomePage stats={stats.post || {}} onStatsTargets={onRequestStats} />;
   if (route === "/posts") return <PrimaryRoute path={route}><PostsPage query={routeQuery} stats={stats.post || {}} onStatsTargets={onRequestStats} /></PrimaryRoute>;
   if (route === "/poems") return <PrimaryRoute path={route}><PoemsPage stats={stats.poem || {}} onStatsTargets={onRequestStats} /></PrimaryRoute>;
