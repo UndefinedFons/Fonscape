@@ -22,9 +22,9 @@ function initialCommentState() {
 }
 
 /**
- * @param {{ targetType: string, slug: string }} options
+ * @param {{ targetType: string, slug: string, onStatsChange?: (type: string, slug: string, comments?: number) => void }} options
  */
-export function useCommentsSection({ targetType, slug }) {
+export function useCommentsSection({ targetType, slug, onStatsChange }) {
   const { viewer } = useCommunity();
   const viewerId = viewer?.id || "";
   const [state, setState] = useState(initialCommentState);
@@ -118,6 +118,7 @@ export function useCommentsSection({ targetType, slug }) {
       if (includeLocation && locationTargetRef.current) query.set("comment", locationTargetRef.current);
       const result = /** @type {import("../types.d.ts").CommentListResponse} */ (await api(`/comments?${query}`));
       if (!isCurrentRequest()) return false;
+      const total = Number(result?.total || 0);
       setState({
         loading: false,
         loadingPage: false,
@@ -125,10 +126,11 @@ export function useCommentsSection({ targetType, slug }) {
         error: "",
         retryPage: false,
         comments: Array.isArray(result?.comments) ? result.comments : [],
-        total: Number(result?.total || 0),
+        total,
         page: Math.max(1, Number(result?.page || requestedPage)),
         totalPages: Math.max(1, Number(result?.totalPages || 1)),
       });
+      onStatsChange?.(targetType, slug, total);
       return true;
     } catch (/** @type {any} */ error) {
       if (!isCurrentRequest()) return false;
@@ -142,7 +144,7 @@ export function useCommentsSection({ targetType, slug }) {
       }));
       return false;
     }
-  }, [slug, targetType, viewerId]);
+  }, [onStatsChange, slug, targetType, viewerId]);
 
   const changePage = useCallback(async (/** @type {number} */ nextPage) => {
     const pageTargetKey = `${targetType}:${slug}:${viewerId}`;
@@ -169,6 +171,7 @@ export function useCommentsSection({ targetType, slug }) {
   const refreshComments = useCallback((/** @type {import("../types.js").PublicComment | undefined} */ createdComment) => {
     const refreshTargetKey = `${targetType}:${slug}:${viewerId}`;
     if (!mountedRef.current || targetKeyRef.current !== refreshTargetKey || pageSwitchRef.current) return;
+    onStatsChange?.(targetType, slug);
     const createdId = typeof createdComment?.id === "string" ? createdComment.id.trim() : "";
     if (createdId) {
       locationTargetRef.current = createdId;
@@ -184,7 +187,7 @@ export function useCommentsSection({ targetType, slug }) {
     expansionRequestRef.current = "";
     consumeCommentTarget();
     void loadPage(pageRef.current, false, { background: true });
-  }, [loadPage, slug, targetType, viewerId]);
+  }, [loadPage, onStatsChange, slug, targetType, viewerId]);
 
   useEffect(() => {
     setState(initialCommentState());
