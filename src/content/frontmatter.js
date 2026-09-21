@@ -6,6 +6,7 @@ export { parseContentDate, sortNewestFirst } from "./date.js";
 
 const SLUG_SEGMENT_PATTERN = /^[a-z0-9][a-z0-9_-]*$/u;
 
+/** @param {unknown} value @returns {boolean} */
 function isValidContentSlug(value) {
   const slug = String(value ?? "");
   return slug.length > 0 && slug.length <= 120 && slug.split("/").every((segment) => SLUG_SEGMENT_PATTERN.test(segment));
