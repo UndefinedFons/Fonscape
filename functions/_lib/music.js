@@ -3,7 +3,7 @@ import { ApiError, json } from "./community.js";
 import { isMetingSongTarget } from "../_generated/content-targets.js";
 
 const METADATA_CACHE_CONTROL = "public, max-age=300, s-maxage=3600, stale-while-revalidate=86400";
-const AUDIO_CACHE_CONTROL = "public, max-age=300, s-maxage=1800, stale-while-revalidate=3600";
+const AUDIO_CACHE_CONTROL = "private, no-store";
 
 /** @param {URL} url @returns {{ source: "netease" | "tencent", id: string }} */
 function configuredTarget(url) {
@@ -74,8 +74,9 @@ async function resolveNeteaseOuterAudioUrl(id, fetchImpl) {
   const location = response.status >= 300 && response.status < 400
     ? response.headers.get("Location")
     : "";
-  if (!location) throw new ApiError(404, "这首歌当前无法播放。", "music_unavailable");
-  return location;
+  if (!location) return endpoint.href;
+  const redirect = new URL(location, endpoint);
+  return redirect.pathname === "/404" ? endpoint.href : redirect.href;
 }
 
 /**
