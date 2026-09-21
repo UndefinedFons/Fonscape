@@ -213,21 +213,31 @@ musicPlacement: "inline"
 
 #### 文章配乐
 
-默认使用网易云音乐或 QQ 音乐的单曲 URL。Frontmatter 中的对象必须写成一行合法 JSON：
+文章配乐默认使用 Meting 单曲 URL，也可改用仓库内的本地媒体。两种方式共用现有播放器，不需要另外配置播放器样式。
+
+##### 默认：Meting 单曲 URL
+
+将网易云音乐或 QQ 音乐的单曲页 URL 写入 `url`。Frontmatter 中的对象必须是一行合法 JSON：
 
 ```yaml
 music: {"url":"https://music.163.com/song?id=123456"}
 ```
 
-Fonscape 会在文章打开时取得曲名、音乐人、封面和可播放地址。当前仅接受可直接识别歌曲 ID 的单曲链接，不接受专辑、歌单、歌手页面或跳转短链。
+Fonscape 会在文章打开时取得曲名、音乐人、封面和可播放地址。`url` 仅接受能够直接识别歌曲 ID 的网易云音乐或 QQ 音乐单曲链接；专辑、歌单、歌手页面和跳转短链不受支持。
 
-需要使用仓库内的本地媒体时，改用 `src`，并填写 `title` 与 `artist`；`cover` 可省略：
+构建时，Fonscape 会根据 Markdown 内容生成歌曲白名单。运行时接口只解析当前站点文章实际引用的歌曲；新增或更换 URL 后，需要重新构建并部署站点。
+
+##### 可选：本地媒体
+
+将音频放在 `public/audio/`，在 `src` 中填写以 `/audio/` 开头的站内路径，同时填写 `title` 与 `artist`。`cover` 可省略；需要封面时，将图片放在 `public/assets/` 并填写以 `/assets/` 开头的路径：
 
 ```yaml
 music: {"src":"/audio/example.mp3","cover":"/assets/example.webp","title":"曲名","artist":"音乐人"}
 ```
 
-同一个配乐对象必须且只能配置 `url` 或 `src`，不能同时填写。
+同一个配乐对象必须且只能填写 `url` 或 `src`。使用 `url` 时，曲名、音乐人和封面由音乐平台提供；使用 `src` 时，这些信息由 Frontmatter 提供。
+
+##### 播放器位置与播放行为
 
 默认播放器位于文章信息与正文之间。需要放入正文时，增加 `musicPlacement: "inline"`，再将下列标记单独写在正文一行：
 
@@ -235,7 +245,7 @@ music: {"src":"/audio/example.mp3","cover":"/assets/example.webp","title":"曲�
 [[article-music]]
 ```
 
-内联播放器不会自动播放；浏览器也可能阻止详情页播放器的有声自动播放，此时读者可手动点击播放。
+`musicPlacement: "inline"` 对 Meting 单曲 URL 和本地媒体都生效，并沿用同一套播放器样式。内联播放器不会自动播放；浏览器也可能阻止详情页播放器的有声自动播放，此时读者可手动点击播放。
 
 ### 新建音乐手记
 

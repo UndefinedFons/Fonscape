@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { ApiError } from "../functions/_lib/community.js";
-import { resolveMetingAudioUrl, resolveMetingSong } from "../functions/_lib/music.js";
+import { musicAudio, musicMetadata, resolveMetingAudioUrl, resolveMetingSong } from "../functions/_lib/music.js";
 import { parseMetingSongUrl } from "../src/musicSources.js";
 
 class FakeMeting {
@@ -26,7 +26,7 @@ class FakeMeting {
   async url(id, bitrate) {
     assert.equal(bitrate, 320);
     const url = id === "unavailable" ? "" : id === "unsafe" ? "javascript:alert(1)" : "https://audio.example.test/song.mp3";
-    return JSON.stringify({ url });
+    return JSON.stringify({ url: url === "https://audio.example.test/song.mp3" ? "http://audio.example.test/song.mp3" : url });
   }
 }
 
@@ -65,5 +65,20 @@ test("Meting normalization produces the existing local-track contract", async ()
   await assert.rejects(
     resolveMetingAudioUrl("tencent", "unsafe", FakeMeting),
     (error) => error instanceof ApiError && error.status === 502 && error.code === "music_provider_invalid",
+  );
+});
+
+test("public music endpoints reject songs that are not referenced by content", async () => {
+  await assert.rejects(
+    musicMetadata({}, new URL("https://example.test/api/music/resolve?source=netease&id=27557102")),
+    (error) => error instanceof ApiError && error.status === 404 && error.code === "music_not_configured",
+  );
+  await assert.rejects(
+    musicAudio({}, new URL("https://example.test/api/music/audio?source=netease&id=27557102")),
+    (error) => error instanceof ApiError && error.status === 404 && error.code === "music_not_configured",
+  );
+  await assert.rejects(
+    musicMetadata({}, new URL("https://example.test/api/music/resolve?source=netease&id=27557102&cacheBust=1")),
+    (error) => error instanceof ApiError && error.status === 400 && error.code === "invalid_music_source",
   );
 });
