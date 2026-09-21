@@ -33,6 +33,7 @@ export function ArticleMusicPlayer({ track, autoplay = true }) {
   const [volumeOpen, setVolumeOpen] = useState(false);
   const [autoplayBlocked, setAutoplayBlocked] = useState(false);
   const [buffering, setBuffering] = useState(true);
+  const [playbackError, setPlaybackError] = useState(false);
   const coverImage = useResponsiveImage(displayTrack.cover, "(max-width: 760px) 72px, 78px");
 
   useEffect(() => {
@@ -68,13 +69,15 @@ export function ArticleMusicPlayer({ track, autoplay = true }) {
     if (!trackSrc) return undefined;
     const audio = acquireAudio({ src: trackSrc });
     audioRef.current = audio;
+    setPlaybackError(false);
     const updateDuration = () => setDuration(Number.isFinite(audio.duration) ? audio.duration : 0);
     const updateTime = () => !seekingRef.current && setCurrentTime(audio.currentTime);
     const markSeeked = () => { seekingRef.current = false; setCurrentTime(audio.currentTime); };
     const markLoading = () => setBuffering(true);
-    const markReady = () => setBuffering(false);
-    const markPlaying = () => { activateAudio(audio); setPlaying(true); setBuffering(false); };
+    const markReady = () => { setBuffering(false); setPlaybackError(false); };
+    const markPlaying = () => { activateAudio(audio); setPlaying(true); setBuffering(false); setPlaybackError(false); };
     const markPaused = () => { deactivateAudio(audio); setPlaying(false); };
+    const markError = () => { deactivateAudio(audio); setPlaying(false); setBuffering(false); setPlaybackError(true); };
     const markEnded = () => { audio.currentTime = 0; setCurrentTime(0); audio.play().catch(() => setPlaying(false)); };
     audio.addEventListener("loadedmetadata", updateDuration);
     audio.addEventListener("durationchange", updateDuration);
@@ -87,6 +90,7 @@ export function ArticleMusicPlayer({ track, autoplay = true }) {
     audio.addEventListener("play", markPlaying);
     audio.addEventListener("playing", markPlaying);
     audio.addEventListener("pause", markPaused);
+    audio.addEventListener("error", markError);
     audio.addEventListener("ended", markEnded);
     audio.volume = volumeRef.current;
     if (audio.readyState >= 1) updateDuration();
@@ -97,7 +101,11 @@ export function ArticleMusicPlayer({ track, autoplay = true }) {
     if (autoplay) {
       activateAudio(audio);
       const playback = audio.paused ? audio.play() : Promise.resolve();
-      playback.then(() => setPlaying(true)).catch(() => { setPlaying(false); setAutoplayBlocked(true); });
+      playback.then(() => { setPlaying(true); setPlaybackError(false); }).catch(() => {
+        setPlaying(false);
+        if (audio.error) setPlaybackError(true);
+        else setAutoplayBlocked(true);
+      });
     } else {
       audio.pause();
       audio.currentTime = 0;
@@ -116,6 +124,7 @@ export function ArticleMusicPlayer({ track, autoplay = true }) {
       audio.removeEventListener("play", markPlaying);
       audio.removeEventListener("playing", markPlaying);
       audio.removeEventListener("pause", markPaused);
+      audio.removeEventListener("error", markError);
       audio.removeEventListener("ended", markEnded);
       releaseAudio(audio);
       audioRef.current = null;
@@ -137,7 +146,11 @@ export function ArticleMusicPlayer({ track, autoplay = true }) {
         await audio.play();
         setPlaying(true);
         setAutoplayBlocked(false);
-      } catch { setPlaying(false); }
+        setPlaybackError(false);
+      } catch {
+        setPlaying(false);
+        if (audio.error) setPlaybackError(true);
+      }
     } else {
       audio.pause();
       setPlaying(false);
@@ -162,7 +175,7 @@ export function ArticleMusicPlayer({ track, autoplay = true }) {
 
   const title = displayTrack.title || "正在载入配乐";
   const artist = displayTrack.artist || "";
-  const loadingLabel = resolutionState === "error" ? "加载失败" : resolutionState === "loading" ? "正在解析" : autoplayBlocked ? "点击播放" : buffering ? "正在加载" : "";
+  const loadingLabel = resolutionState === "error" || playbackError ? "加载失败" : resolutionState === "loading" ? "正在解析" : autoplayBlocked ? "点击播放" : buffering ? "正在加载" : "";
 
   return <section className={`article-music-player${volumeOpen ? " has-volume-open" : ""}`} aria-label={`文章配乐：${title}`}>
     <div className={`article-music-art${displayTrack.cover ? "" : " article-music-art--vinyl"}`}>{displayTrack.cover ? <img {...coverImage} alt={`${title}的音乐封面`} /> : <Disc size={46} weight="duotone" aria-label="默认黑胶唱片封面" />}<button className={`article-music-toggle${playing ? " is-playing" : ""}`} type="button" onClick={togglePlayback} aria-label={playing ? "暂停文章配乐" : "播放文章配乐"} aria-pressed={playing}><span className="article-music-toggle-icon article-music-toggle-icon--play"><Play size={18} weight="fill" /></span><span className="article-music-toggle-icon article-music-toggle-icon--pause"><Pause size={18} weight="fill" /></span></button></div>
