@@ -121,6 +121,9 @@ export function parsePost(path, source, options = {}) {
   if (Object.hasOwn(data, "featuredOrder") && (!Number.isInteger(data.featuredOrder) || data.featuredOrder < 1)) {
     throw new Error(`${path} 的 featuredOrder 必须是正整数。`);
   }
+  if (Object.hasOwn(data, "seriesOrder") && (!Number.isInteger(data.seriesOrder) || data.seriesOrder < 1)) {
+    throw new Error(`${path} 的 seriesOrder 必须是正整数。`);
+  }
   if (Object.hasOwn(data, "music")) validateMusicSource(data.music, path, "music");
   if (Object.hasOwn(data, "musicBlocks")) {
     if (!Array.isArray(data.musicBlocks)) throw new Error(`${path} 的 musicBlocks 必须是数组。`);
