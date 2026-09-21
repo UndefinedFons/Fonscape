@@ -54,14 +54,42 @@ export async function resolveMetingSong(target, MetingClient = Meting) {
   };
 }
 
+/** @param {string} id @param {typeof fetch} fetchImpl */
+async function resolveNeteaseOuterAudioUrl(id, fetchImpl) {
+  const endpoint = new URL("https://music.163.com/song/media/outer/url");
+  endpoint.searchParams.set("id", `${id}.mp3`);
+  let response;
+  try {
+    response = await fetchImpl(endpoint, {
+      redirect: "manual",
+      headers: {
+        Accept: "audio/mpeg,*/*;q=0.8",
+        Referer: "https://music.163.com/",
+        "User-Agent": "Mozilla/5.0 (compatible; Fonscape/1.0)",
+      },
+    });
+  } catch {
+    throw new ApiError(502, "音乐平台暂时无法提供播放地址。", "music_provider_failed");
+  }
+  const location = response.status >= 300 && response.status < 400
+    ? response.headers.get("Location")
+    : "";
+  if (!location) throw new ApiError(404, "这首歌当前无法播放。", "music_unavailable");
+  return location;
+}
+
 /**
  * @param {"netease" | "tencent"} source
  * @param {string} id
  * @param {typeof Meting} [MetingClient]
+ * @param {typeof fetch} [fetchImpl]
  */
-export async function resolveMetingAudioUrl(source, id, MetingClient = Meting) {
+export async function resolveMetingAudioUrl(source, id, MetingClient = Meting, fetchImpl = fetch) {
   const client = new MetingClient(source).format(true);
-  const audio = parseMetingJson(await client.url(id, 320));
+  let audio = parseMetingJson(await client.url(id, 320));
+  if ((!audio?.url || typeof audio.url !== "string") && source === "netease") {
+    audio = { url: await resolveNeteaseOuterAudioUrl(id, fetchImpl) };
+  }
   if (!audio?.url || typeof audio.url !== "string") {
     throw new ApiError(404, "这首歌当前无法播放。", "music_unavailable");
   }
