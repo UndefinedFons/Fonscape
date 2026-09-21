@@ -84,6 +84,12 @@ test("NetEase playback falls back to the public outer URL at restricted runtimes
     });
   });
   assert.equal(audioUrl, "https://m801.music.126.net/example.mp3");
+
+  const browserResolvedUrl = await resolveMetingAudioUrl("netease", "unavailable", FailingMeting, async () => new Response(null, {
+    status: 302,
+    headers: { Location: "/404" },
+  }));
+  assert.equal(browserResolvedUrl, "https://music.163.com/song/media/outer/url?id=unavailable.mp3");
 });
 
 test("public music endpoints reject songs that are not referenced by content", async () => {
