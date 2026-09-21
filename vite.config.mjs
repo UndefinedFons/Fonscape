@@ -3,6 +3,7 @@ import react from "@vitejs/plugin-react";
 import { readdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { parsePost } from "./src/content/frontmatter.js";
+import { contentDateTimestamp } from "./src/content/date.js";
 import siteConfig from "./fonscape.config.js";
 import { generateContentArtifacts } from "./scripts/generate-content-targets.mjs";
 import { generateFontStylesheets } from "./scripts/generate-font-css.mjs";
@@ -62,7 +63,7 @@ function homeFeaturedImage() {
     .map((path) => parsePost(path, readFileSync(path, "utf8")))
     .filter((post) => post.featured)
     .sort((left, right) => (left.featuredOrder ?? Number.MAX_SAFE_INTEGER) - (right.featuredOrder ?? Number.MAX_SAFE_INTEGER)
-      || new Date(left.date).getTime() - new Date(right.date).getTime());
+      || contentDateTimestamp(left.date) - contentDateTimestamp(right.date));
   const post = posts[0];
   return post?.image || "";
 }
