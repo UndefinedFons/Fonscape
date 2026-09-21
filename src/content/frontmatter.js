@@ -1,7 +1,15 @@
 import { countWords, getArticleOutline, getFirstParagraph, getPoemLines } from "./markdown.js";
 import { parseMetingSongUrl } from "../musicSources.js";
+import { parseContentDate } from "./date.js";
 
-const SLUG_PATTERN = /^[a-z0-9][a-z0-9/_-]{0,119}$/u;
+export { parseContentDate, sortNewestFirst } from "./date.js";
+
+const SLUG_SEGMENT_PATTERN = /^[a-z0-9][a-z0-9_-]*$/u;
+
+function isValidContentSlug(value) {
+  const slug = String(value ?? "");
+  return slug.length > 0 && slug.length <= 120 && slug.split("/").every((segment) => SLUG_SEGMENT_PATTERN.test(segment));
+}
 
 /**
  * @param {string} rawValue
@@ -72,8 +80,8 @@ function requireFields(entry, fields, path) {
  * @returns {T}
  */
 function validateCommonEntry(entry, path) {
-  if (!SLUG_PATTERN.test(entry.slug)) throw new Error(`${path} 的 slug 格式无效。`);
-  if (Number.isNaN(new Date(entry.date).getTime())) throw new Error(`${path} 的 date 格式无效。`);
+  if (!isValidContentSlug(entry.slug)) throw new Error(`${path} 的 slug 格式无效。`);
+  if (!parseContentDate(entry.date)) throw new Error(`${path} 的 date 格式无效。`);
   return entry;
 }
 
@@ -222,28 +230,18 @@ export function parseGenericContentMetadata(path, source) {
 }
 
 /**
- * @param {{date: string, slug?: string, key?: string}} left
- * @param {{date: string, slug?: string, key?: string}} right
- */
-export function sortNewestFirst(left, right) {
-  const dateDifference = new Date(right.date).getTime() - new Date(left.date).getTime();
-  if (dateDifference) return dateDifference;
-  const leftKey = String(left.slug || left.key || "");
-  const rightKey = String(right.slug || right.key || "");
-  return leftKey.localeCompare(rightKey);
-}
-
-/**
  * @template {import("../types.js").DatedEntry} T
  * @param {T[]} entries
  * @param {string} label
+ * @param {(entry: T) => string} [keyOf]
  * @returns {T[]}
  */
-export function assertUniqueEntries(entries, label) {
-  const slugs = new Set();
+export function assertUniqueEntries(entries, label, keyOf = (entry) => entry.slug) {
+  const keys = new Set();
   for (const entry of entries) {
-    if (slugs.has(entry.slug)) throw new Error(`${label} 中存在重复 slug：${entry.slug}`);
-    slugs.add(entry.slug);
+    const key = String(keyOf(entry));
+    if (keys.has(key)) throw new Error(`${label} 中存在重复 slug：${key}`);
+    keys.add(key);
   }
   return entries;
 }
