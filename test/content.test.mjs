@@ -90,6 +90,7 @@ test("invalid or duplicate frontmatter is rejected during the build", () => {
   assert.throws(() => parsePost("broken.md", "---\ntitle: A\ndate: 2026-07-30\ncategory: 开发\ncoverSide: left\n---\nBody"), /不支持 coverSide/u);
   assert.throws(() => parsePost("broken.md", "---\ntitle: A\ndate: 2026-07-30\ncategory: 开发\nfeatured: false\nfeaturedOrder: 2\n---\nBody"), /未置顶，不能配置 featuredOrder/u);
   assert.throws(() => parsePost("broken.md", "---\ntitle: A\ndate: 2026-07-30\ncategory: 开发\nfeatured: true\nfeaturedOrder: 1.5\n---\nBody"), /featuredOrder 必须是正整数/u);
+  assert.throws(() => parsePost("broken.md", "---\ntitle: A\ndate: 2026-07-30\ncategory: 开发\nseries: 系列\nseriesOrder: -1\n---\nBody"), /seriesOrder 必须是正整数/u);
   assert.throws(() => parsePost("broken.md", '---\ntitle: A\ndate: 2026-07-30\ncategory: 开发\nmusic: {"url":"https://music.163.com/song?id=1","src":"/audio/a.mp3"}\n---\nBody'), /必须且只能配置 url 或 src/u);
   assert.throws(() => parsePost("broken.md", '---\ntitle: A\ndate: 2026-07-30\ncategory: 开发\nmusic: {"url":"https://music.163.com/album?id=1"}\n---\nBody'), /必须是网易云音乐或 QQ 音乐的单曲链接/u);
   assert.throws(() => parsePost("broken.md", '---\ntitle: A\ndate: 2026-07-30\ncategory: 开发\nmusic: {"src":"/audio/a.mp3"}\n---\nBody'), /必须配置 title 和 artist/u);

@@ -193,7 +193,7 @@ musicPlacement: "inline"
 | `excerpt` | 否 | 列表与详情页摘要；未填写时列表会尝试读取正文首段 |
 | `tags` | 否 | JSON 字符串数组 |
 | `series` | 否 | 系列名称 |
-| `seriesOrder` | 否 | 系列内的章节顺序；相同或未填写时按日期排序 |
+| `seriesOrder` | 否 | 系列内的章节顺序，必须是正整数；相同或未填写时按日期排序 |
 | `featured` | 否 | 是否置顶，默认 `false` |
 | `featuredOrder` | 否 | 置顶顺序，必须是正整数；仅可在 `featured: true` 时使用 |
 | `image` | 否 | 封面路径，例如 `/assets/my-note.webp` |

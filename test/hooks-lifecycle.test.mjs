@@ -54,16 +54,21 @@ test("crop preview redraws for rotation and aspect changes, not crop-box movemen
 
 
 test("listing statistics keep a stable target identity while pagination arrays are recreated", async () => {
-  const [music, poems, posts] = await Promise.all([
+  const [music, poems, posts, app, comments] = await Promise.all([
     read("src/pages/MusicPage.jsx"),
     read("src/pages/PoemsPage.jsx"),
     read("src/pages/PostsPage.jsx"),
+    read("src/App.jsx"),
+    read("src/community/useCommentsSection.js"),
   ]);
 
   for (const source of [music, poems, posts]) {
     assert.match(source, /pageStatsTargets/u);
     assert.match(source, /onStatsTargets\(pageStatsTargets\)/u);
   }
+  assert.match(app, /requestedStatsRef\.current\.delete\(key\)/u);
+  assert.match(app, /comments: Number\(comments\)/u);
+  assert.match(comments, /onStatsChange\?\.\(targetType, slug, total\)/u);
 });
 
 test("archive selection resets only for changed archive content and keeps stats writes isolated", async () => {
