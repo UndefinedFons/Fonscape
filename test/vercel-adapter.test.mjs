@@ -53,6 +53,19 @@ test("Vercel adapter removes only its internal route parameter before shared han
   assert.equal(contextUrl.searchParams.get("path"), "visitor", "visitor query parameters must remain visible to strict shared validation");
 });
 
+test("Vercel route cleanup preserves request method and body", async () => {
+  const request = new Request("https://example.test/api/fonscape?__fonscape_path=auth%2Flogin", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ username: "member", password: "secret1" }),
+  });
+  const adapted = requestWithoutVercelRouteParameter(request);
+  assert.equal(adapted.method, "POST");
+  assert.equal(new URL(adapted.url).searchParams.has("__fonscape_path"), false);
+  assert.equal(adapted.headers.get("Content-Type"), "application/json");
+  assert.deepEqual(await adapted.json(), { username: "member", password: "secret1" });
+});
+
 test("Vercel adapter delegates database-missing responses to the existing Pages handler", async () => {
   const response = await handleVercelApiRequest(
     new Request("https://example.test/api/auth/session"),
