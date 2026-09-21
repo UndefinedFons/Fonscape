@@ -41,7 +41,7 @@ export function MusicPage({ stats, onStatsTargets }) {
     </section>;
 }
 
-export function MusicDetailPage({ path, stats, onView, onStatsTargets }) {
+export function MusicDetailPage({ path, stats, onView, onStatsTargets, onCommentStats }) {
   const { section, slug } = parseMusicContentKey(path);
   const review = section && slug ? use(loadMusicReview(section, slug)) : null;
   const sourceCardImage = useResponsiveImage(review?.image || "", "(max-width: 760px) 88px, 104px");
@@ -57,5 +57,5 @@ export function MusicDetailPage({ path, stats, onView, onStatsTargets }) {
     {review.url && <a className="music-source-card music-source-card--lead" href={review.url} target="_blank" rel="noreferrer">{review.image && <img {...sourceCardImage} alt={`${review.sourceTitle || review.title}专辑封面`} decoding="async" />}<span><small>网易云音乐 · {review.kind}</small><strong>{review.sourceTitle || review.title}</strong><em>{review.sourceMeta || review.kind}</em></span><b>{review.action || "前往收听"}<ArrowRight size={17} /></b></a>}
     {!review.url && review.image && <img className="music-detail-cover" {...detailCoverImage} alt={`${review.title}的封面`} decoding="async" />}
     {detailReview?.content && <RichArticleContent post={detailReview} />}
-  </article><CommentsSection targetType="music" slug={`${section}/${review.slug}`} /></>;
+  </article><CommentsSection targetType="music" slug={`${section}/${review.slug}`} onStatsChange={onCommentStats} /></>;
 }
