@@ -54,11 +54,11 @@
   "rewrites": [
     {
       "source": "/api",
-      "destination": "/api/fonscape?path="
+      "destination": "/api/fonscape?__fonscape_path="
     },
     {
       "source": "/api/:path*",
-      "destination": "/api/fonscape?path=:path*"
+      "destination": "/api/fonscape?__fonscape_path=:path*"
     },
     {
       "source": "/:path((?!api(?:/|$)).*)",
