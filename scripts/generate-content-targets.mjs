@@ -274,7 +274,11 @@ async function generatedFiles(directory = generatedContentRoot, prefix = "") {
 export async function generateContentArtifacts({ check = false } = {}) {
   const collections = await Promise.all(definitions.map(async (definition) => [definition.type, await readCollection(definition)]));
   collections.forEach(([type, entries]) => {
-    assertUniqueEntries(entries.map(({ entry }) => entry), type === "music" ? "音乐" : type === "poem" ? "小诗" : "文章");
+    assertUniqueEntries(
+      entries.map(({ entry }) => entry),
+      type === "music" ? "音乐" : type === "poem" ? "小诗" : "文章",
+      type === "music" ? (entry) => contentKey(type, entry) : undefined,
+    );
   });
   const targets = Object.fromEntries(collections.map(([type, entries]) => [type, entries.map(({ entry }) => contentKey(type, entry))]));
   if (targets.post) targets.post.push("site-about", "site-friends");
