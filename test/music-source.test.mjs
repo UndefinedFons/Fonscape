@@ -69,6 +69,23 @@ test("Meting normalization produces the existing local-track contract", async ()
   );
 });
 
+test("NetEase playback falls back to the public outer URL at restricted runtimes", async () => {
+  class FailingMeting extends FakeMeting {
+    async url() {
+      throw new Error("provider blocked");
+    }
+  }
+  const audioUrl = await resolveMetingAudioUrl("netease", "unavailable", FailingMeting, async (url, init) => {
+    assert.equal(url.href, "https://music.163.com/song/media/outer/url?id=unavailable.mp3");
+    assert.equal(init.redirect, "manual");
+    return new Response(null, {
+      status: 302,
+      headers: { Location: "http://m801.music.126.net/example.mp3" },
+    });
+  });
+  assert.equal(audioUrl, "https://m801.music.126.net/example.mp3");
+});
+
 test("public music endpoints reject songs that are not referenced by content", async () => {
   let unconfiguredId = "1";
   while (isMetingSongTarget("netease", unconfiguredId)) unconfiguredId = String(Number(unconfiguredId) + 1);
