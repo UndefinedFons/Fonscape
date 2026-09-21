@@ -4,6 +4,8 @@ import { join } from "node:path";
 import test from "node:test";
 import { staticContentTargets } from "../functions/_generated/content-targets.js";
 import {
+  assertUniqueEntries,
+  parseContentDate,
   parseMusicReview,
   parseMusicReviewMetadata,
   parsePoem,
@@ -80,6 +82,9 @@ test("post parsers preserve custom categories outside the default list", () => {
 test("invalid or duplicate frontmatter is rejected during the build", () => {
   assert.throws(() => parsePost("broken.md", "---\ntitle: A\ntitle: B\ndate: 2026-07-30\ncategory: 开发\n---\nBody"), /字段 title 重复/u);
   assert.throws(() => parsePost("broken.md", "---\ntitle: A\ndate: nope\ncategory: 开发\n---\nBody"), /date 格式无效/u);
+  assert.throws(() => parsePost("broken.md", "---\ntitle: A\ndate: 2026-02-31T12:00\ncategory: 开发\n---\nBody"), /date 格式无效/u);
+  assert.throws(() => parsePost("broken.md", "---\ntitle: A\nslug: notes/foo/\ndate: 2026-07-30\ncategory: 开发\n---\nBody"), /slug 格式无效/u);
+  assert.throws(() => parsePost("broken.md", "---\ntitle: A\nslug: notes//foo\ndate: 2026-07-30\ncategory: 开发\n---\nBody"), /slug 格式无效/u);
   assert.throws(() => parsePost("broken.md", "---\ntitle: A\ndate: 2026-07-30\ncategory: 开发\ncoverAlt: 说明\n---\nBody"), /无需配置 coverAlt/u);
   assert.throws(() => parsePost("broken.md", "---\ntitle: A\ndate: 2026-07-30\ncategory: 开发\ncoverMode: side\n---\nBody"), /coverMode 必须是 wide 或 none/u);
   assert.throws(() => parsePost("broken.md", "---\ntitle: A\ndate: 2026-07-30\ncategory: 开发\ncoverSide: left\n---\nBody"), /不支持 coverSide/u);
@@ -99,11 +104,18 @@ test("posts accept Meting URLs while preserving local music sources", () => {
 
 test("mixed content can be ordered by time without grouping by type", () => {
   const items = [
-    { slug: "post", kind: "post", date: "2026-08-24T09:00:00" },
+    { slug: "post", kind: "post", date: "2026-01-01T12:00" },
     { slug: "poem", kind: "poem", date: "2025-07-07" },
-    { slug: "music", kind: "music", date: "2026-08-24T10:00:00" },
+    { slug: "music", kind: "music", date: "2026-01-01T05:00Z" },
   ];
-  assert.deepEqual(items.sort(sortNewestFirst).map((item) => item.kind), ["music", "post", "poem"]);
+  assert.equal(parseContentDate("2026-01-01T12:00")?.toISOString(), "2026-01-01T12:00:00.000Z");
+  assert.deepEqual(items.sort(sortNewestFirst).map((item) => item.kind), ["post", "music", "poem"]);
+
+  const music = [
+    { slug: "hello", section: "songs", date: "2026-01-01" },
+    { slug: "hello", section: "albums", date: "2026-01-01" },
+  ];
+  assert.doesNotThrow(() => assertUniqueEntries(music, "音乐", (entry) => `${entry.section}/${entry.slug}`));
 });
 
 test("same-date search entries use their generated keys as a stable tie-breaker", () => {
