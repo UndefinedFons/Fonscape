@@ -70,7 +70,12 @@ test("Meting normalization produces the existing local-track contract", async ()
 });
 
 test("NetEase playback falls back to the public outer URL at restricted runtimes", async () => {
-  const audioUrl = await resolveMetingAudioUrl("netease", "unavailable", FakeMeting, async (url, init) => {
+  class FailingMeting extends FakeMeting {
+    async url() {
+      throw new Error("provider blocked");
+    }
+  }
+  const audioUrl = await resolveMetingAudioUrl("netease", "unavailable", FailingMeting, async (url, init) => {
     assert.equal(url.href, "https://music.163.com/song/media/outer/url?id=unavailable.mp3");
     assert.equal(init.redirect, "manual");
     return new Response(null, {

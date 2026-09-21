@@ -86,7 +86,13 @@ async function resolveNeteaseOuterAudioUrl(id, fetchImpl) {
  */
 export async function resolveMetingAudioUrl(source, id, MetingClient = Meting, fetchImpl = fetch) {
   const client = new MetingClient(source).format(true);
-  let audio = parseMetingJson(await client.url(id, 320));
+  let audio;
+  try {
+    audio = parseMetingJson(await client.url(id, 320));
+  } catch (error) {
+    if (source !== "netease") throw error;
+    audio = null;
+  }
   if ((!audio?.url || typeof audio.url !== "string") && source === "netease") {
     audio = { url: await resolveNeteaseOuterAudioUrl(id, fetchImpl) };
   }
