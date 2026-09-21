@@ -129,6 +129,21 @@ export function App() {
       }
     }
   }, []);
+  const updateCommentStats = useCallback((type, slug, comments) => {
+    const key = `${type}:${slug}`;
+    if (!Number.isFinite(comments)) {
+      requestedStatsRef.current.delete(key);
+      return;
+    }
+    requestedStatsRef.current.add(key);
+    setContentStats((current) => ({
+      ...current,
+      [type]: {
+        ...(current[type] || {}),
+        [slug]: { ...(current[type]?.[slug] || {}), comments: Number(comments) },
+      },
+    }));
+  }, []);
   const recordContentView = useCallback(async (type, slug) => {
     const storageKey = `fonscape:view:${type}:${slug}`;
     if (sessionStorage.getItem(storageKey)) return;
@@ -309,7 +324,7 @@ export function App() {
     <span className="global-glass-veil" aria-hidden="true" />
     {!isSetupRoute && <Header route={route} theme={theme} menuOpen={menuOpen} onMenu={() => { setArticleOutlineOpen(false); setMenuOpen((value) => !value); }} onTheme={toggleTheme} onSearch={() => { preloadDialogs(); setSearchOpen(true); }} onSearchIntent={preloadDialogs} onSettings={() => { preloadDialogs(); setSettingsOpen(true); }} onSettingsIntent={preloadDialogs} viewer={viewer} onAccount={() => requestAccount(viewer ? "profile" : "login")} onAccountIntent={preloadAccount} hasArticleOutline={hasArticleOutline} articleOutlineOpen={articleOutlineOpen} onArticleOutline={() => { setMenuOpen(false); setArticleOutlineOpen((value) => !value); }} onCloseArticleOutline={() => setArticleOutlineOpen(false)} />}
     {!isSetupRoute && hasArticleOutline && <ArticleOutlinePopover items={activePostOutline} open={articleOutlineOpen} activeId={activeOutlineId || activePostOutline[0]?.id} onClose={() => setArticleOutlineOpen(false)} onSelect={(item) => { document.getElementById(item.id)?.scrollIntoView({ behavior: getScrollBehavior(prefersReducedMotion()), block: "start" }); setActiveOutlineId(item.id); setArticleOutlineOpen(false); }} />}
-    <div className={isDetailRoute ? "route-view route-view--detail" : "route-view"} key={route}><RouteContent route={route} routeQuery={routeQuery} stats={contentStats} onView={recordContentView} onOutline={setActivePostOutline} onRequestStats={requestContentStats} isRetiredAdminRoute={isRetiredAdmin} routeEnabled={routeEnabled} /></div>{!isSetupRoute && <><Footer /><DialogFrame kind="search" open={searchOpen} onClose={() => setSearchOpen(false)} label="搜索博客内容">{(requestClose, markLoadingShown) => <Suspense fallback={<DialogSkeleton kind="search" onShown={markLoadingShown} />}><SearchDialog onClose={requestClose} /></Suspense>}</DialogFrame><DialogFrame kind="settings" open={settingsOpen} onClose={() => setSettingsOpen(false)} label="显示设置">{(requestClose, markLoadingShown) => <Suspense fallback={<DialogSkeleton kind="settings" onShown={markLoadingShown} />}><SettingsDialog glassEnabled={glassEnabled} onGlassChange={handleGlassChange} onClose={requestClose} /></Suspense>}</DialogFrame>{siteConfig.showCommunity && <DialogFrame kind="account" open={accountOpen} onClose={closeAccount} label={viewer ? "个人中心" : "账户登录"}>{(requestClose, markLoadingShown) => <Suspense fallback={<DialogSkeleton kind="account" onShown={markLoadingShown} />}><AccountDialog onClose={requestClose} /></Suspense>}</DialogFrame>}{siteConfig.showCommunity && accountNotice && <aside className="community-account-notice" role="alert"><div><strong>账户通知</strong><p>{accountNotice}</p></div><button type="button" onClick={() => dismissAccountNotice()}>知道了</button></aside>}</>}
+    <div className={isDetailRoute ? "route-view route-view--detail" : "route-view"} key={route}><RouteContent route={route} routeQuery={routeQuery} stats={contentStats} onView={recordContentView} onOutline={setActivePostOutline} onRequestStats={requestContentStats} onCommentStats={updateCommentStats} isRetiredAdminRoute={isRetiredAdmin} routeEnabled={routeEnabled} /></div>{!isSetupRoute && <><Footer /><DialogFrame kind="search" open={searchOpen} onClose={() => setSearchOpen(false)} label="搜索博客内容">{(requestClose, markLoadingShown) => <Suspense fallback={<DialogSkeleton kind="search" onShown={markLoadingShown} />}><SearchDialog onClose={requestClose} /></Suspense>}</DialogFrame><DialogFrame kind="settings" open={settingsOpen} onClose={() => setSettingsOpen(false)} label="显示设置">{(requestClose, markLoadingShown) => <Suspense fallback={<DialogSkeleton kind="settings" onShown={markLoadingShown} />}><SettingsDialog glassEnabled={glassEnabled} onGlassChange={handleGlassChange} onClose={requestClose} /></Suspense>}</DialogFrame>{siteConfig.showCommunity && <DialogFrame kind="account" open={accountOpen} onClose={closeAccount} label={viewer ? "个人中心" : "账户登录"}>{(requestClose, markLoadingShown) => <Suspense fallback={<DialogSkeleton kind="account" onShown={markLoadingShown} />}><AccountDialog onClose={requestClose} /></Suspense>}</DialogFrame>}{siteConfig.showCommunity && accountNotice && <aside className="community-account-notice" role="alert"><div><strong>账户通知</strong><p>{accountNotice}</p></div><button type="button" onClick={() => dismissAccountNotice()}>知道了</button></aside>}</>}
   </div>;
 }
 
