@@ -7,6 +7,7 @@ import { ArticleMusicPlayer } from "../ArticleMusicPlayer.jsx";
 import { CommentsSection } from "../community/CommentsSection.jsx";
 import { PostMeta } from "../components/Cards.jsx";
 import { contentRoute, loadCollectionFacets, loadPost, siteConfig } from "../content/index.js";
+import { contentDateTimestamp } from "../content/date.js";
 import { detailImageSizes } from "../responsiveImages.ts";
 import { setDocumentTitle } from "../navigation.js";
 import { getPostOutline } from "../richContent.js";
@@ -31,7 +32,7 @@ export function ArticlePage({ slug, stats, onView, onOutline, onStatsTargets }) 
   if (!post) return <NotFound embedded />;
   const coverMode = post.image && post.coverMode !== "none" ? "wide" : "none";
   const showDetailCover = coverMode !== "none";
-  const seriesPosts = post.series ? use(loadCollectionFacets("post")).filter((item) => item.series === post.series).sort((a, b) => (a.seriesOrder || 0) - (b.seriesOrder || 0) || a.date.localeCompare(b.date)) : [];
+  const seriesPosts = post.series ? use(loadCollectionFacets("post")).filter((item) => item.series === post.series).sort((a, b) => (a.seriesOrder || 0) - (b.seriesOrder || 0) || contentDateTimestamp(a.date) - contentDateTimestamp(b.date)) : [];
   const seriesIndex = seriesPosts.findIndex((item) => item.slug === post.slug);
   const previousChapter = seriesIndex > 0 ? seriesPosts[seriesIndex - 1] : null;
   const nextChapter = seriesIndex >= 0 && seriesIndex < seriesPosts.length - 1 ? seriesPosts[seriesIndex + 1] : null;

@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 import siteConfig from "../fonscape.config.js";
 import { contentRepositoryConfig } from "../content-repository.config.mjs";
 import { parsePostMetadata, sortNewestFirst } from "../src/content/frontmatter.js";
+import { parseContentDate } from "../src/content/date.js";
 import { normalizeSiteUrl, siteUrlForPath } from "../src/siteUrl.js";
 import { postRoute } from "../src/routes.js";
 
@@ -32,8 +33,8 @@ export function escapeXml(value) {
  */
 export function parseRssDate(value) {
   const source = String(value ?? "").trim();
-  const date = new Date(/[zZ]|[+-]\d{2}:?\d{2}$/u.test(source) ? source : `${source}Z`);
-  if (Number.isNaN(date.getTime())) throw new Error(`RSS 日期无效：${source}`);
+  const date = parseContentDate(source);
+  if (!date) throw new Error(`RSS 日期无效：${source}`);
   return date;
 }
 
