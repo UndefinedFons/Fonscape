@@ -17,7 +17,7 @@ import { routeHref } from "../routes.js";
 
 const RichArticleContent = lazy(() => import("../RichArticleContent.jsx").then((module) => ({ default: module.RichArticleContent })));
 
-export function ArticlePage({ slug, stats, onView, onOutline, onStatsTargets }) {
+export function ArticlePage({ slug, stats, onView, onOutline, onStatsTargets, onCommentStats }) {
   const post = use(loadPost(slug));
   const detailPost = post;
   const inlineMusicPlayer = useMemo(() => post?.music && post.musicPlacement === "inline" ? <ArticleMusicPlayer track={post.music} autoplay={false} /> : null, [post]);
@@ -44,5 +44,5 @@ export function ArticlePage({ slug, stats, onView, onOutline, onStatsTargets }) 
     {post.music && post.musicPlacement !== "inline" && <ArticleMusicPlayer track={post.music} />}
     {detailPost && <RichArticleContent post={detailPost} inlineMusicPlayer={inlineMusicPlayer} inlineMusicPlayers={inlineMusicPlayers} />}
     {post.series && <nav className="series-navigation" aria-label={`${post.series}系列章节`}><header><FolderOpen size={20} weight="duotone" /><span><small>SERIES</small><strong>{post.series}</strong></span><em>{seriesIndex + 1} / {seriesPosts.length}</em></header><div>{previousChapter ? <a href={contentRoute("post", previousChapter)}><ArrowLeft size={17} /><span><small>上一章</small><strong>{previousChapter.title}</strong></span></a> : <span className="is-disabled"><ArrowLeft size={17} /><span><small>上一章</small><strong>这是第一章</strong></span></span>}{nextChapter ? <a href={contentRoute("post", nextChapter)}><span><small>下一章</small><strong>{nextChapter.title}</strong></span><ArrowRight size={17} /></a> : <span className="is-disabled"><span><small>下一章</small><strong>已经读到最后</strong></span><ArrowRight size={17} /></span>}</div></nav>}
-  </article><CommentsSection targetType="post" slug={post.slug} /></>;
+  </article><CommentsSection targetType="post" slug={post.slug} onStatsChange={onCommentStats} /></>;
 }
