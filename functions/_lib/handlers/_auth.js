@@ -37,6 +37,9 @@ export async function session(context) {
   const [unreadReplies, unreadAdminComments] = await db.batch([
     db.prepare(`SELECT COUNT(*) AS count FROM comments c
       WHERE c.reply_to_user_id = ? AND c.user_id != ? AND c.status = 'published' AND c.created_at > ?
+        AND (c.parent_id IS NULL OR EXISTS (
+          SELECT 1 FROM comments parent WHERE parent.id = c.parent_id AND parent.status = 'published'
+        ))
         AND NOT EXISTS (SELECT 1 FROM comment_notification_reads notification_read
           WHERE notification_read.user_id = ? AND notification_read.comment_id = c.id)`)
       .bind(user.id, user.id, notificationsSeenAt, user.id),

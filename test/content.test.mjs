@@ -14,6 +14,7 @@ import {
   parsePostMetadata,
   sortNewestFirst,
 } from "../src/content/frontmatter.js";
+import { getArticleOutline } from "../src/content/markdown.js";
 
 const definitions = [
   ["post", "posts", parsePost, (entry) => entry.slug],
@@ -94,6 +95,18 @@ test("invalid or duplicate frontmatter is rejected during the build", () => {
   assert.throws(() => parsePost("broken.md", '---\ntitle: A\ndate: 2026-07-30\ncategory: 开发\nmusic: {"url":"https://music.163.com/song?id=1","src":"/audio/a.mp3"}\n---\nBody'), /必须且只能配置 url 或 src/u);
   assert.throws(() => parsePost("broken.md", '---\ntitle: A\ndate: 2026-07-30\ncategory: 开发\nmusic: {"url":"https://music.163.com/album?id=1"}\n---\nBody'), /必须是网易云音乐或 QQ 音乐的单曲链接/u);
   assert.throws(() => parsePost("broken.md", '---\ntitle: A\ndate: 2026-07-30\ncategory: 开发\nmusic: {"src":"/audio/a.mp3"}\n---\nBody'), /必须配置 title 和 artist/u);
+});
+
+test("required content labels must be non-empty strings", () => {
+  assert.throws(
+    () => parsePost("broken.md", '---\ntitle: {"unexpected":"object"}\ndate: 2026-07-30\ncategory: 开发\n---\nBody'),
+    /title 必须是非空字符串/u,
+  );
+});
+
+test("article outlines ignore headings inside fenced code blocks", () => {
+  const outline = getArticleOutline("引言\n\n~~~md\n## 假标题\n~~~\n\n## 第一节\n\n## 第二节");
+  assert.deepEqual(outline.map((item) => item.title), ["序章", "第一节", "第二节"]);
 });
 
 test("posts accept Meting URLs while preserving local music sources", () => {

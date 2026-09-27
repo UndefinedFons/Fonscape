@@ -317,6 +317,26 @@ test("reviewed conflict resolutions can be applied on a second run", async (cont
   assert.equal(await readFile(join(data.project, ".fonscape-version"), "utf8"), "1.1.0\n");
 });
 
+test("rechecking an unchanged conflict preserves reviewed resolutions", async (context) => {
+  const data = await fixture();
+  context.after(() => rm(data.root, { recursive: true, force: true }));
+  await put(data.project, "src/App.jsx", "const version = 'site-custom';\n");
+  const command = ["update", "--project", data.project, "--source-dir", data.source, "--target-dir", data.target];
+  await assert.rejects(main(command), /存在不能自动处理的冲突/u);
+  const conflictRoot = join(data.project, ".fonscape-update", "conflicts", "1.0.0-to-1.1.0");
+  const reviewed = "const version = 'site-custom';\nexport const newApi = true;\n";
+  await put(join(conflictRoot, "resolved"), "src/App.jsx", reviewed);
+
+  await assert.rejects(main(command), /存在不能自动处理的冲突/u);
+  assert.equal(await readFile(join(conflictRoot, "resolved", "src/App.jsx"), "utf8"), reviewed);
+
+  await put(data.project, "src/App.jsx", "const version = 'different-custom';\n");
+  await assert.rejects(main(command), /冲突材料.*已变化/u);
+  await assert.rejects(main([...command, "--resolutions", join(conflictRoot, "resolved"), "--apply"]), /冲突材料.*已变化/u);
+  assert.equal(await readFile(join(data.project, "src/App.jsx"), "utf8"), "const version = 'different-custom';\n");
+  assert.equal(await readFile(join(conflictRoot, "resolved", "src/App.jsx"), "utf8"), reviewed);
+});
+
 test("multiple conflicts in one file are reported as reviewable conflicts", async (context) => {
   const data = await fixture();
   context.after(() => rm(data.root, { recursive: true, force: true }));

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { At } from "@phosphor-icons/react/At";
 import { Camera } from "@phosphor-icons/react/Camera";
 import { SignOut } from "@phosphor-icons/react/SignOut";
@@ -6,11 +6,15 @@ import { UserCircle } from "@phosphor-icons/react/UserCircle";
 import { Avatar } from "./Avatar.jsx";
 import { AVATAR_MAX_BYTES, api, compressAvatar, validateAvatarFile } from "./api.js";
 import { useCommunity } from "./CommunityProvider.jsx";
+import { loadSearchIndex, siteConfig } from "../content/index.js";
+import { getEnabledCollectionTypes } from "../sectionAvailability.js";
 import { loadMyComments, loadMyReplies, loadReceivedComments } from "./accountData.js";
 import { MyMessages, MyReplies, ReceivedComments } from "./AccountFeeds.jsx";
 import { AvatarCropper } from "./AvatarCropper.jsx";
 
-export function AccountCenter({ contentLookup, onClose }) {
+const enabledContentTypes = getEnabledCollectionTypes(siteConfig);
+
+export function AccountCenter({ onClose }) {
   const { viewer, logout, updateViewer } = useCommunity();
   const adminTabs = viewer.role === "admin";
   const [tab, setTab] = useState("profile");
@@ -18,12 +22,30 @@ export function AccountCenter({ contentLookup, onClose }) {
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
   const [crop, setCrop] = useState(null);
+  const [titleIndex, setTitleIndex] = useState({ items: null, loading: false, error: false });
+  const [titleIndexAttempt, setTitleIndexAttempt] = useState(0);
   const uploadRef = useRef(null);
+  const needsContentTitles = tab !== "profile";
+  const contentLookup = useMemo(
+    () => new Map((titleIndex.items || []).map((entry) => [`${entry.type}:${entry.key}`, entry])),
+    [titleIndex.items],
+  );
   useEffect(() => {
     loadMyComments(viewer.id).catch(() => {});
     loadMyReplies(viewer.id).catch(() => {});
     if (adminTabs) loadReceivedComments(viewer.id).catch(() => {});
   }, [adminTabs, viewer.id]);
+  useEffect(() => {
+    if (!needsContentTitles || titleIndex.items !== null) return undefined;
+    let active = true;
+    setTitleIndex((current) => ({ ...current, loading: true, error: false }));
+    loadSearchIndex(enabledContentTypes).then((items) => {
+      if (active) setTitleIndex({ items, loading: false, error: false });
+    }).catch(() => {
+      if (active) setTitleIndex({ items: null, loading: false, error: true });
+    });
+    return () => { active = false; };
+  }, [needsContentTitles, titleIndex.items, titleIndexAttempt]);
   useEffect(() => () => { if (crop?.url) URL.revokeObjectURL(crop.url); }, [crop?.url]);
   const saveProfile = async (event) => {
     event.preventDefault();
@@ -97,7 +119,7 @@ export function AccountCenter({ contentLookup, onClose }) {
     {crop && <AvatarCropper crop={crop} onChange={setCrop} onCancel={() => setCrop(null)} onApply={applyCrop} busy={busy} />}
     {!crop && <><div className={`account-mode-tabs account-mode-tabs--center${adminTabs ? " account-mode-tabs--admin" : ""}`} data-active={tab} role="tablist" aria-label="个人中心"><button type="button" role="tab" aria-selected={tab === "profile"} className={tab === "profile" ? "active" : ""} onClick={() => setTab("profile")}>个人资料</button><button type="button" role="tab" aria-selected={tab === "comments"} className={tab === "comments" ? "active" : ""} onClick={() => setTab("comments")}>我的消息</button>{adminTabs && <button type="button" role="tab" aria-selected={tab === "received"} className={tab === "received" ? "active" : ""} onClick={() => setTab("received")}><span>收到评论</span>{viewer.unreadAdminComments > 0 && <em>{viewer.unreadAdminComments > 99 ? "99+" : viewer.unreadAdminComments}</em>}</button>}<button type="button" role="tab" aria-selected={tab === "replies"} className={tab === "replies" ? "active" : ""} onClick={() => setTab("replies")}><span>收到回复</span>{viewer.unreadReplies > 0 && <em>{viewer.unreadReplies > 99 ? "99+" : viewer.unreadReplies}</em>}</button></div>
     <div className="account-tab-panel">
-      {tab === "profile" ? <form className="community-form account-profile-form" onSubmit={saveProfile}><label><span>公开昵称</span><span className="community-input"><UserCircle size={18} /><input value={nickname} onChange={(event) => setNickname(event.target.value)} minLength="1" maxLength="10" required /></span></label><label><span>登录账户</span><span className="community-input is-readonly"><At size={18} /><input value={viewer.username} readOnly /></span></label>{message && <p className="community-form-message" role="status">{message}</p>}<button className="account-nickname-save" type="submit" disabled={busy || nickname.trim() === viewer.nickname}>保存昵称</button></form> : tab === "comments" ? <MyMessages contentLookup={contentLookup} onClose={onClose} /> : tab === "received" ? <ReceivedComments contentLookup={contentLookup} onClose={onClose} /> : <MyReplies contentLookup={contentLookup} onClose={onClose} />}
+      {tab === "profile" ? <form className="community-form account-profile-form" onSubmit={saveProfile}><label><span>公开昵称</span><span className="community-input"><UserCircle size={18} /><input value={nickname} onChange={(event) => setNickname(event.target.value)} minLength="1" maxLength="10" required /></span></label><label><span>登录账户</span><span className="community-input is-readonly"><At size={18} /><input value={viewer.username} readOnly /></span></label>{message && <p className="community-form-message" role="status">{message}</p>}<button className="account-nickname-save" type="submit" disabled={busy || nickname.trim() === viewer.nickname}>保存昵称</button></form> : titleIndex.loading || (!titleIndex.items && !titleIndex.error) ? <div className="community-skeleton" role="status" aria-label="正在加载内容标题"><i /><i /><i /></div> : titleIndex.error ? <p className="community-inline-error" role="alert">内容标题暂时无法加载。<button type="button" onClick={() => setTitleIndexAttempt((attempt) => attempt + 1)}>重试</button></p> : tab === "comments" ? <MyMessages contentLookup={contentLookup} onClose={onClose} /> : tab === "received" ? <ReceivedComments contentLookup={contentLookup} onClose={onClose} /> : <MyReplies contentLookup={contentLookup} onClose={onClose} />}
     </div>
     <footer className="account-center-actions"><button type="button" onClick={signOut} disabled={busy}><SignOut size={17} />退出登录</button></footer></>}
   </>;

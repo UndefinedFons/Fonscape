@@ -5,6 +5,7 @@ import { JSDOM } from "jsdom";
 import { act, createElement } from "react";
 import { createServer } from "vite";
 import { siteConfig } from "../src/siteConfig.js";
+import { getEnabledCollectionTypes } from "../src/sectionAvailability.js";
 
 const sourceRoot = new URL("../", import.meta.url);
 const communityTest = siteConfig.showCommunity ? test : test.skip;
@@ -147,17 +148,34 @@ function installDom(path = "/admin/setup") {
   return { document: jsdom.window.document, replaceCalls };
 }
 
-function installFetch({ setup = { initialized: false }, session = { user: null } } = {}) {
+function installFetch({ setup = { initialized: false }, session = { user: null }, search = "empty" } = {}) {
+  const requests = [];
+  let searchAttempts = 0;
   globalThis.fetch = async (input, options = {}) => {
     const requestUrl = new URL(typeof input === "string" ? input : input.url, "https://fonstage.test");
+    requests.push(requestUrl.pathname);
     if (requestUrl.pathname === "/api/auth/session") return makeResponse(session);
     if (requestUrl.pathname === "/api/admin/setup") {
       if (typeof setup === "function") return setup(options);
       return setup instanceof Error ? Promise.reject(setup) : makeResponse(setup.payload ?? setup, setup.status ?? 200);
     }
     if (requestUrl.pathname === "/api/site/runtime") return makeResponse({ launchedAt: Date.now() });
+    if (requestUrl.pathname.includes("/fonscape/content/search/")) {
+      searchAttempts += 1;
+      if (search === "stall") return new Promise(() => {});
+      if (search === "fail-once" && searchAttempts === 1) return makeResponse({ error: "索引暂时不可用" }, 503);
+      return makeResponse([]);
+    }
     return makeResponse({ error: "not found" }, 404);
   };
+  return requests;
+}
+
+async function enableSearchChunks() {
+  const { contentManifest } = await viteServer.ssrLoadModule("/functions/_generated/content-metadata.js");
+  const previous = Object.fromEntries(Object.entries(contentManifest.collections).map(([type, descriptor]) => [type, descriptor.searchChunkCount]));
+  Object.values(contentManifest.collections).forEach((descriptor) => { descriptor.searchChunkCount = 1; });
+  return () => Object.entries(previous).forEach(([type, count]) => { contentManifest.collections[type].searchChunkCount = count; });
 }
 
 async function loadApplication() {
@@ -264,4 +282,63 @@ communityTest("an already initialized site redirects away from setup", async () 
   await waitFor(() => {
     if (!replaceCalls.includes("/")) throw new Error(`redirect calls: ${JSON.stringify(replaceCalls)}; body: ${document.body.textContent}`);
   });
+});
+
+communityTest("anonymous account access remains available while content search is stalled", async () => {
+  const restoreSearchChunks = await enableSearchChunks();
+  const { document } = installDom("/");
+  const requests = installFetch({ search: "stall" });
+  try {
+    await mountApp();
+    const accountButton = await waitFor(() => document.querySelector(".account-nav-button"));
+    await act(async () => accountButton.click());
+    await waitFor(() => assert.equal(document.querySelector(".account-auth-head h2")?.textContent, "欢迎回来"));
+    assert.deepEqual(requests.filter((path) => path.includes("/fonscape/content/search/")), [], "anonymous login must not request collection titles");
+  } finally {
+    restoreSearchChunks();
+  }
+});
+
+communityTest("search index errors stay in the dialog and retry with a fresh request", async () => {
+  const restoreSearchChunks = await enableSearchChunks();
+  const enabledTypeCount = getEnabledCollectionTypes(siteConfig).length;
+  const { document } = installDom("/");
+  const requests = installFetch({ search: "fail-once" });
+  try {
+    await mountApp();
+    await waitFor(() => document.querySelector('button[aria-label="打开搜索"]'));
+    await act(async () => document.querySelector('button[aria-label="打开搜索"]').click());
+    await waitFor(() => assert.ok(document.querySelector(".search-load-error")));
+    assert.ok(document.querySelector(".search-dialog"), "the dialog remains mounted around its content error");
+    assert.equal(document.querySelector(".app-error-boundary"), null, "search failure does not replace the application");
+    assert.equal(requests.filter((path) => path.includes("/fonscape/content/search/")).length, enabledTypeCount);
+
+    await act(async () => document.querySelector(".search-load-error button").click());
+    await waitFor(() => assert.equal(document.querySelector(".no-results")?.textContent, "没有找到相关内容，换个词试试。"));
+    assert.equal(requests.filter((path) => path.includes("/fonscape/content/search/")).length, enabledTypeCount + 1, "retry starts a fresh request for the failed collection index");
+  } finally {
+    restoreSearchChunks();
+  }
+});
+
+communityTest("signed-in profile opens without title requests and message tab remains available", async () => {
+  const restoreSearchChunks = await enableSearchChunks();
+  const { document } = installDom("/");
+  const requests = installFetch({ session: { user: { id: "member-1", username: "member", nickname: "读者", role: "member", unreadReplies: 0, unreadAdminComments: 0 } } });
+  try {
+    await mountApp();
+    const accountButton = await waitFor(() => document.querySelector(".account-nav-button"));
+    await act(async () => accountButton.click());
+    await waitFor(() => assert.ok(document.querySelector(".account-profile-form")));
+    assert.deepEqual(requests.filter((path) => path.includes("/fonscape/content/search/")), [], "profile fields do not need article titles");
+
+    const messagesTab = [...document.querySelectorAll('.account-mode-tabs [role="tab"]')].find((button) => button.textContent === "我的消息");
+    await act(async () => messagesTab.click());
+    await waitFor(() => assert.ok(document.querySelector('.account-tab-panel .community-inline-error, .account-tab-panel .account-empty')));
+    assert.equal(messagesTab.getAttribute("aria-selected"), "true");
+    const enabledTypes = getEnabledCollectionTypes(siteConfig);
+    assert.ok(requests.filter((path) => path.includes("/fonscape/content/search/")).every((path) => enabledTypes.some((type) => path.includes(`/search/${type}/`))), "hidden collection indexes remain unused");
+  } finally {
+    restoreSearchChunks();
+  }
 });

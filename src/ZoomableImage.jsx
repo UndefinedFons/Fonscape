@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { X } from "@phosphor-icons/react/X";
+import { useModalFocus } from "./useModalFocus.js";
 import { useResponsiveImage } from "./useResponsiveImage.js";
 
 export function ZoomableImage({
@@ -20,11 +21,12 @@ export function ZoomableImage({
   const [closing, setClosing] = useState(false);
   const [failed, setFailed] = useState(false);
   const responsiveImage = useResponsiveImage(src, sizes);
-  const closeRef = useRef(null);
+  const dialogRef = useRef(null);
   const triggerRef = useRef(null);
   const closeTimerRef = useRef(null);
   const openRef = useRef(false);
   const closingRef = useRef(false);
+  useModalFocus(dialogRef, open, triggerRef);
 
   const closeLightbox = useCallback(() => {
     if (!openRef.current || closingRef.current) return;
@@ -36,7 +38,6 @@ export function ZoomableImage({
       closingRef.current = false;
       setOpen(false);
       setClosing(false);
-      requestAnimationFrame(() => triggerRef.current?.focus());
     }, reducedMotion ? 0 : 280);
   }, []);
   useEffect(() => { setFailed(false); }, [src]);
@@ -49,7 +50,6 @@ export function ZoomableImage({
     };
     document.body.style.overflow = "hidden";
     document.addEventListener("keydown", handleKeyDown);
-    requestAnimationFrame(() => closeRef.current?.focus());
     return () => {
       document.body.style.overflow = previousOverflow;
       document.removeEventListener("keydown", handleKeyDown);
@@ -70,8 +70,8 @@ export function ZoomableImage({
       {caption && <span className="article-image-caption">{caption}</span>}
     </button>
     {open && createPortal(
-      <div className={`image-lightbox${closing ? " is-closing" : ""}`} role="dialog" aria-modal="true" aria-label={alt || "图片放大预览"} onMouseDown={(event) => event.target === event.currentTarget && closeLightbox()}>
-        <button ref={closeRef} type="button" className="image-lightbox-close" onClick={closeLightbox} aria-label="关闭图片预览"><X size={22} weight="bold" /></button>
+      <div ref={dialogRef} tabIndex={-1} className={`image-lightbox${closing ? " is-closing" : ""}`} role="dialog" aria-modal="true" aria-label={alt || "图片放大预览"} onMouseDown={(event) => event.target === event.currentTarget && closeLightbox()}>
+        <button type="button" className="image-lightbox-close" onClick={closeLightbox} aria-label="关闭图片预览"><X size={22} weight="bold" /></button>
         <figure>
           <img src={src} alt={alt} />
           {showLightboxCaption && (caption || alt) && <figcaption>{caption || alt}</figcaption>}

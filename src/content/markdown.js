@@ -59,18 +59,46 @@ export function countWords(markdown) {
  * @returns {ArticleOutlineItem[]}
  */
 export function getArticleOutline(markdown) {
-  const matches = [...markdown.matchAll(/^##\s+(.+)$/gm)];
-  if (matches.length < 2) return [];
+  const lines = markdown.split(/\r?\n/u);
+  /** @type {{ line: number, title: string }[]} */
+  const headings = [];
+  /** @type {string[]} */
+  const prefaceLines = [];
+  /** @type {{ character: string, length: number } | null} */
+  let fence = null;
+
+  lines.forEach((line, index) => {
+    if (fence) {
+      if (headings.length === 0) prefaceLines.push(line);
+      const closingFence = line.match(/^ {0,3}(`+|~+)[ \t]*$/u)?.[1];
+      if (closingFence && closingFence[0] === fence.character && closingFence.length >= fence.length) fence = null;
+      return;
+    }
+
+    const openingFence = line.match(/^ {0,3}(`{3,}|~{3,})(.*)$/u);
+    if (openingFence && !(openingFence[1][0] === "`" && openingFence[2].includes("`"))) {
+      if (headings.length === 0) prefaceLines.push(line);
+      fence = { character: openingFence[1][0], length: openingFence[1].length };
+      return;
+    }
+
+    const heading = line.match(/^##\s+(.+)$/u);
+    if (heading) {
+      headings.push({ line: index + 1, title: heading[1] });
+    } else if (headings.length === 0) {
+      prefaceLines.push(line);
+    }
+  });
+
+  if (headings.length < 2) return [];
   /** @type {ArticleOutlineItem[]} */
-  const outline = matches.map((match, index) => ({
+  const outline = headings.map((heading, index) => ({
     id: `article-section-${index + 1}`,
     number: String(index + 1).padStart(2, "0"),
-    line: markdown.slice(0, match.index ?? 0).split("\n").length,
-    title: (match[1] || "").replace(/[*_`~]/g, "").trim(),
+    line: heading.line,
+    title: heading.title.replace(/[*_`~]/g, "").trim(),
   }));
-  const preface = markdown
-    .slice(0, matches[0]?.index ?? 0)
-    .replace(/\[\[article-music\]\]/g, "");
+  const preface = prefaceLines.join("\n").replace(/\[\[article-music\]\]/g, "");
   if (markdownToPlainText(preface)) {
     outline.unshift({ id: "article-prologue", number: "00", title: "序章", prologue: true });
   }

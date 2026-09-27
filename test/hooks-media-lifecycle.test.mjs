@@ -40,6 +40,9 @@ function createHookRunner() {
       slots[index] = { kind: "effect", dependencies, cleanup: previous?.cleanup };
       dispatcher.pending.push({ changed, effect, previousCleanup: previous?.cleanup, slot: slots[index] });
     },
+    useLayoutEffect(effect, dependencies) {
+      dispatcher.useEffect(effect, dependencies);
+    },
   };
   return {
     render(Component, props) {
