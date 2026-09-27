@@ -32,9 +32,10 @@ export function contentMeta(item, contentLookup) {
     const poem = contentLookup.get(`poem:${item.contentSlug}`);
     return { title: poem?.title || item.contentSlug, section: "小诗" };
   }
-  const [section, slug] = String(item.contentSlug || "").split("/");
-  const review = contentLookup.get(`music:${section}/${slug}`);
-  return { title: item.contentTitle || review?.title || slug || item.contentSlug, section: `音乐 · ${review?.kind || "内容"}` };
+  const contentSlug = String(item.contentSlug || "");
+  const slug = contentSlug.split("/").slice(1).join("/");
+  const review = contentLookup.get(`music:${contentSlug}`);
+  return { title: item.contentTitle || review?.title || slug || contentSlug, section: `音乐 · ${review?.kind || "内容"}` };
 }
 
 export function loadMyReplies(viewerId, refresh = false) {

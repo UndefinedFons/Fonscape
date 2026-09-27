@@ -4,6 +4,7 @@ import { flushSync } from "react-dom";
 import { useCommunity } from "./community/CommunityProvider.jsx";
 import { ArticleOutlinePopover, Header } from "./components/Header.jsx";
 import { Footer } from "./components/Footer.jsx";
+import { RouteErrorBoundary } from "./components/AppErrorBoundary.jsx";
 import { AccountDialog, preloadAccount, preloadDialogs, preloadRouteContent, preloadRouteModule, RouteContent, SearchDialog, SettingsDialog } from "./appRoutes.jsx";
 import { getGlassBackground, preloadHeroAssets, PRIMARY_HERO_PATHS } from "./heroImages.js";
 import { lockPageScroll } from "./lockPageScroll.js";
@@ -13,6 +14,7 @@ import { isSiteRouteEnabled } from "./sectionAvailability.js";
 import { isApplicationRoute } from "./routes.js";
 import { siteConfig } from "./siteConfig.js";
 import { useAppRouting, isRetiredAdminRoute } from "./useAppRouting.js";
+import { useModalFocus } from "./useModalFocus.js";
 
 const DIALOG_CLOSE_DELAYS = { search: 240, settings: 260, account: 240 };
 
@@ -31,10 +33,11 @@ function DialogFrame({ kind, open, onClose, label, children }) {
   const [loadingShown, setLoadingShown] = useState(false);
   const closeTimer = useRef(0);
   const afterClose = useRef(null);
-  const accountCloseButton = useRef(null);
+  const dialogRef = useRef(null);
   const wasOpen = useRef(open);
   const externalClosePending = wasOpen.current && !open && !closing;
   const visible = open || closing || externalClosePending;
+  useModalFocus(dialogRef, visible);
   useLayoutEffect(() => {
     if (open) {
       wasOpen.current = true;
@@ -70,7 +73,6 @@ function DialogFrame({ kind, open, onClose, label, children }) {
   const markLoadingShown = useCallback(() => setLoadingShown(true), []);
   useEffect(() => {
     if (!open) return undefined;
-    if (kind === "account") accountCloseButton.current?.focus();
     const closeOnEscape = (event) => event.key === "Escape" && requestClose();
     window.addEventListener("keydown", closeOnEscape);
     return () => window.removeEventListener("keydown", closeOnEscape);
@@ -81,8 +83,8 @@ function DialogFrame({ kind, open, onClose, label, children }) {
     ? `account-backdrop${closing ? " is-closing" : ""}`
     : `dialog-backdrop ${kind}-backdrop${closing ? " is-closing" : ""}`;
   return <div className={backdropClass} onMouseDown={(event) => event.target === event.currentTarget && requestClose()}>
-    <section className={`${kind}-dialog${loadingShown ? " had-loading" : ""}`} role="dialog" aria-modal="true" aria-label={label}>
-      {account && <button ref={accountCloseButton} className="account-dialog-close" type="button" aria-label="关闭" onClick={() => requestClose()}><X size={19} /></button>}
+    <section ref={dialogRef} tabIndex={-1} className={`${kind}-dialog${loadingShown ? " had-loading" : ""}`} role="dialog" aria-modal="true" aria-label={label}>
+      {account && <button className="account-dialog-close" type="button" aria-label="关闭" onClick={() => requestClose()}><X size={19} /></button>}
       {children(requestClose, markLoadingShown)}
     </section>
   </div>;
@@ -324,7 +326,7 @@ export function App() {
     <span className="global-glass-veil" aria-hidden="true" />
     {!isSetupRoute && <Header route={route} theme={theme} menuOpen={menuOpen} onMenu={() => { setArticleOutlineOpen(false); setMenuOpen((value) => !value); }} onTheme={toggleTheme} onSearch={() => { preloadDialogs(); setSearchOpen(true); }} onSearchIntent={preloadDialogs} onSettings={() => { preloadDialogs(); setSettingsOpen(true); }} onSettingsIntent={preloadDialogs} viewer={viewer} onAccount={() => requestAccount(viewer ? "profile" : "login")} onAccountIntent={preloadAccount} hasArticleOutline={hasArticleOutline} articleOutlineOpen={articleOutlineOpen} onArticleOutline={() => { setMenuOpen(false); setArticleOutlineOpen((value) => !value); }} onCloseArticleOutline={() => setArticleOutlineOpen(false)} />}
     {!isSetupRoute && hasArticleOutline && <ArticleOutlinePopover items={activePostOutline} open={articleOutlineOpen} activeId={activeOutlineId || activePostOutline[0]?.id} onClose={() => setArticleOutlineOpen(false)} onSelect={(item) => { document.getElementById(item.id)?.scrollIntoView({ behavior: getScrollBehavior(prefersReducedMotion()), block: "start" }); setActiveOutlineId(item.id); setArticleOutlineOpen(false); }} />}
-    <div className={isDetailRoute ? "route-view route-view--detail" : "route-view"} key={route}><RouteContent route={route} routeQuery={routeQuery} stats={contentStats} onView={recordContentView} onOutline={setActivePostOutline} onRequestStats={requestContentStats} onCommentStats={updateCommentStats} isRetiredAdminRoute={isRetiredAdmin} routeEnabled={routeEnabled} /></div>{!isSetupRoute && <><Footer /><DialogFrame kind="search" open={searchOpen} onClose={() => setSearchOpen(false)} label="搜索博客内容">{(requestClose, markLoadingShown) => <Suspense fallback={<DialogSkeleton kind="search" onShown={markLoadingShown} />}><SearchDialog onClose={requestClose} /></Suspense>}</DialogFrame><DialogFrame kind="settings" open={settingsOpen} onClose={() => setSettingsOpen(false)} label="显示设置">{(requestClose, markLoadingShown) => <Suspense fallback={<DialogSkeleton kind="settings" onShown={markLoadingShown} />}><SettingsDialog glassEnabled={glassEnabled} onGlassChange={handleGlassChange} onClose={requestClose} /></Suspense>}</DialogFrame>{siteConfig.showCommunity && <DialogFrame kind="account" open={accountOpen} onClose={closeAccount} label={viewer ? "个人中心" : "账户登录"}>{(requestClose, markLoadingShown) => <Suspense fallback={<DialogSkeleton kind="account" onShown={markLoadingShown} />}><AccountDialog onClose={requestClose} /></Suspense>}</DialogFrame>}{siteConfig.showCommunity && accountNotice && <aside className="community-account-notice" role="alert"><div><strong>账户通知</strong><p>{accountNotice}</p></div><button type="button" onClick={() => dismissAccountNotice()}>知道了</button></aside>}</>}
+    <div className={isDetailRoute ? "route-view route-view--detail" : "route-view"} key={route}><RouteErrorBoundary><RouteContent route={route} routeQuery={routeQuery} stats={contentStats} onView={recordContentView} onOutline={setActivePostOutline} onRequestStats={requestContentStats} onCommentStats={updateCommentStats} isRetiredAdminRoute={isRetiredAdmin} routeEnabled={routeEnabled} /></RouteErrorBoundary></div>{!isSetupRoute && <><Footer /><DialogFrame kind="search" open={searchOpen} onClose={() => setSearchOpen(false)} label="搜索博客内容">{(requestClose, markLoadingShown) => <Suspense fallback={<DialogSkeleton kind="search" onShown={markLoadingShown} />}><RouteErrorBoundary><SearchDialog onClose={requestClose} /></RouteErrorBoundary></Suspense>}</DialogFrame><DialogFrame kind="settings" open={settingsOpen} onClose={() => setSettingsOpen(false)} label="显示设置">{(requestClose, markLoadingShown) => <Suspense fallback={<DialogSkeleton kind="settings" onShown={markLoadingShown} />}><SettingsDialog glassEnabled={glassEnabled} onGlassChange={handleGlassChange} onClose={requestClose} /></Suspense>}</DialogFrame>{siteConfig.showCommunity && <DialogFrame kind="account" open={accountOpen} onClose={closeAccount} label={viewer ? "个人中心" : "账户登录"}>{(requestClose, markLoadingShown) => <Suspense fallback={<DialogSkeleton kind="account" onShown={markLoadingShown} />}><AccountDialog onClose={requestClose} /></Suspense>}</DialogFrame>}{siteConfig.showCommunity && accountNotice && <aside className="community-account-notice" role="alert"><div><strong>账户通知</strong><p>{accountNotice}</p></div><button type="button" onClick={() => dismissAccountNotice()}>知道了</button></aside>}</>}
   </div>;
 }
 

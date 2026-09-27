@@ -17,7 +17,7 @@ import { NotFound } from "./NotFound.jsx";
 const RichArticleContent = lazy(() => import("../RichArticleContent.jsx").then((module) => ({ default: module.RichArticleContent })));
 
 export function MusicPage({ stats, onStatsTargets }) {
-  const allMusicReviews = useProgressiveCollection("music");
+  const { items: allMusicReviews, error: collectionError, retry: retryCollection } = useProgressiveCollection("music");
   const requestedSection = new URLSearchParams(parseRouteQuery()).get("section");
   const [section, setSection] = useState(() => musicSections.some((item) => item.id === requestedSection) ? requestedSection : "songs");
   const activeIndex = musicSections.findIndex((item) => item.id === section);
@@ -37,7 +37,7 @@ export function MusicPage({ stats, onStatsTargets }) {
   };
   return <section className="music-library page-width">
       <div className="music-tabs" role="tablist" aria-label="音乐分类" data-active-index={activeIndex}><span className="music-tab-indicator" aria-hidden="true" />{musicSections.map(({ id, label, icon: Icon }) => <button key={id} role="tab" aria-selected={section === id} className={section === id ? "active" : ""} onClick={() => selectSection(id)}><Icon size={23} weight="duotone" /><strong>{label}</strong></button>)}</div>
-      <div ref={pagination.topRef} className={`music-panel paginated-view${pagination.leaving ? " is-leaving" : ""}`} role="tabpanel" key={section}>{activeEntries.length ? <div className="music-review-grid">{pagination.pageItems.map((entry, index) => <MusicReviewCard entry={entry} section={section} stats={stats[`${section}/${entry.slug}`]} imageLoading={index === 0 ? "eager" : "lazy"} key={entry.slug} />)}</div> : <div className="music-empty"><ActiveSectionIcon size={36} weight="duotone" /><h2>{section === "songs" ? "暂无歌曲" : section === "artists" ? "暂无音乐人" : "暂无专辑"}</h2></div>}</div><Pagination page={pagination.page} totalPages={pagination.totalPages} onChange={pagination.changePage} />
+      <div ref={pagination.topRef} className={`music-panel paginated-view${pagination.leaving ? " is-leaving" : ""}`} role="tabpanel" key={section}>{activeEntries.length ? <div className="music-review-grid">{pagination.pageItems.map((entry, index) => <MusicReviewCard entry={entry} section={section} stats={stats[`${section}/${entry.slug}`]} imageLoading={index === 0 ? "eager" : "lazy"} key={entry.slug} />)}</div> : <div className="music-empty"><ActiveSectionIcon size={36} weight="duotone" /><h2>{section === "songs" ? "暂无歌曲" : section === "artists" ? "暂无音乐人" : "暂无专辑"}</h2></div>}</div><Pagination page={pagination.page} totalPages={pagination.totalPages} onChange={pagination.changePage} />{collectionError && <div className="collection-load-error" role="alert"><span>部分内容暂时无法加载，已显示已加载的内容。</span><button type="button" onClick={retryCollection}>重试加载</button></div>}
     </section>;
 }
 

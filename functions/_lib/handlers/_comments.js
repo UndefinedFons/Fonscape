@@ -243,6 +243,9 @@ export async function myReplies(context) {
     LEFT JOIN comments target ON target.id = COALESCE(c.reply_to_comment_id, c.parent_id)
     LEFT JOIN comment_notification_reads notification_read ON notification_read.user_id = ? AND notification_read.comment_id = c.id
     WHERE c.reply_to_user_id = ? AND c.user_id != ? AND c.status = 'published'
+      AND (c.parent_id IS NULL OR EXISTS (
+        SELECT 1 FROM comments parent WHERE parent.id = c.parent_id AND parent.status = 'published'
+      ))
     ORDER BY c.created_at DESC LIMIT 100`).bind(user.id, user.id, user.id).all();
   const rows = result.results || [];
   return json({ replies: rows.map((row) => ({
@@ -271,6 +274,9 @@ export async function markReplyNotificationRead(context, commentId) {
   await db.prepare(`INSERT INTO comment_notification_reads (user_id, comment_id, created_at)
     SELECT ?, c.id, ? FROM comments c
     WHERE c.id = ? AND c.reply_to_user_id = ? AND c.user_id != ? AND c.status = 'published'
+      AND (c.parent_id IS NULL OR EXISTS (
+        SELECT 1 FROM comments parent WHERE parent.id = c.parent_id AND parent.status = 'published'
+      ))
     ON CONFLICT(user_id, comment_id) DO NOTHING`).bind(user.id, Date.now(), normalizedCommentId, user.id, user.id).run();
   return json({ ok: true });
 }

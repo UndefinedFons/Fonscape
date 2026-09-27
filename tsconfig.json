@@ -34,6 +34,7 @@
     "src/siteConfig.js",
     "src/siteUrl.js",
     "src/siteUtils.js",
+    "src/useModalFocus.js",
     "src/types.d.ts",
     "src/community/CommunityProvider.jsx",
     "src/community/CommentComposer.jsx",

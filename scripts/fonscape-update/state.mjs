@@ -92,6 +92,34 @@ export async function withUpdateLock(project, operation) {
   }
 }
 
+async function assertConflictMaterials(root, plan, allowSubset = false) {
+  const staleMessage = `冲突材料已变化，旧目录已保留：${root}。请先备份或移走旧目录，再重新运行预检。`;
+  const manifest = {
+    fromVersion: plan.fromVersion,
+    targetVersion: plan.targetVersion,
+    conflicts: plan.conflicts.map(({ path, reason }) => ({ path, reason })),
+  };
+  let existingManifest;
+  try {
+    existingManifest = JSON.parse((await readFile(join(root, "conflicts.json"))).toString("utf8"));
+  } catch {
+    throw new Error(staleMessage);
+  }
+  const sameManifest = allowSubset
+    ? existingManifest && Array.isArray(existingManifest.conflicts)
+      && existingManifest.fromVersion === manifest.fromVersion
+      && existingManifest.targetVersion === manifest.targetVersion
+      && manifest.conflicts.every(({ path, reason }) => existingManifest.conflicts?.some((item) => item.path === path && item.reason === reason))
+    : JSON.stringify(existingManifest) === JSON.stringify(manifest);
+  if (!sameManifest) throw new Error(staleMessage);
+  for (const conflict of plan.conflicts) {
+    for (const [name, value] of [["base", conflict.base], ["current", conflict.local], ["incoming", conflict.incoming]]) {
+      const existing = await readOptional(join(root, name, conflict.path));
+      if (value === null ? existing !== null : existing === null || !existing.equals(value)) throw new Error(staleMessage);
+    }
+  }
+}
+
 export async function writeConflictBundle(project, plan) {
   const conflictsDirectory = await ensureStateSubdirectory(project, "conflicts");
   const root = join(conflictsDirectory, `${plan.fromVersion}-to-${plan.targetVersion}`);
@@ -99,24 +127,34 @@ export async function writeConflictBundle(project, plan) {
   if (await exists(root)) {
     const info = await lstat(root);
     if (!info.isDirectory()) throw new Error(`冲突材料目录不是目录：${root}`);
+    await assertNoManagedSymlink(project, `${UPDATE_DIRECTORY}/conflicts/${basename(root)}/conflicts.json`);
+    for (const conflict of plan.conflicts) {
+      for (const name of ["base", "current", "incoming"]) {
+        await assertNoManagedSymlink(project, `${UPDATE_DIRECTORY}/conflicts/${basename(root)}/${name}/${conflict.path}`);
+      }
+    }
+    await assertConflictMaterials(root, plan);
+    return root;
   }
-  await rm(root, { recursive: true, force: true });
+  const manifest = {
+    fromVersion: plan.fromVersion,
+    targetVersion: plan.targetVersion,
+    conflicts: plan.conflicts.map(({ path, reason }) => ({ path, reason })),
+  };
   for (const conflict of plan.conflicts) {
     for (const [name, value] of [["base", conflict.base], ["current", conflict.local], ["incoming", conflict.incoming]]) {
       if (value !== null) await atomicWrite(join(root, name, conflict.path), value);
     }
     if (conflict.merged !== null) await atomicWrite(join(root, "resolved", conflict.path), conflict.merged);
   }
-  await atomicWrite(join(root, "conflicts.json"), Buffer.from(`${JSON.stringify({
-    fromVersion: plan.fromVersion,
-    targetVersion: plan.targetVersion,
-    conflicts: plan.conflicts.map(({ path, reason }) => ({ path, reason })),
-  }, null, 2)}\n`));
+  await atomicWrite(join(root, "conflicts.json"), Buffer.from(`${JSON.stringify(manifest, null, 2)}\n`));
   return root;
 }
 
 export async function resolveConflicts(plan, resolutionDirectory, alreadySelected = new Set()) {
   if (!resolutionDirectory) return;
+  const bundleRoot = dirname(resolutionDirectory);
+  if (await exists(join(bundleRoot, "conflicts.json"))) await assertConflictMaterials(bundleRoot, plan, true);
   for (const path of alreadySelected) {
     const resolvedPath = join(resolutionDirectory, path);
     const content = await readOptional(resolvedPath);

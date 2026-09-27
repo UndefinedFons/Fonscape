@@ -353,6 +353,36 @@ test("reply notification receipts mark only the clicked message", async () => {
   }
 });
 
+test("replies under deleted comments do not appear in the inbox or unread count", async () => {
+  const { client, db } = await migratedDatabase();
+  try {
+    const now = Date.now();
+    const recipient = await seedUser(client, { id: "member-1", now });
+    await seedUser(client, { id: "member-2", username: "writer02", nickname: "写作者", now });
+    const limits = { MAX_COMMENTS_PER_USER: "10", MAX_COMMENTS_PER_TARGET: "10", MAX_TOTAL_COMMENTS: "10" };
+    for (const [id, offset] of [["deleted-root", 1], ["visible-root", 3]]) {
+      await insertCommentAtomically(db, {
+        id, userId: recipient.id, role: "member", target: { type: "post", slug: "site-about" },
+        body: id, now: now + offset,
+      }, limits);
+    }
+    for (const [id, parentId, offset] of [["hidden-reply", "deleted-root", 2], ["visible-reply", "visible-root", 4]]) {
+      await insertCommentAtomically(db, {
+        id, userId: "member-2", role: "member", target: { type: "post", slug: "site-about" },
+        body: id, parentId, replyToUserId: recipient.id, replyToCommentId: parentId, now: now + offset,
+      }, limits);
+    }
+    await client.execute({ sql: "UPDATE comments SET status = 'deleted', updated_at = ? WHERE id = 'deleted-root'", args: [now + 5] });
+
+    const inbox = await (await onRequest(requestContext({ path: ["me", "replies"], db, currentUser: recipient }))).json();
+    assert.deepEqual(inbox.replies.map(({ id }) => id), ["visible-reply"]);
+    const session = await (await onRequest(requestContext({ path: ["auth", "session"], db, currentUser: recipient }))).json();
+    assert.equal(session.user.unreadReplies, 1);
+  } finally {
+    await client.close();
+  }
+});
+
 test("admin comment notification receipts are also per message", async () => {
   const { client, db } = await migratedDatabase();
   try {

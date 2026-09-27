@@ -8,8 +8,10 @@ const SLUG_SEGMENT_PATTERN = /^[a-z0-9][a-z0-9_-]*$/u;
 
 /** @param {unknown} value @returns {boolean} */
 function isValidContentSlug(value) {
-  const slug = String(value ?? "");
-  return slug.length > 0 && slug.length <= 120 && slug.split("/").every((segment) => SLUG_SEGMENT_PATTERN.test(segment));
+  return typeof value === "string"
+    && value.length > 0
+    && value.length <= 120
+    && value.split("/").every((segment) => SLUG_SEGMENT_PATTERN.test(segment));
 }
 
 /**
@@ -70,7 +72,12 @@ export function parseMarkdownSource(path, source) {
  */
 function requireFields(entry, fields, path) {
   fields.forEach((key) => {
-    if (!entry[key]) throw new Error(`${path} 的 Frontmatter 缺少 ${key}。`);
+    if (entry[key] === undefined || entry[key] === null || entry[key] === "") {
+      throw new Error(`${path} 的 Frontmatter 缺少 ${key}。`);
+    }
+    if (typeof entry[key] !== "string" || !entry[key].trim()) {
+      throw new Error(`${path} 的 Frontmatter ${key} 必须是非空字符串。`);
+    }
   });
 }
 
@@ -112,6 +119,12 @@ function validateMusicSource(track, path, field) {
 export function parsePost(path, source, options = {}) {
   const { data, filename, content } = parseMarkdownSource(path, source);
   const { content: _frontmatterContent, coverPosition: _coverPosition, ...frontmatter } = data;
+  if (Object.hasOwn(data, "tags") && (!Array.isArray(data.tags) || !data.tags.every((tag) => typeof tag === "string"))) {
+    throw new Error(`${path} 的 Frontmatter tags 必须是字符串数组。`);
+  }
+  if (Object.hasOwn(data, "series") && data.series !== null && typeof data.series !== "string") {
+    throw new Error(`${path} 的 Frontmatter series 必须是字符串。`);
+  }
   if (Object.hasOwn(data, "coverAlt")) throw new Error(`${path} 的文章封面无需配置 coverAlt，系统会自动生成替代文字。`);
   if (Object.hasOwn(data, "coverSide")) throw new Error(`${path} 的文章封面不支持 coverSide。`);
   if (Object.hasOwn(data, "coverMode") && !["wide", "none"].includes(data.coverMode)) {

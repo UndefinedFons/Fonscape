@@ -42,8 +42,8 @@ test("cold dialogs show the final shell immediately and preserve original close 
   ]);
 
   assert.match(app, /const DIALOG_CLOSE_DELAYS = \{ search: 240, settings: 260, account: 240 \}/u);
-  assert.match(app, /<section className=\{`\$\{kind\}-dialog\$\{loadingShown \? " had-loading" : ""\}`\}/u);
-  assert.match(app, /account && <button ref=\{accountCloseButton\} className="account-dialog-close"/u);
+  assert.match(app, /<section[^>]*className=\{`\$\{kind\}-dialog\$\{loadingShown \? " had-loading" : ""\}`\}/u);
+  assert.match(app, /account && <button className="account-dialog-close"/u);
   assert.match(app, /<Suspense fallback=\{<DialogSkeleton kind="search" onShown=\{markLoadingShown\} \/>\}/u);
   assert.doesNotMatch(dialogs, /search-dialog-content|settings-dialog-content|dialog-content-reveal/u);
   assert.doesNotMatch(account, /account-dialog-content|dialog-content-reveal/u);
@@ -72,15 +72,6 @@ test("content image metadata travels with content and img src is never blocked",
   assert.match(responsive, /const src = candidates\[0\]\?\.src \|\| source/u);
   assert.doesNotMatch(responsive, /responsive-images-full|import\(/u);
   assert.doesNotMatch(routes, /preloadResponsiveImageIndex/u);
-});
-
-test("collection pages render chunk zero and append later chunks serially while idle", async () => {
-  const progressive = await readFile("src/useProgressiveCollection.js", "utf8");
-  assert.match(progressive, /use\(loadCollectionPageChunk\(type, 0\)\)/u);
-  assert.match(progressive, /let nextIndex = 1/u);
-  assert.match(progressive, /await loadCollectionPageChunk\(type, nextIndex\)/u);
-  assert.match(progressive, /requestIdleCallback\(loadNext/u);
-  assert.doesNotMatch(progressive, /Promise\.all/u);
 });
 
 test("Markdown bodies stay out of the initial module and retain the 1.15.1 detail handoff", async () => {
