@@ -3,6 +3,10 @@
 </p>
 
 <p align="center">
+  如果觉得该项目还不错，希望您可以小小地 star 一下✨，非常感谢！
+</p>
+
+<p align="center">
   <a href="https://fonstage.space/">在线示例</a> ·
   <a href="#开始使用">开始使用</a> ·
   <a href="./GUIDE.md">使用指南</a>
