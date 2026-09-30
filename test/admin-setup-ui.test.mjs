@@ -350,7 +350,7 @@ test("recent route intent postpones idle prefetch and upgrades its hero priority
     Object.defineProperty(globalThis, "performance", { configurable: true, value: { now: () => now } });
     await act(async () => link.dispatchEvent(new MouseEvent("pointerover", { bubbles: true })));
     const postImage = await waitFor(() => {
-      const item = images.find((image) => image.source === "/fonscape/test-posts.svg");
+      const item = images.find((image) => image.source === "/fonscape/test-posts.svg" && image.fetchPriority === "low");
       assert.ok(item);
       return item;
     });
