@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { getHomeContent } from "../src/pages/homeContent.js";
+import { getHomeContent } from "../src/pages/homeContent.ts";
 
 test("home content leaves the featured area empty when no article is pinned", () => {
   const result = getHomeContent([

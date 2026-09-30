@@ -32,7 +32,7 @@ test("a failed later collection chunk preserves loaded items and retries the sam
     const postDescriptor = contentManifest.collections.post;
     originalChunkCount = postDescriptor.pageChunkCount;
     postDescriptor.pageChunkCount = 3;
-    const { useProgressiveCollection } = await server.ssrLoadModule("/src/useProgressiveCollection.js");
+    const { useProgressiveCollection } = await server.ssrLoadModule("/src/useProgressiveCollection.ts");
     const calls = [];
     let retryChunkAttempts = 0;
     globalThis.fetch = async (input) => {

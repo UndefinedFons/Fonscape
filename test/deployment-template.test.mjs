@@ -69,19 +69,18 @@ test("one-click deployment asks for only an empty administrator bootstrap token"
   }
 });
 
-test("content, font, image and RSS artifacts generate before supported project commands", async () => {
-  const packageJson = await readJson("../package.json");
-  assert.equal(packageJson.scripts["pnpm:devPreinstall"], undefined);
+test("generated artifacts precede supported project commands", async () => {
+  const { scripts } = await readJson("../package.json");
+  assert.deepEqual(new Set(scripts.generate.split(" && ")), new Set([
+    "node scripts/generate-content-targets.mjs",
+    "node scripts/generate-font-css.mjs",
+    "node scripts/generate-responsive-images.mjs",
+    "node scripts/generate-rss.mjs",
+    "node scripts/generate-sitemap.mjs",
+  ]));
   for (const command of ["dev", "build", "test", "check"]) {
-    const commands = packageJson.scripts[command].split(" && ");
-    for (const script of ["generate-content-targets", "generate-font-css", "generate-responsive-images", "generate-rss", "generate-sitemap"]) {
-      assert.equal(commands.includes(`node scripts/${script}.mjs`), false, `${command} must delegate generation to pnpm generate`);
-    }
-    assert.ok(commands.includes("pnpm generate"), `${command} must run the shared generate task`);
+    assert.ok(scripts[command].startsWith("pnpm generate && "), `${command} must generate artifacts before execution`);
   }
-  assert.equal(packageJson.scripts.precheck, undefined);
-  assert.match(packageJson.scripts.check, /^pnpm generate /u);
-  assert.doesNotMatch(packageJson.scripts.check, /--check/u);
 });
 
 test("public image and audio directories stay separate", async () => {

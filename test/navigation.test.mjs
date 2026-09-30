@@ -5,14 +5,14 @@ import {
   composeDocumentTitle,
   getRouteDocumentTitle,
   getScrollBehavior,
-} from "../src/navigation.js";
+} from "../src/navigation.ts";
 import {
   getEnabledCollectionTypes,
   getSectionAvailability,
   isSiteRouteEnabled,
   normalizeRouteLocation,
-} from "../src/sectionAvailability.js";
-import { contentRoute, legacyHashRoute, parseMusicContentKey } from "../src/routes.js";
+} from "../src/sectionAvailability.ts";
+import { contentRoute, legacyHashRoute, parseMusicContentKey } from "../src/routes.ts";
 import {
   consumeDetailSource,
   consumeKnownPopNavigation,
@@ -24,7 +24,7 @@ import {
   rememberDetailSource,
   readNavigationType,
   returnFromDetail,
-} from "../src/routeState.js";
+} from "../src/routeState.ts";
 
 function createBrowser(initial = "/") {
   const origin = "https://example.com";

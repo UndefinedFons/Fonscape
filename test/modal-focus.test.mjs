@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { JSDOM } from "jsdom";
-import { containModalFocus } from "../src/useModalFocus.js";
+import { containModalFocus } from "../src/useModalFocus.ts";
 
 test("modal focus stays inside and returns to the opener after close", () => {
   const originalWindow = globalThis.window;

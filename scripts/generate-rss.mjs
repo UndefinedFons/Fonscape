@@ -3,10 +3,10 @@ import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import siteConfig from "../fonscape.config.js";
 import { contentRepositoryConfig } from "../content-repository.config.mjs";
-import { parsePostMetadata, sortNewestFirst } from "../src/content/frontmatter.js";
-import { parseContentDate } from "../src/content/date.js";
-import { normalizeSiteUrl, siteUrlForPath } from "../src/siteUrl.js";
-import { postRoute } from "../src/routes.js";
+import { parsePostMetadata, sortNewestFirst } from "../src/content/frontmatter.ts";
+import { parseContentDate } from "../src/content/date.ts";
+import { normalizeSiteUrl, siteUrlForPath } from "../src/siteUrl.ts";
+import { postRoute } from "../src/routes.ts";
 
 export { normalizeSiteUrl };
 

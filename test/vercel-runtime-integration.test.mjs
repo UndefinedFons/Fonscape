@@ -1,9 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { createClient } from "@libsql/client";
-import { handleVercelApiRequest } from "../api/fonscape.js";
+import { handleVercelApiRequest } from "../api/fonscape.ts";
 import { migrateTurso, readMigrations } from "../scripts/migrate-turso.mjs";
-import { createTursoD1Database } from "../server/turso-d1.js";
+import { createTursoD1Database } from "../server/turso-d1.ts";
 
 test("Vercel and Turso execute the shared auth and comment API end to end", async () => {
   const client = createClient({ url: ":memory:" });

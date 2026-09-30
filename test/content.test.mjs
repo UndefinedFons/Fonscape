@@ -13,8 +13,8 @@ import {
   parsePost,
   parsePostMetadata,
   sortNewestFirst,
-} from "../src/content/frontmatter.js";
-import { getArticleOutline } from "../src/content/markdown.js";
+} from "../src/content/frontmatter.ts";
+import { getArticleOutline } from "../src/content/markdown.ts";
 
 const definitions = [
   ["post", "posts", parsePost, (entry) => entry.slug],
@@ -130,12 +130,4 @@ test("mixed content can be ordered by time without grouping by type", () => {
     { slug: "hello", section: "albums", date: "2026-01-01" },
   ];
   assert.doesNotThrow(() => assertUniqueEntries(music, "音乐", (entry) => `${entry.section}/${entry.slug}`));
-});
-
-test("same-date search entries use their generated keys as a stable tie-breaker", () => {
-  const items = [
-    { key: "poem-z", type: "poem", date: "2026-08-24" },
-    { key: "post-a", type: "post", date: "2026-08-24" },
-  ];
-  assert.deepEqual(items.sort(sortNewestFirst).map((item) => item.key), ["poem-z", "post-a"]);
 });

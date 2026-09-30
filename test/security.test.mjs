@@ -17,8 +17,8 @@ import {
   protectRegistration,
   rateLimitSecret,
   reconcileRuntimeCounters,
-} from "../functions/_lib/abuse.js";
-import { createTursoD1Database } from "../server/turso-d1.js";
+} from "../functions/_lib/abuse.ts";
+import { createTursoD1Database } from "../server/turso-d1.ts";
 import {
   ApiError,
   commentRow,
@@ -27,7 +27,7 @@ import {
   publicUser,
   readJson,
   readLimitedBody,
-} from "../functions/_lib/community.js";
+} from "../functions/_lib/community.ts";
 
 test("network scopes group IPv4 by /24 and IPv6 by /64", () => {
   assert.equal(networkPrefix("203.0.113.42"), "203.0.113.0/24");

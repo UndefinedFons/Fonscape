@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { onRequest } from "../functions/api/[[path]].js";
+import { onRequest } from "../functions/api/[[path]].ts";
 
 const admin = Object.freeze({
   id: "admin-1",

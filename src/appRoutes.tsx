@@ -1,0 +1,195 @@
+import { BookOpenText } from "@phosphor-icons/react/BookOpenText";
+import { Feather } from "@phosphor-icons/react/Feather";
+import { LinkSimple } from "@phosphor-icons/react/LinkSimple";
+import { MusicNotes } from "@phosphor-icons/react/MusicNotes";
+import { UserCircle } from "@phosphor-icons/react/UserCircle";
+import { lazy, Suspense } from "react";
+import type { ReactNode } from "react";
+import { loadCollectionPageChunk, loadMusicReview, loadPoem, loadPost, siteConfig } from "./content/index.ts";
+import { PageHero } from "./components/PageHero.tsx";
+import { replaceRouteWithHome, returnFromDetail } from "./routeState.ts";
+import { setRouteDocumentTitle } from "./navigation.ts";
+import { isSiteRouteEnabled, normalizeRoutePath } from "./sectionAvailability.ts";
+import { HomePage } from "./pages/HomePage.tsx";
+import { NotFound } from "./pages/NotFound.tsx";
+import { AdminSetupFrame, DetailPageFrame } from "./components/RoutePageFrame.tsx";
+import type { ArticleOutlineItem, ContentType, RouteStats } from "./types.ts";
+
+type StatsTarget = { type: ContentType; slug: string };
+type RouteViewHandler = (type: ContentType, slug: string) => Promise<void>;
+type CommentStatsHandler = (type: ContentType, slug: string, comments?: number) => void;
+type RouteOutlineHandler = (items: ArticleOutlineItem[]) => void;
+
+const withFullFonts = <T,>(loader: () => Promise<T>): Promise<T> => {
+  void ensureFullFontStylesheet();
+  return loader();
+};
+const withFullAssets = <T,>(loader: () => Promise<T>): Promise<T> => {
+  void ensureFullFontStylesheet();
+  return loader();
+};
+const loadAboutModule = () => withFullAssets(() => import("./pages/AboutPage.tsx"));
+const loadAdminSetupModule = () => withFullFonts(() => import("./pages/AdminSetupPage.tsx"));
+const loadRichArticleModule = () => import("./RichArticleContent.tsx");
+const loadArticleModule = () => withFullFonts(() => Promise.all([import("./pages/ArticlePage.tsx"), loadRichArticleModule()]).then(([module]) => module));
+const loadDialogsModule = () => withFullFonts(() => import("./components/Dialogs.tsx"));
+const loadFriendsModule = () => withFullAssets(() => import("./pages/FriendsPage.tsx"));
+const loadMusicModule = () => withFullAssets(() => import("./pages/MusicPage.tsx"));
+const loadMusicDetailModule = () => Promise.all([loadMusicModule(), loadRichArticleModule()]).then(([module]) => module);
+const loadPoemModule = () => withFullFonts(() => import("./pages/PoemPage.tsx"));
+const loadPoemsModule = () => withFullAssets(() => import("./pages/PoemsPage.tsx"));
+const loadPostsModule = () => withFullAssets(() => import("./pages/PostsPage.tsx"));
+const loadAccountModule = () => withFullFonts(() => import("./community/AccountDialog.tsx"));
+
+const primaryRouteShells = {
+  "/posts": { kicker: "ARTICLE INDEX", title: "文章", description: siteConfig.pages.postsDescription, icon: BookOpenText, variant: "posts" },
+  "/poems": { kicker: "SMALL POEMS", title: "小诗", description: siteConfig.pages.poemsDescription, icon: Feather, variant: "poems" },
+  "/music": { kicker: "MUSIC NOTES", title: "音乐", description: siteConfig.pages.musicDescription, icon: MusicNotes, variant: "music" },
+  "/friends": { kicker: "FRIEND LINKS", title: "友链", description: siteConfig.pages.friendsDescription, icon: LinkSimple, variant: "friends" },
+  "/about": { kicker: "HELLO", title: "关于我", description: siteConfig.about.heroDescription, icon: UserCircle, variant: "about" },
+} as const;
+
+type PrimaryRoutePath = keyof typeof primaryRouteShells;
+
+function PrimaryRoute({ path, children }: { path: PrimaryRoutePath; children: ReactNode }) {
+  return <main className={path === "/about" ? "about-page" : undefined}><PageHero {...primaryRouteShells[path]} /><Suspense fallback={null}>{children}</Suspense></main>;
+}
+
+export const AboutPage = lazy(() => loadAboutModule().then((module) => ({ default: module.AboutPage })));
+export const AdminSetupPage = lazy(() => loadAdminSetupModule().then((module) => ({ default: module.AdminSetupPage })));
+export const ArticlePage = lazy(() => loadArticleModule().then((module) => ({ default: module.ArticlePage })));
+export const SearchDialog = lazy(() => loadDialogsModule().then((module) => ({ default: module.SearchDialog })));
+export const SettingsDialog = lazy(() => loadDialogsModule().then((module) => ({ default: module.SettingsDialog })));
+export const FriendsPage = lazy(() => loadFriendsModule().then((module) => ({ default: module.FriendsPage })));
+export const MusicPage = lazy(() => loadMusicModule().then((module) => ({ default: module.MusicPage })));
+export const MusicDetailPage = lazy(() => loadMusicDetailModule().then((module) => ({ default: module.MusicDetailPage })));
+export const PoemPage = lazy(() => loadPoemModule().then((module) => ({ default: module.PoemPage })));
+const PoemComments = lazy(() => loadPoemModule().then((module) => ({ default: module.PoemComments })));
+export const PoemsPage = lazy(() => loadPoemsModule().then((module) => ({ default: module.PoemsPage })));
+export const PostsPage = lazy(() => loadPostsModule().then((module) => ({ default: module.PostsPage })));
+export const AccountDialog = lazy(() => loadAccountModule().then((module) => ({ default: module.AccountDialog })));
+
+export function preloadDialogs() {
+  return loadDialogsModule().catch(() => {});
+}
+
+export function preloadAccount() {
+  if (!siteConfig.showCommunity) return Promise.resolve();
+  return loadAccountModule().catch(() => {});
+}
+
+const prefetchedRouteModules = new Map<() => Promise<unknown>, Promise<unknown>>();
+
+let fullFontStylesheetReady: Promise<void> | undefined;
+function ensureFullFontStylesheet() {
+  if (typeof document === "undefined") return Promise.resolve();
+  if (fullFontStylesheetReady) return fullFontStylesheetReady;
+  const existing = document.querySelector<HTMLLinkElement>('link[rel="stylesheet"][href="/fonscape/google-fonts-full.css"]');
+  if (existing?.sheet && existing.media !== "print") return Promise.resolve();
+  fullFontStylesheetReady = new Promise<void>((resolve) => {
+    const stylesheet = existing || Object.assign(document.createElement("link"), { rel: "stylesheet", href: "/fonscape/google-fonts-full.css" });
+    const finish = () => {
+      stylesheet.media = "all";
+      resolve();
+    };
+    stylesheet.addEventListener("load", finish, { once: true });
+    stylesheet.addEventListener("error", finish, { once: true });
+    if (existing?.sheet) finish();
+    else if (!existing) document.head.append(stylesheet);
+  });
+  return fullFontStylesheetReady;
+}
+
+export function routeModuleLoader(path: string): (() => Promise<unknown>) | null {
+  const routePath = normalizeRoutePath(path);
+  if (!isSiteRouteEnabled(routePath, siteConfig)) return null;
+  if (routePath.startsWith("/post/")) return loadArticleModule;
+  if (routePath.startsWith("/poem/")) return loadPoemModule;
+  if (routePath.startsWith("/music/")) return loadMusicDetailModule;
+  if (routePath === "/music") return loadMusicModule;
+  if (routePath === "/posts") return loadPostsModule;
+  if (routePath === "/poems") return loadPoemsModule;
+  if (routePath === "/friends") return loadFriendsModule;
+  if (routePath === "/about") return loadAboutModule;
+  if (routePath === "/admin/setup") return loadAdminSetupModule;
+  return null;
+}
+
+export function preloadRouteModule(path: string): Promise<unknown> {
+  const loader = routeModuleLoader(path);
+  if (!loader) return Promise.resolve(null);
+  if (!prefetchedRouteModules.has(loader)) {
+    prefetchedRouteModules.set(loader, loader().catch((error) => {
+      prefetchedRouteModules.delete(loader);
+      throw error;
+    }));
+  }
+  return prefetchedRouteModules.get(loader)!;
+}
+
+export function decodeRoutePath(value: unknown): string {
+  return String(value ?? "").split("/").map((segment) => {
+    try { return decodeURIComponent(segment); } catch { return segment; }
+  }).join("/");
+}
+
+export function preloadRouteContent(path: string): Promise<unknown> {
+  const routePath = normalizeRoutePath(path);
+  if (!isSiteRouteEnabled(routePath, siteConfig)) return Promise.resolve(null);
+  if (routePath.startsWith("/post/")) return loadPost(decodeRoutePath(routePath.slice("/post/".length))).catch(() => null);
+  if (routePath.startsWith("/poem/")) return loadPoem(decodeRoutePath(routePath.slice("/poem/".length))).catch(() => null);
+  if (routePath.startsWith("/music/")) {
+    const [, section, ...slugParts] = routePath.split("/");
+    if (section && slugParts.length) return loadMusicReview(decodeRoutePath(section), decodeRoutePath(slugParts.join("/"))).catch(() => null);
+  }
+  if (routePath === "/posts") return loadCollectionPageChunk("post", 0).catch(() => null);
+  if (routePath === "/poems") return loadCollectionPageChunk("poem", 0).catch(() => null);
+  if (routePath === "/music") return loadCollectionPageChunk("music", 0).catch(() => null);
+  return Promise.resolve(null);
+}
+
+export function preloadRoute(path: string): Promise<[unknown, unknown]> {
+  const routePath = normalizeRoutePath(path);
+  if (!isSiteRouteEnabled(routePath, siteConfig)) {
+    replaceRouteWithHome();
+    setRouteDocumentTitle("/", siteConfig.title);
+    return Promise.resolve([null, null]);
+  }
+  setRouteDocumentTitle(routePath, siteConfig.title);
+  const loader = routeModuleLoader(path);
+  return Promise.all([loader ? loader() : null, preloadRouteContent(path)]);
+}
+
+/**
+ * Render the route selected by the canonical pathname state. Lazy route
+ * modules remain behind the app's existing Suspense boundary.
+ */
+export function RouteContent({ route, routeQuery, stats, onView, onOutline, onRequestStats, onCommentStats, isRetiredAdminRoute, routeEnabled }: {
+  route: string;
+  routeQuery: string;
+  stats: RouteStats;
+  onView: RouteViewHandler;
+  onOutline: RouteOutlineHandler;
+  onRequestStats: (targets: StatsTarget[]) => Promise<void>;
+  onCommentStats: CommentStatsHandler;
+  isRetiredAdminRoute: boolean;
+  routeEnabled: boolean;
+}) {
+  if (!routeEnabled || isRetiredAdminRoute) return <HomePage stats={stats.post || {}} onStatsTargets={onRequestStats} />;
+  if (route.startsWith("/post/")) return <DetailPageFrame kind="post" onReturn={() => returnFromDetail(route)}><ArticlePage slug={decodeRoutePath(route.slice("/post/".length))} stats={stats.post || {}} onView={onView} onOutline={onOutline} onStatsTargets={onRequestStats} onCommentStats={onCommentStats} /></DetailPageFrame>;
+  if (route.startsWith("/poem/")) return <DetailPageFrame kind="poem" onReturn={() => returnFromDetail(route)} afterContent={siteConfig.showCommunity && <PoemComments slug={decodeRoutePath(route.slice("/poem/".length))} onCommentStats={onCommentStats} />}><PoemPage slug={decodeRoutePath(route.slice("/poem/".length))} stats={stats.poem || {}} onView={onView} onStatsTargets={onRequestStats} /></DetailPageFrame>;
+  if (route.startsWith("/music/")) return <DetailPageFrame kind="music" onReturn={() => returnFromDetail(route)}><MusicDetailPage path={decodeRoutePath(route.slice("/music/".length))} stats={stats.music || {}} onView={onView} onStatsTargets={onRequestStats} onCommentStats={onCommentStats} /></DetailPageFrame>;
+  if (route === "/") return <HomePage stats={stats.post || {}} onStatsTargets={onRequestStats} />;
+  if (route === "/posts") return <PrimaryRoute path={route}><PostsPage query={routeQuery} stats={stats.post || {}} onStatsTargets={onRequestStats} /></PrimaryRoute>;
+  if (route === "/poems") return <PrimaryRoute path={route}><PoemsPage stats={stats.poem || {}} onStatsTargets={onRequestStats} /></PrimaryRoute>;
+  if (route === "/music") return <PrimaryRoute path={route}><MusicPage query={routeQuery} stats={stats.music || {}} onStatsTargets={onRequestStats} /></PrimaryRoute>;
+  if (route === "/friends") return <PrimaryRoute path={route}><FriendsPage /></PrimaryRoute>;
+  if (route === "/about") return <PrimaryRoute path={route}><AboutPage /></PrimaryRoute>;
+  if (route === "/admin/setup") return <AdminSetupFrame><AdminSetupPage /></AdminSetupFrame>;
+  return <NotFound />;
+}
+
+export function isDetailPath(path: string): boolean {
+  const route = normalizeRoutePath(path);
+  return route.startsWith("/post/") || route.startsWith("/poem/") || route.startsWith("/music/");
+}

@@ -16,15 +16,15 @@ export function registerResponsiveImages(entries: unknown) {
   }
 }
 
-function responsiveImage(source: string) {
-  return registeredResponsiveImages[source] || responsiveImageCatalog[source];
+function responsiveImage(source: string | undefined) {
+  return registeredResponsiveImages[source as string] || responsiveImageCatalog[source as string];
 }
 
-export function responsiveImageCandidates(source: string) {
+export function responsiveImageCandidates(source: string | undefined) {
   return responsiveImage(source)?.candidates || [];
 }
 
-export function responsiveImageProps(source: string, sizes: string) {
+export function responsiveImageProps(source: string | undefined, sizes?: string) {
   const candidates = responsiveImageCandidates(source);
   const src = candidates[0]?.src || source;
   return {
@@ -36,12 +36,12 @@ export function responsiveImageProps(source: string, sizes: string) {
   };
 }
 
-export function responsiveImageLqip(source: string) {
+export function responsiveImageLqip(source: string | undefined) {
   return responsiveImage(source)?.lqip || "";
 }
 
 /** Pick the smallest candidate that covers the intended rendered width. */
-export function responsiveImageUrl(source: string, intendedWidth: number) {
+export function responsiveImageUrl<T extends string | undefined>(source: T, intendedWidth: number): string | T {
   const candidates = responsiveImageCandidates(source);
   return candidates.find(({ width }) => width >= intendedWidth)?.src || candidates.at(-1)?.src || source;
 }

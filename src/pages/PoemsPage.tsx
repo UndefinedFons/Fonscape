@@ -1,0 +1,27 @@
+import { siteConfig } from "../siteConfig.ts";
+import { ArrowRight } from "@phosphor-icons/react/ArrowRight";
+import { CalendarBlank } from "@phosphor-icons/react/CalendarBlank";
+import { ChatCircleDots } from "@phosphor-icons/react/ChatCircleDots";
+import { Eye } from "@phosphor-icons/react/Eye";
+import { Feather } from "@phosphor-icons/react/Feather";
+import { useEffect, useMemo } from "react";
+import { Pagination } from "../components/Pagination.tsx";
+import { contentRoute } from "../content/index.ts";
+import { usePagination, useResponsivePageSize } from "../hooks.ts";
+import { formatContentDate } from "../siteUtils.ts";
+import { useProgressiveCollection } from "../useProgressiveCollection.ts";
+import type { ContentStat } from "../types.ts";
+
+type StatsTarget = { type: "poem"; slug: string };
+
+export function PoemsPage({ stats, onStatsTargets }: { stats: Record<string, ContentStat>; onStatsTargets: (targets: StatsTarget[]) => Promise<void> }) {
+  const { items: poems, error: collectionError, retry: retryCollection } = useProgressiveCollection("poem");
+  const pagination = usePagination(poems, useResponsivePageSize(6, 3), "all", "poems");
+  const pageStatsKey = JSON.stringify(pagination.pageItems.map((poem) => poem.slug));
+  const pageStatsTargets = useMemo(
+    () => (JSON.parse(pageStatsKey) as string[]).map((slug) => ({ type: "poem" as const, slug })),
+    [pageStatsKey],
+  );
+  useEffect(() => { onStatsTargets(pageStatsTargets); }, [onStatsTargets, pageStatsTargets]);
+  return <section className="listing page-width"><div ref={pagination.topRef} className={`poem-grid paginated-view${pagination.leaving ? " is-leaving" : ""}`}>{poems.length ? pagination.pageItems.map((poem) => <a className="poem-card" href={contentRoute("poem", poem)} key={poem.slug}><Feather size={24} /><h2>{poem.title}</h2>{poem.previewLines.slice(0, 3).map((line, index) => <p key={`${poem.slug}-${index}`}>{line}</p>)}{poem.lineCount > poem.previewLines.length && <p aria-hidden="true">……</p>}<div className="poem-card-footer"><span className="poem-card-stats"><span className="poem-card-date"><CalendarBlank size={14} /><time dateTime={poem.date}>{formatContentDate(poem.date)}</time></span><span><Eye size={14} />{stats[poem.slug]?.views || 0}</span>{siteConfig.showCommunity && <span><ChatCircleDots size={14} />{stats[poem.slug]?.comments || 0}</span>}</span><span className="poem-card-link">读完整首 <ArrowRight size={15} /></span></div></a>) : <div className="section-empty"><Feather size={34} weight="duotone" /><h2>暂无小诗</h2></div>}</div><Pagination page={pagination.page} totalPages={pagination.totalPages} onChange={pagination.changePage} />{(collectionError as Error | null) && <div className="collection-load-error" role="alert"><span>部分内容暂时无法加载，已显示已加载的内容。</span><button type="button" onClick={retryCollection}>重试加载</button></div>}</section>;
+}

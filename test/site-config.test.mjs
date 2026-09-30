@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { resolveGlassBackground } from "../src/heroImages.js";
-import { DEFAULT_POST_CATEGORIES, getNavItems, getPostCategories, normalizePostCategories, siteConfig } from "../src/siteConfig.js";
-import { formatCopyrightYears } from "../src/siteUtils.js";
+import { resolveGlassBackground } from "../src/heroImages.ts";
+import { DEFAULT_POST_CATEGORIES, getNavItems, getPostCategories, normalizePostCategories, siteConfig } from "../src/siteConfig.ts";
+import { formatCopyrightYears } from "../src/siteUtils.ts";
 
 test("site configuration keeps the portable theme shape", () => {
   assert.equal(typeof siteConfig.home.eyebrow, "string");

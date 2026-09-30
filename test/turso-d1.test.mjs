@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { createTursoD1Database } from "../server/turso-d1.js";
+import { createTursoD1Database } from "../server/turso-d1.ts";
 
 test("Turso adapter exposes the D1 prepared-statement result shape", async () => {
   const calls = [];

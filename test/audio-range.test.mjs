@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { onRequest, parseRange } from "../functions/audio/[[path]].js";
+import { onRequest, parseRange } from "../functions/audio/[[path]].ts";
 
 const encoder = new TextEncoder();
 

@@ -11,7 +11,7 @@ test("channels resolve accessible links from configured addresses", async () => 
     server: { middlewareMode: true, ws: false, watch: null },
   });
   try {
-    const { resolveChannels } = await server.ssrLoadModule("/src/pages/AboutPage.jsx");
+    const { resolveChannels } = await server.ssrLoadModule("/src/pages/AboutPage.tsx");
     const [email] = resolveChannels({ channels: { email: { address: " hello@example.com " } } });
     assert.equal(email.ariaLabel, "发送邮件至 hello@example.com");
     assert.equal(email.href, "mailto:hello@example.com");
@@ -33,7 +33,7 @@ test("profile layout keeps a generous comparable-height range before becoming st
     server: { middlewareMode: true },
   });
   try {
-    const { shouldUseStickyProfileLayout } = await server.ssrLoadModule("/src/pages/AboutPage.jsx");
+    const { shouldUseStickyProfileLayout } = await server.ssrLoadModule("/src/pages/AboutPage.tsx");
     assert.equal(shouldUseStickyProfileLayout(539, 640), false);
     assert.equal(shouldUseStickyProfileLayout(500, 680), false);
     assert.equal(shouldUseStickyProfileLayout(500, 681), true);

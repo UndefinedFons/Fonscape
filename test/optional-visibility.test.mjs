@@ -1,8 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { buildSitemap } from "../scripts/generate-sitemap.mjs";
-import { getNavItems } from "../src/siteConfig.js";
-import { isSiteRouteEnabled } from "../src/sectionAvailability.js";
+import { getNavItems } from "../src/siteConfig.ts";
+import { isSiteRouteEnabled } from "../src/sectionAvailability.ts";
 
 test("community defaults to enabled and controls friends and setup routes together", () => {
   for (const config of [{}, { showCommunity: true }, { showCommunity: false }]) {
