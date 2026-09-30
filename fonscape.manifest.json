@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "version": "1.18.1",
+  "version": "1.19.0",
   "ownership": {
     "user": [
       ".env",

@@ -9,10 +9,10 @@ import {
   parsePoemMetadata,
   parsePostMetadata,
   sortNewestFirst,
-} from "../src/content/frontmatter.js";
-import { sortFeaturedPosts } from "../src/pages/homeContent.js";
+} from "../src/content/frontmatter.ts";
+import { sortFeaturedPosts } from "../src/pages/homeContent.ts";
 import { extractLocalRasterSources, isLocalRasterSource } from "./generate-responsive-images.mjs";
-import { parseMetingSongUrl } from "../src/musicSources.js";
+import { parseMetingSongUrl } from "../src/musicSources.ts";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const outputPath = join(root, "functions", "_generated", "content-targets.js");

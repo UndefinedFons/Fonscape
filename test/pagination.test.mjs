@@ -4,7 +4,7 @@ import { JSDOM } from "jsdom";
 import { act, createElement } from "react";
 import { createRoot } from "react-dom/client";
 import { createServer } from "vite";
-import { FULL_PAGINATION_THRESHOLD, getVisiblePaginationPages } from "../src/pagination.js";
+import { FULL_PAGINATION_THRESHOLD, getVisiblePaginationPages } from "../src/pagination.ts";
 
 test("pagination shows every page through the five-page threshold", () => {
   assert.equal(FULL_PAGINATION_THRESHOLD, 5);
@@ -56,7 +56,7 @@ test("pagination scroll follows the reduced-motion preference", async () => {
   });
   let root;
   try {
-    const { usePagination } = await server.ssrLoadModule("/src/hooks.js");
+    const { usePagination } = await server.ssrLoadModule("/src/hooks.ts");
     function PaginationProbe() {
       const pagination = usePagination([1, 2, 3], 1, "test", "pagination");
       pagination.topRef.current = { scrollIntoView(options) { scrollIntoViewCalls.push(options); } };

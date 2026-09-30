@@ -1,7 +1,7 @@
 {
   "$schema": "./node_modules/wrangler/config-schema.json",
   "name": "fonscape-blog",
-  "main": "worker/index.js",
+  "main": "worker/index.ts",
   "workers_dev": true,
   "preview_urls": true,
   "compatibility_date": "2026-07-29",

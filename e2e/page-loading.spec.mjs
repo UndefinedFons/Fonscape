@@ -13,7 +13,7 @@ test("a direct article keeps its page and return button usable while content and
     await fonts.promise;
     await route.continue();
   });
-  await page.route("**/src/pages/ArticlePage.jsx", async (route) => {
+  await page.route("**/src/pages/ArticlePage.tsx", async (route) => {
     await article.promise;
     await route.continue();
   });
@@ -41,7 +41,7 @@ test("a direct article keeps its page and return button usable while content and
 
 test("a direct primary route shows its hero before the lazy page arrives", async ({ page }) => {
   const content = deferred();
-  await page.route("**/src/pages/AboutPage.jsx", async (route) => {
+  await page.route("**/src/pages/AboutPage.tsx", async (route) => {
     await content.promise;
     await route.continue();
   });
@@ -60,7 +60,7 @@ test("a direct primary route shows its hero before the lazy page arrives", async
 for (const width of [320, 768, 1280]) {
   test(`detail handoff follows changing content height without overlapping the footer at ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height: 800 });
-    await page.route('**/src/main.jsx', (route) => route.fulfill({ contentType: 'text/javascript', body: `
+    await page.route('**/src/main.tsx', (route) => route.fulfill({ contentType: 'text/javascript', body: `
       import React from '/node_modules/.vite/deps/react.js';
       const { use, useState } = React;
       import ReactDOM from '/node_modules/.vite/deps/react-dom_client.js';

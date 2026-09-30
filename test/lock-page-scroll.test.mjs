@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { lockPageScroll } from "../src/lockPageScroll.js";
+import { lockPageScroll } from "../src/lockPageScroll.ts";
 
 test("page scroll lock preserves position and releases only after the final owner", () => {
   const originalWindow = globalThis.window;

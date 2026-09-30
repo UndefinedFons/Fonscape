@@ -1,11 +1,11 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { readFile } from "node:fs/promises";
-import { buildSearchItems, enabledSearchTypes, filterSearchItems, searchScopeOptions, searchScopeStyle } from "../src/components/searchModel.js";
+import { buildSearchItems, enabledSearchTypes, filterSearchItems, searchScopeOptions, searchScopeStyle } from "../src/components/searchModel.ts";
 
 test("the combined search feed applies newest-first ordering with stable ties", () => {
   const items = buildSearchItems([
-    { type: "poem", key: "z-poem", title: "小诗", date: "2026-08-28" },
+    { type: "poem", key: "z-poem", title: "小诗", date: "2026-08-29" },
     { type: "post", key: "b-post", title: "文章 B", category: "评谈", date: "2026-08-29" },
     { type: "music", key: "songs/a-song", title: "音乐", kind: "歌曲", date: "2026-08-27" },
     { type: "post", key: "a-post", title: "文章 A", category: "记录", date: "2026-08-29" },

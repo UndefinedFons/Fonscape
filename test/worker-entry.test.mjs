@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFile, readdir, stat } from "node:fs/promises";
 import test from "node:test";
-import worker, { audioAssetSizes, canonicalAudioPathname } from "../worker/index.js";
+import worker, { audioAssetSizes, canonicalAudioPathname } from "../worker/index.ts";
 
 function executionContext() {
   return { waitUntil() {} };

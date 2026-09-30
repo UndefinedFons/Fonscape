@@ -9,6 +9,7 @@ const viewer = {
   unreadReplies: 0,
   unreadAdminComments: 0,
   avatarUrl: null,
+  avatarUpdatedAt: null,
   createdAt: 1,
 };
 

@@ -1,6 +1,6 @@
 import { createClient } from "@libsql/client";
 import { migrateTurso } from "../../scripts/migrate-turso.mjs";
-import { createTursoD1Database } from "../../server/turso-d1.js";
+import { createTursoD1Database } from "../../server/turso-d1.ts";
 
 export async function migratedDatabase() {
   const client = createClient({ url: ":memory:" });

@@ -1,9 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { isMetingSongTarget } from "../functions/_generated/content-targets.js";
-import { ApiError } from "../functions/_lib/community.js";
-import { musicAudio, musicMetadata, resolveMetingAudioUrl, resolveMetingSong } from "../functions/_lib/music.js";
-import { parseMetingSongUrl } from "../src/musicSources.js";
+import { ApiError } from "../functions/_lib/community.ts";
+import { musicAudio, musicMetadata, resolveMetingAudioUrl, resolveMetingSong } from "../functions/_lib/music.ts";
+import { parseMetingSongUrl } from "../src/musicSources.ts";
 
 class FakeMeting {
   constructor(source) {

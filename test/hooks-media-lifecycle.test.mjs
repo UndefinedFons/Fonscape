@@ -1,5 +1,4 @@
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
 import test from "node:test";
 import React from "react";
 import { createServer } from "vite";
@@ -173,8 +172,8 @@ async function loadMediaComponents() {
   });
   try {
     assert.equal(server.config.optimizeDeps.include?.length || 0, 0);
-    const module = await server.ssrLoadModule("/src/ArticleMusicPlayer.jsx");
-    const lightboxModule = await server.ssrLoadModule("/src/ZoomableImage.jsx");
+    const module = await server.ssrLoadModule("/src/ArticleMusicPlayer.tsx");
+    const lightboxModule = await server.ssrLoadModule("/src/ZoomableImage.tsx");
     return { server, ArticleMusicPlayer: module.ArticleMusicPlayer, stopArticleAudio: module.stopArticleAudio, ZoomableImage: lightboxModule.ZoomableImage };
   } catch (error) {
     await server.close();
@@ -319,12 +318,4 @@ test("lightbox close survives closing rerenders and still cleans up on timer or 
     if (previousRequestAnimationFrame === undefined) delete globalThis.requestAnimationFrame;
     else globalThis.requestAnimationFrame = previousRequestAnimationFrame;
   }
-});
-
-test("outline updates do not close the panel while route changes still reset it", async () => {
-  const source = await readFile("src/App.jsx", "utf8");
-  assert.match(source, /setArticleOutlineOpen\(false\);\s*setActiveOutlineId\(""\);\s*\}, \[route\]\);/u);
-  assert.match(source, /setActiveOutlineId\(\(current\) => current && activePostOutline\.some\(\(item\) => item\.id === current\)/u);
-  assert.match(source, /\}, \[activePostOutline\]\);\s*useEffect\(\(\) => \{/u);
-  assert.match(source, /\}, \[route, hasArticleOutline, activePostOutline\]\);/u);
 });

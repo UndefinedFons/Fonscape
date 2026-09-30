@@ -246,19 +246,25 @@ test("real env files stay user-owned while the public env example three-way merg
   assert.equal(await readFile(join(data.project, ".env.example"), "utf8"), "PUBLIC_NAME=incoming\nPUBLIC_COLOR=blue\nSITE_ONLY=1\n");
 });
 
-test("apply preserves user content, merges site package metadata, backs up, and rolls back", async (context) => {
+test("apply preserves user content, merges site package metadata, renames theme sources, backs up, and rolls back", async (context) => {
   const data = await fixture();
   context.after(() => rm(data.root, { recursive: true, force: true }));
-  await main([
-    "update",
-    "--project", data.project,
-    "--source-dir", data.source,
-    "--target-dir", data.target,
-    "--apply",
+  await rm(join(data.target, "src/App.jsx"));
+  await Promise.all([
+    put(data.target, "src/App.tsx", "export const version: string = 'new';\n"),
+    put(data.project, "fonscape.config.js", "export default { title: 'My site' };\n"),
+    put(data.project, "src/content/posts/personal.md", "# Personal writing\n"),
+    put(data.project, "src/content/friends.json", '[{"site":"Friend"}]\n'),
   ]);
+  const args = ["update", "--project", data.project, "--source-dir", data.source, "--target-dir", data.target];
+  await main(args);
+  assert.equal(await readFile(join(data.project, "src/App.jsx"), "utf8"), "const version = 'old';\n");
+  await assert.rejects(access(join(data.project, "src/App.tsx")), { code: "ENOENT" });
+  await main([...args, "--apply"]);
 
-  assert.equal(await readFile(join(data.project, "src/content/friends.json"), "utf8"), "[]\n");
-  assert.equal(await readFile(join(data.project, "src/App.jsx"), "utf8"), "const version = 'new';\n");
+  assert.equal(await readFile(join(data.project, "src/content/friends.json"), "utf8"), '[{"site":"Friend"}]\n');
+  await assert.rejects(access(join(data.project, "src/App.jsx")), { code: "ENOENT" });
+  assert.equal(await readFile(join(data.project, "src/App.tsx"), "utf8"), "export const version: string = 'new';\n");
   assert.match(await readFile(join(data.project, "src/styles.css"), "utf8"), /color: purple[\s\S]*padding: 2rem/u);
   assert.equal(await readFile(join(data.project, "scripts/new-feature.mjs"), "utf8"), "export const enabled = true;\n");
   await assert.rejects(access(join(data.project, "docs/optional.md")), { code: "ENOENT" });
@@ -269,10 +275,17 @@ test("apply preserves user content, merges site package metadata, backs up, and 
   assert.equal(mergedPackage.scripts.fonscape, "node scripts/fonscape-update.mjs");
   assert.equal(await readFile(join(data.project, ".fonscape-version"), "utf8"), "1.1.0\n");
 
+  assert.equal(await readFile(join(data.project, "fonscape.config.js"), "utf8"), "export default { title: 'My site' };\n");
+  assert.equal(await readFile(join(data.project, "src/content/posts/personal.md"), "utf8"), "# Personal writing\n");
+
   const backupsRoot = join(data.project, ".fonscape-update", "backups");
   const [backupName] = await readdir(backupsRoot);
   await main(["update", "--project", data.project, "--rollback", relative(data.project, join(backupsRoot, backupName))]);
   assert.equal(await readFile(join(data.project, "src/App.jsx"), "utf8"), "const version = 'old';\n");
+  await assert.rejects(access(join(data.project, "src/App.tsx")), { code: "ENOENT" });
+  assert.equal(await readFile(join(data.project, "src/content/friends.json"), "utf8"), '[{"site":"Friend"}]\n');
+  assert.equal(await readFile(join(data.project, "fonscape.config.js"), "utf8"), "export default { title: 'My site' };\n");
+  assert.equal(await readFile(join(data.project, "src/content/posts/personal.md"), "utf8"), "# Personal writing\n");
   assert.equal(await readFile(join(data.project, ".fonscape-version"), "utf8"), "1.0.0\n");
 });
 

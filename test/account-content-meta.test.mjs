@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { contentMeta } from "../src/community/accountData.js";
+import { contentMeta } from "../src/community/accountData.ts";
 
 test("music account messages resolve titles with nested slugs", () => {
   const item = { contentType: "music", contentSlug: "artists/classical/john-coltrane" };

@@ -37,9 +37,9 @@ jobs:
             public/fonscape/generated-images/
             .fonscape-cache/responsive-images/
           fail-on-cache-miss: false
-          key: fonscape-responsive-images-v1-${{ runner.os }}-${{ runner.arch }}-node22-pnpm11.16.0-${{ hashFiles('scripts/generate-responsive-images.mjs', 'scripts/generate-content-targets.mjs', 'scripts/generate-font-css.mjs', 'src/content/frontmatter.js', 'src/content/markdown.js', 'src/pages/homeContent.js', 'src/siteConfig.js', 'src/responsiveImages.ts', 'package.json', 'pnpm-lock.yaml') }}-${{ hashFiles('public/assets/**/*', 'fonscape.config.js', 'src/content/**/*') }}
+          key: fonscape-responsive-images-v1-${{ runner.os }}-${{ runner.arch }}-node22-pnpm11.16.0-${{ hashFiles('scripts/generate-responsive-images.mjs', 'scripts/generate-content-targets.mjs', 'scripts/generate-font-css.mjs', 'src/content/frontmatter.ts', 'src/content/markdown.ts', 'src/pages/homeContent.ts', 'src/siteConfig.ts', 'src/responsiveImages.ts', 'package.json', 'pnpm-lock.yaml') }}-${{ hashFiles('public/assets/**/*', 'fonscape.config.js', 'src/content/**/*') }}
           restore-keys: |
-            fonscape-responsive-images-v1-${{ runner.os }}-${{ runner.arch }}-node22-pnpm11.16.0-${{ hashFiles('scripts/generate-responsive-images.mjs', 'scripts/generate-content-targets.mjs', 'scripts/generate-font-css.mjs', 'src/content/frontmatter.js', 'src/content/markdown.js', 'src/pages/homeContent.js', 'src/siteConfig.js', 'src/responsiveImages.ts', 'package.json', 'pnpm-lock.yaml') }}-
+            fonscape-responsive-images-v1-${{ runner.os }}-${{ runner.arch }}-node22-pnpm11.16.0-${{ hashFiles('scripts/generate-responsive-images.mjs', 'scripts/generate-content-targets.mjs', 'scripts/generate-font-css.mjs', 'src/content/frontmatter.ts', 'src/content/markdown.ts', 'src/pages/homeContent.ts', 'src/siteConfig.ts', 'src/responsiveImages.ts', 'package.json', 'pnpm-lock.yaml') }}-
 
       - name: Test and build
         run: pnpm check

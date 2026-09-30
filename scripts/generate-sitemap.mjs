@@ -8,9 +8,9 @@ import {
   parsePoemMetadata,
   parsePostMetadata,
   sortNewestFirst,
-} from "../src/content/frontmatter.js";
-import { musicRoute, poemRoute, postRoute, routeHref } from "../src/routes.js";
-import { normalizeSiteUrl, siteUrlForPath } from "../src/siteUrl.js";
+} from "../src/content/frontmatter.ts";
+import { musicRoute, poemRoute, postRoute, routeHref } from "../src/routes.ts";
+import { normalizeSiteUrl, siteUrlForPath } from "../src/siteUrl.ts";
 import { parseRssDate } from "./generate-rss.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");

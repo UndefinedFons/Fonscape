@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { insertCommentAtomically, reconcileRuntimeCounters } from "../functions/_lib/abuse.js";
-import { onRequest } from "../functions/api/[[path]].js";
-import { sha256 } from "../functions/_lib/community.js";
+import { insertCommentAtomically, reconcileRuntimeCounters } from "../functions/_lib/abuse.ts";
+import { onRequest } from "../functions/api/[[path]].ts";
+import { sha256 } from "../functions/_lib/community.ts";
 import { migratedDatabase, requestContext, seedUser } from "./helpers/runtime-database.mjs";
 
 function withD1TriggerChangeCount(db) {

@@ -16,7 +16,7 @@ test("the application error fallback renders a recoverable interface", async () 
     server: { middlewareMode: true, ws: false, watch: null },
   });
   try {
-    const { AppErrorBoundary, AppErrorFallback } = await server.ssrLoadModule("/src/components/AppErrorBoundary.jsx");
+    const { AppErrorBoundary, AppErrorFallback } = await server.ssrLoadModule("/src/components/AppErrorBoundary.tsx");
     const html = renderToStaticMarkup(createElement(AppErrorFallback));
     assert.match(html, /role="alert"/u);
     assert.match(html, /页面暂时无法显示/u);
@@ -51,7 +51,7 @@ test("a route content request failure stays inside the route and can be retried"
   });
   let root;
   try {
-    const { RouteErrorBoundary } = await server.ssrLoadModule("/src/components/AppErrorBoundary.jsx");
+    const { RouteErrorBoundary } = await server.ssrLoadModule("/src/components/AppErrorBoundary.tsx");
     let attempts = 0;
     function TransientContent() {
       const [state, setState] = useState({ value: "", error: null });

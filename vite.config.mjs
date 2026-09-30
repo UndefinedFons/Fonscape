@@ -2,8 +2,8 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import { readdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { parsePost } from "./src/content/frontmatter.js";
-import { contentDateTimestamp } from "./src/content/date.js";
+import { parsePost } from "./src/content/frontmatter.ts";
+import { contentDateTimestamp } from "./src/content/date.ts";
 import siteConfig from "./fonscape.config.js";
 import { generateContentArtifacts } from "./scripts/generate-content-targets.mjs";
 import { generateFontStylesheets } from "./scripts/generate-font-css.mjs";
@@ -12,7 +12,7 @@ import { responsiveImageCandidates, responsiveImageUrl } from "./src/responsiveI
 import { generateRssFeed } from "./scripts/generate-rss.mjs";
 import { generateSitemap } from "./scripts/generate-sitemap.mjs";
 import { isKnownMermaidCircularChunkWarning, MERMAID_CHUNK_WARNING_LIMIT_KB, mermaidChunkWarningPlugin } from "./scripts/chunk-size-warning.mjs";
-import { normalizeSiteUrl, siteUrlForPath } from "./src/siteUrl.js";
+import { normalizeSiteUrl, siteUrlForPath } from "./src/siteUrl.ts";
 
 function escapeAttribute(value) {
   return String(value).replaceAll("&", "&amp;").replaceAll('"', "&quot;").replaceAll("<", "&lt;");
@@ -150,7 +150,7 @@ export default defineConfig({
     host: "0.0.0.0",
     allowedHosts: ["terminal.local"],
     warmup: {
-      clientFiles: ["./src/main.jsx"],
+      clientFiles: ["./src/main.tsx"],
     },
   },
   plugins: [contentMetadataPlugin(), mermaidChunkWarningPlugin(), react(), heroPreloadPlugin()],

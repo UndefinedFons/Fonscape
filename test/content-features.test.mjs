@@ -6,8 +6,8 @@ import { join } from "node:path";
 import test from "node:test";
 import { buildRssFeed, parseRssDate, readRssPosts } from "../scripts/generate-rss.mjs";
 import { buildSitemap } from "../scripts/generate-sitemap.mjs";
-import { hasMathSyntax, parseAlertMarker, protectCurrencySyntax } from "../src/content/richFeatures.js";
-import { normalizeSiteUrl } from "../src/siteUrl.js";
+import { hasMathSyntax, parseAlertMarker, protectCurrencySyntax } from "../src/content/richFeatures.ts";
+import { normalizeSiteUrl } from "../src/siteUrl.ts";
 
 test("content feature syntax distinguishes alerts, formulas, currency, and code", () => {
   assert.deepEqual(parseAlertMarker("[!WARNING]\n注意内容"), { type: "WARNING", label: "警告", className: "warning" });

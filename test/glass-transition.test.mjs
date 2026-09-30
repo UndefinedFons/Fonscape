@@ -5,7 +5,7 @@ import { readThemeStyles } from "./helpers/readThemeStyles.mjs";
 
 test("global glass keeps backdrop sampling stable while opacity transitions", async () => {
   const [app, styles] = await Promise.all([
-    readFile(new URL("../src/App.jsx", import.meta.url), "utf8"),
+    readFile(new URL("../src/App.tsx", import.meta.url), "utf8"),
     readThemeStyles(),
   ]);
   const backdropRule = styles.match(/\.global-glass-backdrop\s*\{(?<body>[^}]+)\}/u)?.groups?.body || "";

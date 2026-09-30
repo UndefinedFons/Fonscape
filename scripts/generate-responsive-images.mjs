@@ -2,9 +2,9 @@ import { createHash, randomUUID } from "node:crypto";
 import { lstat, mkdir, readFile, readdir, realpath, rename, stat, unlink, writeFile } from "node:fs/promises";
 import { basename, dirname, extname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { parseMarkdownSource, parseMusicReviewMetadata, parsePostMetadata } from "../src/content/frontmatter.js";
-import { getHomeContent } from "../src/pages/homeContent.js";
-import { siteConfig } from "../src/siteConfig.js";
+import { parseMarkdownSource, parseMusicReviewMetadata, parsePostMetadata } from "../src/content/frontmatter.ts";
+import { getHomeContent } from "../src/pages/homeContent.ts";
+import { siteConfig } from "../src/siteConfig.ts";
 import {
   chunkResponsiveEntries,
   renderManifest,

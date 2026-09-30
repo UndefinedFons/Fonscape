@@ -8,7 +8,7 @@ import {
   requestWithoutVercelRouteParameter,
   vercelApiPath,
   vercelClientAddress,
-} from "../api/fonscape.js";
+} from "../api/fonscape.ts";
 
 test("Vercel adapter uses the first trusted forwarded address for existing abuse policies", () => {
   const request = new Request("https://example.test/api/comments", {

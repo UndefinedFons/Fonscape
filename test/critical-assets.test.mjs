@@ -7,7 +7,7 @@ test("homepage fonts are inlined while the complete catalog loads only on demand
   const [fontCss, fullFontCss, routes, { localizeGoogleFontStylesheet }] = await Promise.all([
     readFile("public/fonscape/google-fonts.css", "utf8"),
     readFile("public/fonscape/google-fonts-full.css", "utf8"),
-    readFile("src/appRoutes.jsx", "utf8"),
+    readFile("src/appRoutes.tsx", "utf8"),
     import("../vite.config.mjs"),
   ]);
   const transformed = localizeGoogleFontStylesheet(index);
@@ -41,16 +41,16 @@ test("site metadata configuration is applied to the generated HTML", async () =>
 test("homepage and detail images use two responsive derivatives while lightboxes retain originals", async () => {
   const [config, cards, home, responsive, responsiveHook, zoomable, richArticle, article, music, generator, player] = await Promise.all([
     readFile("vite.config.mjs", "utf8"),
-    readFile("src/components/Cards.jsx", "utf8"),
-    readFile("src/pages/HomePage.jsx", "utf8"),
+    readFile("src/components/Cards.tsx", "utf8"),
+    readFile("src/pages/HomePage.tsx", "utf8"),
     readFile("src/responsiveImages.ts", "utf8"),
-    readFile("src/useResponsiveImage.js", "utf8"),
-    readFile("src/ZoomableImage.jsx", "utf8"),
-    readFile("src/RichArticleContent.jsx", "utf8"),
-    readFile("src/pages/ArticlePage.jsx", "utf8"),
-    readFile("src/pages/MusicPage.jsx", "utf8"),
+    readFile("src/useResponsiveImage.ts", "utf8"),
+    readFile("src/ZoomableImage.tsx", "utf8"),
+    readFile("src/RichArticleContent.tsx", "utf8"),
+    readFile("src/pages/ArticlePage.tsx", "utf8"),
+    readFile("src/pages/MusicPage.tsx", "utf8"),
     readFile("scripts/generate-responsive-images.mjs", "utf8"),
-    readFile("src/ArticleMusicPlayer.jsx", "utf8"),
+    readFile("src/ArticleMusicPlayer.tsx", "utf8"),
   ]);
 
   assert.match(config, /homeFeaturedImage/u);

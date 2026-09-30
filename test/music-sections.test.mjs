@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { getMusicSectionIcon, musicSections } from "../src/musicSections.js";
+import { getMusicSectionIcon, musicSections } from "../src/musicSections.ts";
 
 test("songs, artists, and albums keep distinct shared icons", () => {
   assert.deepEqual(musicSections.map((section) => section.id), ["songs", "artists", "albums"]);

@@ -1,13 +1,21 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { onRequest } from "../functions/api/[[path]].js";
+import { onRequest } from "../functions/api/[[path]].ts";
 import { migratedDatabase, requestContext, seedUser } from "./helpers/runtime-database.mjs";
+import { api, ApiClientError } from "../src/community/api.ts";
 
 async function requestJson({ path, query = "", method = "GET", db, currentUser, body, headers = {} }) {
   const context = requestContext({ path, query, method, db, currentUser, body, headers });
   const response = await onRequest(context);
   const payload = await response.json();
   await context.settle();
+  if (response.ok) {
+    const previousFetch = globalThis.fetch;
+    globalThis.fetch = async () => Response.json(payload, { status: response.status });
+    try {
+      assert.deepEqual(await api("/" + path.join("/") + query, { method }), payload, "the frontend must accept the actual backend response");
+    } finally { globalThis.fetch = previousFetch; }
+  }
   return { response, payload };
 }
 
@@ -15,11 +23,12 @@ function contract(value, description) {
   assert.equal(value && typeof value === "object", true, description);
 }
 
-test("session, comments, replies, deletion, and errors keep their response contracts", async () => {
+test("session, comments, replies, deletion, and errors keep their response contracts", async (t) => {
   const { client, db } = await migratedDatabase();
   try {
     const now = Date.now();
     const member = await seedUser(client, { now });
+    const other = await seedUser(client, { now, id: "other-member", username: "othermember", nickname: "另一位读者" });
     await client.execute({
       sql: `INSERT INTO comments (id, user_id, body, status, content_type, content_slug, parent_id, reply_to_comment_id, reply_to_user_id, created_at, updated_at)
         VALUES ('comment-1', ?, '已发布', 'published', 'post', 'site-friends', NULL, NULL, NULL, ?, ?)`,
@@ -79,7 +88,7 @@ test("session, comments, replies, deletion, and errors keep their response contr
     assert.equal(created.payload.comment.updatedAt, created.payload.comment.createdAt);
 
     const reply = await requestJson({
-      path: ["comments"], method: "POST", db, currentUser: member,
+      path: ["comments"], method: "POST", db, currentUser: other,
       body: { type: "post", slug: "site-friends", body: "契约回复", parentId: created.payload.comment.id },
     });
     assert.equal(reply.response.status, 201);
@@ -90,6 +99,28 @@ test("session, comments, replies, deletion, and errors keep their response contr
     assert.equal(reply.payload.comment.replyTo, member.nickname);
     assert.equal(reply.payload.comment.replyToUser.id, member.id);
     assert.equal(reply.payload.comment.replyToUser.nickname, member.nickname);
+
+    const messages = await requestJson({ path: ["me", "comments"], db, currentUser: member });
+    assert.equal(messages.payload.comments.length, 2);
+    const replies = await requestJson({ path: ["me", "replies"], db, currentUser: member });
+    assert.equal(replies.payload.replies.length, 1);
+    const admin = await seedUser(client, { now, id: "admin-contract", username: "admincontract", role: "admin" });
+    const received = await requestJson({ path: ["me", "admin-comments"], db, currentUser: admin });
+    assert.equal(received.payload.comments.length, 2);
+
+    let malformed;
+    t.mock.method(globalThis, "fetch", async () => Response.json(malformed));
+    for (const [path, value] of [
+      ["/auth/session", { user: { ...session.payload.user, role: "owner" } }],
+      ["/comments", { comment: { ...created.payload.comment, status: "draft" } }],
+      ["/comments?type=post&slug=site-friends", { ...listed.payload, page: "1" }],
+      ["/me/comments", { comments: [{ ...messages.payload.comments[0], contentType: "page" }] }],
+      ["/me/replies", { replies: [{ ...replies.payload.replies[0], unread: "yes" }] }],
+    ]) {
+      malformed = value;
+      await assert.rejects(api(path), (error) => error instanceof ApiClientError && error.code === "invalid_response", path + " must reject a malformed success response");
+    }
+    t.mock.restoreAll();
 
     const deleted = await requestJson({
       path: ["comments", created.payload.comment.id], method: "DELETE", db, currentUser: member,

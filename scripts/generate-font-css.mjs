@@ -5,16 +5,16 @@ import {
   parseMusicReviewMetadata,
   parsePoemMetadata,
   parsePostMetadata,
-} from "../src/content/frontmatter.js";
-import { getHomeContent } from "../src/pages/homeContent.js";
-import { authorProfile, siteConfig } from "../src/siteConfig.js";
+} from "../src/content/frontmatter.ts";
+import { getHomeContent } from "../src/pages/homeContent.ts";
+import { authorProfile, siteConfig } from "../src/siteConfig.ts";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const catalogPath = join(root, "scripts", "vendor", "google-fonts.css");
 const outputDirectory = join(root, "public", "fonscape");
 const criticalOutputPath = join(outputDirectory, "google-fonts.css");
 const fullOutputPath = join(outputDirectory, "google-fonts-full.css");
-const scannedExtensions = new Set([".html", ".js", ".jsx", ".json", ".md"]);
+const scannedExtensions = new Set([".html", ".js", ".jsx", ".ts", ".tsx", ".json", ".md"]);
 
 async function sourceFiles(directory) {
   const entries = await readdir(directory, { withFileTypes: true });
@@ -94,11 +94,11 @@ async function renderFontStylesheets() {
     readFile(join(root, "index.html"), "utf8"),
   ]);
   const criticalUiSources = await Promise.all([
-    "src/pages/HomePage.jsx",
-    "src/components/Header.jsx",
-    "src/components/Footer.jsx",
-    "src/components/PageHero.jsx",
-    "src/siteConfig.js",
+    "src/pages/HomePage.tsx",
+    "src/components/Header.tsx",
+    "src/components/Footer.tsx",
+    "src/components/PageHero.tsx",
+    "src/siteConfig.ts",
   ].map((path) => readFile(join(root, path), "utf8")));
   const contentSources = await criticalContentSources(srcFiles);
   const sharedSource = [indexSource, ...criticalUiSources, JSON.stringify({ home: siteConfig.home, author: {

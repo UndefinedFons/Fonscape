@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { ApiError, normalizeNickname, normalizeUsername, validatePassword } from "../functions/_lib/community.js";
+import { ApiError, normalizeNickname, normalizeUsername, validatePassword } from "../functions/_lib/community.ts";
 
 function rejected(fn, ...args) {
   assert.throws(() => fn(...args), ApiError);

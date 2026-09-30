@@ -1,4 +1,4 @@
-import { siteConfig } from "../siteConfig.js";
+import { siteConfig } from "../siteConfig.ts";
 import { ArrowLeft } from "@phosphor-icons/react/ArrowLeft";
 import { Suspense, useCallback, useEffect, useLayoutEffect, useRef, type ReactNode } from "react";
 

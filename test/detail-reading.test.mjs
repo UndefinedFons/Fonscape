@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { getDetailReadingTarget } from "../src/detailReading.js";
+import { getDetailReadingTarget } from "../src/detailReading.ts";
 
 test("detail routes expose the content region used by the shared reading progress", () => {
   assert.equal(getDetailReadingTarget("/post/example"), ".article-page .article-body");

@@ -3,13 +3,13 @@ import test from "node:test";
 import {
   AVATAR_MAX_BYTES as SERVER_AVATAR_MAX_BYTES,
   AVATAR_TOTAL_MAX_BYTES,
-} from "../functions/api/[[path]].js";
+} from "../functions/api/[[path]].ts";
 import {
   AVATAR_INPUT_MAX_BYTES,
   AVATAR_MAX_BYTES,
   AVATAR_OUTPUT_SIZE,
   validateAvatarFile,
-} from "../src/community/api.js";
+} from "../src/community/api.ts";
 
 test("avatar limits keep raw input separate from the stored WebP", () => {
   assert.equal(AVATAR_INPUT_MAX_BYTES, 10 * 1024 * 1024);
