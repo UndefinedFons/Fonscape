@@ -7,6 +7,7 @@ import {
   readLimitedBody,
   requireDatabase,
   requireUser,
+  versionedAvatarUrl,
 } from "../community.ts";
 import { protectAvatar, protectProfileUpdate } from "../abuse.ts";
 import { userById } from "./_shared.ts";
@@ -132,7 +133,7 @@ export async function profile(context: RequestContext, userId: string): Promise<
     profile: {
       id: row.id,
       nickname: row.nickname,
-      avatarUrl: row.avatar_user_id === row.id && row.avatar_updated_at ? `/api/avatar/${row.id}?v=${row.avatar_updated_at}` : null,
+      avatarUrl: versionedAvatarUrl(row.id, row.avatar_user_id, row.avatar_updated_at),
     },
   });
 }

@@ -30,7 +30,6 @@ function configuredTarget(url: URL): MetingTarget {
   return { source: targetSource, id };
 }
 
-/** @param {string} value */
 function parseMetingJson(value: string): unknown {
   try {
     return JSON.parse(value);
@@ -39,10 +38,6 @@ function parseMetingJson(value: string): unknown {
   }
 }
 
-/**
- * @param {{ source: "netease" | "tencent", id: string }} target
- * @param {typeof Meting} [MetingClient]
- */
 export async function resolveMetingSong(target: MetingTarget, MetingClient: typeof Meting = Meting): Promise<ResolvedMetingSong> {
   const client = new MetingClient(target.source).format(true);
   const songs = parseMetingJson(await client.song(target.id));
@@ -85,12 +80,6 @@ async function resolveNeteaseOuterAudioUrl(id: string, fetchImpl: typeof fetch):
   return redirect.pathname === "/404" ? endpoint.href : redirect.href;
 }
 
-/**
- * @param {"netease" | "tencent"} source
- * @param {string} id
- * @param {typeof Meting} [MetingClient]
- * @param {typeof fetch} [fetchImpl]
- */
 export async function resolveMetingAudioUrl(source: MetingSource, id: string, MetingClient: typeof Meting = Meting, fetchImpl: typeof fetch = fetch): Promise<string> {
   const client = new MetingClient(source).format(true);
   let audio: MetingAudio;
@@ -119,13 +108,11 @@ export async function resolveMetingAudioUrl(source: MetingSource, id: string, Me
   return audioUrl.href;
 }
 
-/** @param {import("../types.ts").RequestContext} _context @param {URL} url */
 export async function musicMetadata(_context: RequestContext, url: URL): Promise<Response> {
   const target = configuredTarget(url);
   return json(await resolveMetingSong(target), 200, { "Cache-Control": METADATA_CACHE_CONTROL });
 }
 
-/** @param {import("../types.ts").RequestContext} _context @param {URL} url */
 export async function musicAudio(_context: RequestContext, url: URL): Promise<Response> {
   const { source, id } = configuredTarget(url);
   return new Response(null, {

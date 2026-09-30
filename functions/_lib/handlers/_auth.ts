@@ -157,13 +157,17 @@ export async function login(context: RequestContext): Promise<Response> {
   const username = String(input.username || "").trim();
   if (!username || username.length > 64) throw new ApiError(401, "账户名或密码不正确。", "invalid_credentials");
   await protectLogin(context, username);
-  const password = String(input.password || "");
+  const passwordIsString = typeof input.password === "string";
+  const password = typeof input.password === "string" ? input.password : "";
   const user = await db.prepare(`SELECT ${USER_FIELDS} FROM users u
     LEFT JOIN user_avatars ua ON ua.user_id = u.id
     WHERE u.username = ? COLLATE NOCASE LIMIT 1`).bind(username).first<AuthUserRow>();
   if (!user) throw new ApiError(401, "账户名或密码不正确。", "invalid_credentials");
   const credentials = await hashPassword(password, user.password_salt);
-  if (!await constantTimeEqual(credentials.hash, user.password_hash)) throw new ApiError(401, "账户名或密码不正确。", "invalid_credentials");
+  const passwordMatches = await constantTimeEqual(credentials.hash, user.password_hash);
+  if (!passwordIsString || !passwordMatches) {
+    throw new ApiError(401, "账户名或密码不正确。", "invalid_credentials");
+  }
   if (user.status !== "active") throw new ApiError(403, "该账户暂时无法登录。", "account_banned");
   const auth = await createSession(db, user.id, context.request, limitFromEnv(context.env, "MAX_ACTIVE_SESSIONS"));
   return json({ user: publicUser(user) }, 200, { "Set-Cookie": auth.cookie });

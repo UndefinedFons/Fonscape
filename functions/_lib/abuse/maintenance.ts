@@ -8,7 +8,6 @@ import {
 
 import type { Database, RequestContext } from "../../types.ts";
 
-/** @param {Database} db @param {number} [now] */
 export async function cleanupRuntimeData(db: Database, now = Date.now()): Promise<{ expiredSessions: number; staleRateLimits: number }> {
   const [sessions, rateLimits] = await db.batch([
     db.prepare("DELETE FROM sessions WHERE expires_at <= ?").bind(now),
@@ -23,7 +22,6 @@ export async function cleanupRuntimeData(db: Database, now = Date.now()): Promis
 // Trigger-maintained aggregates are authoritative during normal operation.
 // This full reconciliation is intentionally reserved for scheduled recovery;
 // it must never make an ordinary API write scan every runtime table.
-/** @param {Database} db @param {number} [now] */
 export async function reconcileRuntimeCounters(db: Database, now = Date.now()): Promise<{ reconciledAccounts: number }> {
   const [accountUsage] = await db.batch([
     db.prepare(`UPDATE account_usage
@@ -58,7 +56,6 @@ export async function reconcileRuntimeCounters(db: Database, now = Date.now()): 
   };
 }
 
-/** @param {RequestContext} context */
 async function maintenance(context: RequestContext): Promise<void> {
   const db = requireDatabase(context.env);
   const now = Date.now();
@@ -67,7 +64,6 @@ async function maintenance(context: RequestContext): Promise<void> {
   await cleanupRuntimeData(db, now);
 }
 
-/** @param {RequestContext} context */
 export function scheduleMaintenance(context: RequestContext): void {
   context.waitUntil(maintenance(context).catch((error) => {
     console.error(JSON.stringify({ event: "background_maintenance_failed", error: error instanceof Error ? error.message : String(error) }));

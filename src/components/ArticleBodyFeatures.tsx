@@ -9,6 +9,7 @@ import type { ReactNode } from "react";
 import type { Icon as PhosphorIcon } from "@phosphor-icons/react";
 import type { Mermaid, RenderResult } from "mermaid";
 import { parseAlertMarker, stripAlertMarker } from "../content/richFeatures.ts";
+import { sanitizeMermaidSvg } from "../content/mermaidSvg.ts";
 
 type AlertType = "NOTE" | "TIP" | "IMPORTANT" | "WARNING" | "CAUTION";
 
@@ -35,10 +36,6 @@ function getFirstBlockquoteText(node: MarkdownNode | null | undefined): string {
   return firstParagraph.children.map((child) => child?.type === "text" ? child.value : "").join("");
 }
 
-/**
- * @param {unknown} node
- * @returns {{ type: string, label: string, className: string } | null}
- */
 export function getArticleAlert(node: unknown) {
   return parseAlertMarker(getFirstBlockquoteText(node as MarkdownNode | null | undefined));
 }
@@ -61,9 +58,6 @@ function removeAlertFromChildren(children: ReactNode): ReactNode[] {
   return items.map((item, index) => index === firstIndex ? nextFirst : item);
 }
 
-/**
- * @param {{ children?: import("react").ReactNode, node?: unknown }} props
- */
 export function ArticleBlockquote({ children, node }: { children?: ReactNode; node?: unknown }) {
   const alert = getArticleAlert(node);
   if (!alert) {
@@ -148,38 +142,6 @@ function getMermaidThemeVariables() {
   };
 }
 
-function roundMermaidRectangles(root: ParentNode): void {
-  root.querySelectorAll("g.node rect.basic.label-container, rect.actor.actor-top, rect.actor.actor-bottom").forEach((node) => {
-    if (!node.getAttribute("rx") || node.getAttribute("rx") === "0") node.setAttribute("rx", "8");
-    if (!node.getAttribute("ry") || node.getAttribute("ry") === "0") node.setAttribute("ry", "8");
-  });
-}
-
-function sanitizeMermaidSvg(svg: unknown): string {
-  if (typeof DOMParser === "undefined" || typeof XMLSerializer === "undefined") return "";
-  const parsed = new DOMParser().parseFromString(String(svg || ""), "image/svg+xml");
-  if (parsed.querySelector("parsererror")) return "";
-  parsed.querySelectorAll("script, foreignObject").forEach((node) => node.remove());
-  parsed.querySelectorAll("*").forEach((node) => {
-    [...node.attributes].forEach(({ name, value }) => {
-      if (/^on/iu.test(name) || (/^(?:href|src|xlink:href)$/iu.test(name) && /^\s*(?:javascript:|data:text\/html)/iu.test(value))) {
-        node.removeAttribute(name);
-      }
-    });
-  });
-  roundMermaidRectangles(parsed);
-  const root = parsed.documentElement;
-  const viewBox = root.getAttribute("viewBox")?.trim().split(/[\s,]+/u).map(Number);
-  if (viewBox?.length === 4 && viewBox.every(Number.isFinite) && viewBox[2] > 0 && viewBox[3] > 0) {
-    root.setAttribute("width", String(viewBox[2]));
-    root.setAttribute("height", String(viewBox[3]));
-    root.style.width = `${viewBox[2]}px`;
-    root.style.maxWidth = "none";
-    root.style.height = "auto";
-  }
-  return new XMLSerializer().serializeToString(parsed.documentElement);
-}
-
 function currentDocumentTheme(): "dark" | "light" {
   return typeof document !== "undefined" && document.documentElement.dataset.theme === "dark" ? "dark" : "light";
 }
@@ -221,7 +183,6 @@ function renderMermaid(mermaid: Mermaid, id: string, source: string, themeVariab
  * Mermaid's strict security mode and a final SVG scrub keep source labels from
  * becoming executable markup when repository content is changed.
  *
- * @param {{ source: string }} props
  */
 export function MermaidDiagram({ source }: { source: string }) {
   const theme = useDocumentTheme();

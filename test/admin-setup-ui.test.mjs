@@ -4,18 +4,17 @@ import { fileURLToPath } from "node:url";
 import { JSDOM } from "jsdom";
 import { act, createElement } from "react";
 import { createServer } from "vite";
-import { siteConfig } from "../src/siteConfig.ts";
 import { getEnabledCollectionTypes } from "../src/sectionAvailability.ts";
 import { buildContentDistribution } from "../scripts/generate-content-targets.mjs";
 import { parseMusicReview, parsePost } from "../src/content/frontmatter.ts";
 
 const sourceRoot = new URL("../", import.meta.url);
-const communityTest = siteConfig.showCommunity ? test : test.skip;
+const siteConfigPath = fileURLToPath(new URL("../fonscape.config.js", import.meta.url));
+const communityOnConfig = Object.freeze({ showCommunity: true, showPoems: false, showMusic: false });
+const communityOffConfig = Object.freeze({ showCommunity: false, showPoems: false, showMusic: false });
 
 let viteServer;
 let createRoot;
-let App;
-let CommunityProvider;
 let mountedRoot;
 let restoreDom;
 let fixtureServer;
@@ -46,6 +45,18 @@ function themeDistribution() {
   ]);
 }
 
+function configFixturePlugin(overrides, beforeExport = "") {
+  return {
+    name: "fixed-site-config-test-fixture",
+    transform(code, id) {
+      if (id !== siteConfigPath) return null;
+      const exportStatement = "export default siteConfig;";
+      if (!code.includes(exportStatement)) throw new Error("Unable to apply the fixed site config test fixture.");
+      return code.replace(exportStatement, `${beforeExport}export default { ...siteConfig, ...${JSON.stringify(overrides)} };`);
+    },
+  };
+}
+
 
 test.before(async () => {
   viteServer = await createServer({
@@ -54,6 +65,7 @@ test.before(async () => {
     appType: "custom",
     optimizeDeps: { noDiscovery: true },
     esbuild: { jsx: "automatic" },
+    plugins: [configFixturePlugin(communityOnConfig)],
     server: { middlewareMode: true, ws: false, watch: null },
   });
 });
@@ -86,7 +98,7 @@ function makeResponse(payload, status = 200) {
   };
 }
 
-function installDom(path = "/admin/setup") {
+function installDom(path = "/admin/setup", { includeFullFontStylesheet = true } = {}) {
   const jsdom = new JSDOM(
     "<!doctype html><html><head></head><body><div id=\"root\"></div></body></html>",
     { url: `https://fonstage.test${path}`, pretendToBeVisual: true },
@@ -106,11 +118,13 @@ function installDom(path = "/admin/setup") {
   });
   jsdom.window.scrollTo = () => {};
 
-  const stylesheet = jsdom.window.document.createElement("link");
-  stylesheet.rel = "stylesheet";
-  stylesheet.href = "/fonscape/google-fonts-full.css";
-  Object.defineProperty(stylesheet, "sheet", { configurable: true, value: {} });
-  jsdom.window.document.head.append(stylesheet);
+  if (includeFullFontStylesheet) {
+    const stylesheet = jsdom.window.document.createElement("link");
+    stylesheet.rel = "stylesheet";
+    stylesheet.href = "/fonscape/google-fonts-full.css";
+    Object.defineProperty(stylesheet, "sheet", { configurable: true, value: {} });
+    jsdom.window.document.head.append(stylesheet);
+  }
 
   const location = {
     get href() { return jsdom.window.location.href; },
@@ -216,12 +230,14 @@ async function enableSearchChunks() {
 
 async function loadApplication() {
   if (!createRoot) ({ createRoot } = await import("react-dom/client"));
-  if (!App) ({ App } = await viteServer.ssrLoadModule("/src/App.tsx"));
-  if (!CommunityProvider) ({ CommunityProvider } = await viteServer.ssrLoadModule("/src/community/CommunityProvider.tsx"));
 }
 
-async function mountApp() {
+async function mountApp(server = viteServer) {
   await loadApplication();
+  const [{ App }, { CommunityProvider }] = await Promise.all([
+    server.ssrLoadModule("/src/App.tsx"),
+    server.ssrLoadModule("/src/community/CommunityProvider.tsx"),
+  ]);
   mountedRoot = createRoot(document.getElementById("root"));
   await act(async () => {
     mountedRoot.render(createElement(CommunityProvider, null, createElement(App)));
@@ -257,12 +273,10 @@ async function mountFixture({ handleApi = () => undefined, distinctHeroes = fals
   fixtureServer = await createServer({
     root: fileURLToPath(sourceRoot), configFile: false, appType: "custom",
     optimizeDeps: { noDiscovery: true }, esbuild: { jsx: "automatic" },
-    plugins: [{ name: "enable-music-fixture", transform(code, id) {
-      if (id === fileURLToPath(new URL("fonscape.config.js", sourceRoot))) {
-        const heroes = distinctHeroes ? 'siteConfig.heroes.posts.image = "/fonscape/test-posts.svg"; siteConfig.heroes.music.image = "/fonscape/test-music.svg"; ' : "";
-        return code.replace("export default siteConfig;", `${heroes}export default { ...siteConfig, showMusic: true };`);
-      }
-    } }],
+    plugins: [configFixturePlugin(
+      { ...communityOnConfig, showMusic: true },
+      distinctHeroes ? 'siteConfig.heroes.posts.image = "/fonscape/test-posts.svg"; siteConfig.heroes.music.image = "/fonscape/test-music.svg"; ' : "",
+    )],
     server: { middlewareMode: true, ws: false, watch: null },
   });
   const { contentManifest } = await fixtureServer.ssrLoadModule("/functions/_generated/content-metadata.js");
@@ -297,6 +311,19 @@ async function traverse(direction) {
   await act(async () => history[direction]());
 }
 
+test("extended route intent loads the full font stylesheet on demand", async () => {
+  const { document } = installDom("/", { includeFullFontStylesheet: false });
+  const { preloadRouteModule } = await viteServer.ssrLoadModule("/src/appRoutes.tsx");
+
+  assert.equal(document.querySelector('link[href="/fonscape/google-fonts-full.css"]'), null);
+  await preloadRouteModule("/admin/setup");
+
+  const stylesheet = document.querySelector('link[rel="stylesheet"][href="/fonscape/google-fonts-full.css"]');
+  assert.ok(stylesheet, "loading a route that needs extended glyphs requests the full local font catalog");
+  await act(async () => stylesheet.dispatchEvent(new Event("load")));
+  assert.equal(stylesheet.media, "all", "the stylesheet becomes active after it finishes loading");
+});
+
 test("recent route intent postpones idle prefetch and upgrades its hero priority", async () => {
   installDom("/");
   const originalImage = globalThis.Image;
@@ -323,7 +350,7 @@ test("recent route intent postpones idle prefetch and upgrades its hero priority
     Object.defineProperty(globalThis, "performance", { configurable: true, value: { now: () => now } });
     await act(async () => link.dispatchEvent(new MouseEvent("pointerover", { bubbles: true })));
     const postImage = await waitFor(() => {
-      const item = images.find((image) => image.source === "/fonscape/test-posts.svg");
+      const item = images.find((image) => image.source === "/fonscape/test-posts.svg" && image.fetchPriority === "low");
       assert.ok(item);
       return item;
     });
@@ -434,7 +461,7 @@ test("series navigation uses generated facets for the current chapter and both b
   assert.match(document.querySelector(".series-navigation .is-disabled")?.textContent, /已经读到最后/u);
 });
 
-communityTest("a published comment updates the article card count after returning to the list", async () => {
+test("a published comment updates the article card count after returning to the list", async () => {
   installDom("/posts");
   let comments = [];
   await mountFixture({ handleApi: (url, options) => {
@@ -466,7 +493,7 @@ communityTest("a published comment updates the article card count after returnin
   await waitFor(() => assert.equal(cardComments(), "1"));
 });
 
-communityTest("collapsed replies toggle the inert boundary along with their expansion state", async () => {
+test("collapsed replies toggle the inert boundary along with their expansion state", async () => {
   installDom("/friends");
   const comments = [commentFixture("parent"), commentFixture("reply-1", { parentId: "parent" }), commentFixture("reply-2", { parentId: "parent" })];
   await mountFixture({ handleApi: (url) => url.pathname === "/api/comments" ? Response.json({ comments, total: 3, page: 1, pageSize: 20, totalPages: 1 }) : undefined });
@@ -481,7 +508,7 @@ communityTest("collapsed replies toggle the inert boundary along with their expa
   assert.equal(replies.hasAttribute("inert"), true);
 });
 
-communityTest("account messages refresh on reopening and invalidate after writes without accepting late stale responses", async () => {
+test("account messages refresh on reopening and invalidate after writes without accepting late stale responses", async () => {
   installDom("/friends");
   let comments = [commentFixture("cached", { contentType: "post", contentSlug: "site-friends" })];
   let deferComments = false;
@@ -577,7 +604,7 @@ communityTest("account messages refresh on reopening and invalidate after writes
   assert.equal(data.cachedMyComments(member.id), undefined, "logout clears account data");
 });
 
-communityTest("the admin setup route renders its frame without the public shell", async () => {
+test("the admin setup route renders its frame without the public shell", async () => {
   const { document } = installDom();
   installFetch();
   await mountApp();
@@ -598,7 +625,7 @@ communityTest("the admin setup route renders its frame without the public shell"
   assert.equal(token.hasAttribute("hidden"), false);
 });
 
-communityTest("the password control toggles visibility while retaining the entered value", async () => {
+test("the password control toggles visibility while retaining the entered value", async () => {
   const { document } = installDom();
   installFetch();
   await mountApp();
@@ -622,7 +649,7 @@ communityTest("the password control toggles visibility while retaining the enter
   assert.equal(visibilityButton.getAttribute("aria-pressed"), "false");
 });
 
-communityTest("an asynchronous setup status failure is shown in the form", async () => {
+test("an asynchronous setup status failure is shown in the form", async () => {
   const { document } = installDom();
   installFetch({ setup: { status: 503, payload: { error: "初始化服务暂时不可用" } } });
   await mountApp();
@@ -635,7 +662,7 @@ communityTest("an asynchronous setup status failure is shown in the form", async
   assert.ok(document.querySelector("#admin-setup-token"));
 });
 
-communityTest("an already initialized site redirects away from setup", async () => {
+test("an already initialized site redirects away from setup", async () => {
   const { document, replaceCalls } = installDom();
   installFetch({ setup: { initialized: true } });
   await mountApp();
@@ -645,7 +672,7 @@ communityTest("an already initialized site redirects away from setup", async () 
   });
 });
 
-communityTest("anonymous account access remains available while content search is stalled", async () => {
+test("anonymous account access remains available while content search is stalled", async () => {
   const restoreSearchChunks = await enableSearchChunks();
   const { document } = installDom("/");
   const requests = installFetch({ search: "stall" });
@@ -680,9 +707,9 @@ communityTest("anonymous account access remains available while content search i
   }
 });
 
-communityTest("search index errors stay in the dialog and retry with a fresh request", async () => {
+test("search index errors stay in the dialog and retry with a fresh request", async () => {
   const restoreSearchChunks = await enableSearchChunks();
-  const enabledTypeCount = getEnabledCollectionTypes(siteConfig).length;
+  const enabledTypeCount = getEnabledCollectionTypes(communityOnConfig).length;
   const { document } = installDom("/");
   const requests = installFetch({ search: "fail-once" });
   try {
@@ -702,7 +729,7 @@ communityTest("search index errors stay in the dialog and retry with a fresh req
   }
 });
 
-communityTest("signed-in profile opens without title requests and message tab remains available", async () => {
+test("signed-in profile opens without title requests and message tab remains available", async () => {
   const restoreSearchChunks = await enableSearchChunks();
   const { document } = installDom("/");
   const requests = installFetch({ session: { user: member } });
@@ -717,14 +744,14 @@ communityTest("signed-in profile opens without title requests and message tab re
     await act(async () => messagesTab.click());
     await waitFor(() => assert.ok(document.querySelector('.account-tab-panel .community-inline-error, .account-tab-panel .account-empty')));
     assert.equal(messagesTab.getAttribute("aria-selected"), "true");
-    const enabledTypes = getEnabledCollectionTypes(siteConfig);
+    const enabledTypes = getEnabledCollectionTypes(communityOnConfig);
     assert.ok(requests.filter((path) => path.includes("/fonscape/content/search/")).every((path) => enabledTypes.some((type) => path.includes(`/search/${type}/`))), "hidden collection indexes remain unused");
   } finally {
     restoreSearchChunks();
   }
 });
 
-communityTest("navigation loads content on press and commits the target hero while content is pending", async () => {
+test("navigation loads content on press and commits the target hero while content is pending", async () => {
   const { contentManifest } = await viteServer.ssrLoadModule("/functions/_generated/content-metadata.js");
   const descriptor = contentManifest.collections.post;
   const previous = descriptor.pageChunkCount;
@@ -746,4 +773,28 @@ communityTest("navigation loads content on press and commits the target hero whi
   } finally {
     descriptor.pageChunkCount = previous;
   }
+});
+
+test("community-off configuration hides community entry points and retires setup", async () => {
+  fixtureServer = await createServer({
+    root: fileURLToPath(sourceRoot),
+    configFile: false,
+    appType: "custom",
+    optimizeDeps: { noDiscovery: true },
+    esbuild: { jsx: "automatic" },
+    plugins: [configFixturePlugin(communityOffConfig)],
+    server: { middlewareMode: true, ws: false, watch: null },
+  });
+  const { document } = installDom("/admin/setup");
+  const requests = installFetch();
+  await mountApp(fixtureServer);
+
+  await waitFor(() => {
+    assert.equal(window.location.pathname, "/");
+    assert.ok(document.querySelector("main.home-page"));
+  });
+  assert.equal(document.querySelector(".admin-setup-page"), null);
+  assert.equal(document.querySelector(".account-nav-button"), null);
+  assert.equal(document.querySelector('nav[aria-label="主导航"] a[href="/friends"]'), null);
+  assert.equal(requests.includes("/api/auth/session"), false, "disabled community does not request an account session");
 });

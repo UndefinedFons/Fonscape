@@ -117,7 +117,6 @@ export function CommunityProvider({ children }: { children?: ReactNode }) {
   return <CommunityContext.Provider value={value}>{children}</CommunityContext.Provider>;
 }
 
-/** @returns {CommunityContextValue} */
 export function useCommunity(): CommunityContextValue {
   const value = useContext(CommunityContext);
   if (!value) throw new Error("useCommunity must be used inside CommunityProvider");

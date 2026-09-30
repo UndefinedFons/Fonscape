@@ -438,6 +438,55 @@ test("concurrent registrations map the unique username race to 409", async () =>
   }
 });
 
+test("setup and registration reject non-string passwords while login keeps its credential error", async () => {
+  const { client, db } = await migratedDatabase();
+  const environment = { ADMIN_BOOTSTRAP_TOKEN: "test-bootstrap-token" };
+  try {
+    const invalidSetup = requestContext({
+      path: ["admin", "setup"], method: "POST", db, currentUser: undefined, env: environment,
+      body: { token: environment.ADMIN_BOOTSTRAP_TOKEN, username: "admin01", nickname: "管理员", password: 123456 },
+    });
+    const invalidSetupResponse = await onRequest(invalidSetup);
+    assert.equal(invalidSetupResponse.status, 400);
+    assert.equal((await invalidSetupResponse.json()).code, "invalid_password");
+
+    const setup = requestContext({
+      path: ["admin", "setup"], method: "POST", db, currentUser: undefined, env: environment,
+      body: { token: environment.ADMIN_BOOTSTRAP_TOKEN, username: "admin01", nickname: "管理员", password: "123456" },
+    });
+    const setupResponse = await onRequest(setup);
+    await setup.settle();
+    assert.equal(setupResponse.status, 201);
+
+    const invalidRegistration = requestContext({
+      path: ["auth", "register"], method: "POST", db, currentUser: undefined,
+      body: { username: "reader02", nickname: "读者", password: 123456 },
+    });
+    const invalidRegistrationResponse = await onRequest(invalidRegistration);
+    assert.equal(invalidRegistrationResponse.status, 400);
+    assert.equal((await invalidRegistrationResponse.json()).code, "invalid_password");
+
+    const invalidLogin = requestContext({
+      path: ["auth", "login"], method: "POST", db, currentUser: undefined,
+      body: { username: "admin01", password: 123456 },
+    });
+    const invalidLoginResponse = await onRequest(invalidLogin);
+    assert.equal(invalidLoginResponse.status, 401);
+    const invalidLoginBody = await invalidLoginResponse.json();
+    assert.deepEqual(invalidLoginBody, { error: "账户名或密码不正确。", code: "invalid_credentials" });
+
+    const validLogin = requestContext({
+      path: ["auth", "login"], method: "POST", db, currentUser: undefined,
+      body: { username: "admin01", password: "123456" },
+    });
+    const validLoginResponse = await onRequest(validLogin);
+    await validLogin.settle();
+    assert.equal(validLoginResponse.status, 200);
+  } finally {
+    await client.close();
+  }
+});
+
 test("content stats query explicit generic targets without scanning comments", async () => {
   const { client, db: baseDb } = await migratedDatabase();
   const queries = [];

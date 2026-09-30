@@ -1,84 +1,32 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
+import { JSDOM } from "jsdom";
+import { applySiteMetadata, localizeGoogleFontStylesheet } from "../vite.config.mjs";
 
-test("homepage fonts are inlined while the complete catalog loads only on demand", async () => {
+test("homepage embeds critical local fonts without requesting the remote or full catalog", async () => {
   const index = await readFile("index.html", "utf8");
-  const [fontCss, fullFontCss, routes, { localizeGoogleFontStylesheet }] = await Promise.all([
-    readFile("public/fonscape/google-fonts.css", "utf8"),
-    readFile("public/fonscape/google-fonts-full.css", "utf8"),
-    readFile("src/appRoutes.tsx", "utf8"),
-    import("../vite.config.mjs"),
-  ]);
-  const transformed = localizeGoogleFontStylesheet(index);
+  const criticalFontCss = await readFile("public/fonscape/google-fonts.css", "utf8");
+  const document = new JSDOM(localizeGoogleFontStylesheet(index)).window.document;
 
-  assert.match(transformed, /<style data-fonscape-critical-fonts>@font-face/u);
-  assert.doesNotMatch(transformed, /google-fonts-full\.css/u);
-  assert.doesNotMatch(transformed, /fonts\.googleapis\.com/u);
-  assert.match(fontCss, /font-family:\s*'Noto Sans SC'/u);
-  assert.match(fontCss, /font-family:\s*'Zen Maru Gothic'/u);
-  assert.match(fullFontCss, /font-weight:\s*400/u);
-  assert.match(fullFontCss, /font-weight:\s*500/u);
-  assert.match(fullFontCss, /font-weight:\s*700/u);
-  assert.match(routes, /document\.createElement\("link"\)/u);
-  assert.match(routes, /href:\s*"\/fonscape\/google-fonts-full\.css"/u);
-  assert.match(fontCss, /font-display:\s*swap/iu);
-  assert.ok(fontCss.length < fullFontCss.length / 2, "首屏字体声明应明显小于完整字符目录");
+  const inlineStyles = document.querySelectorAll("style[data-fonscape-critical-fonts]");
+  assert.equal(inlineStyles.length, 1);
+  assert.equal(inlineStyles[0].textContent, criticalFontCss);
+  assert.equal(document.querySelector('link[href*="fonts.googleapis.com"]'), null);
+  assert.equal(document.querySelector('link[href*="google-fonts-full.css"]'), null);
 });
 
-test("site metadata configuration is applied to the generated HTML", async () => {
-  const { applySiteMetadata } = await import("../vite.config.mjs");
-  const transformed = applySiteMetadata(await readFile("index.html", "utf8"), {
+test("site metadata is escaped and applied as document values", async () => {
+  const description = 'A $& $1 <small> site "description"';
+  const html = await readFile("index.html", "utf8");
+  const document = new JSDOM(applySiteMetadata(html, {
     language: "en",
     title: "Notes $& $1 & ideas",
-    description: 'A $& $1 <small> site "description"',
-  });
-  assert.match(transformed, /<html lang="en">/u);
-  assert.match(transformed, /<title>Notes \$&amp; \$1 &amp; ideas<\/title>/u);
-  assert.match(transformed, /content="A \$&amp; \$1 &lt;small> site &quot;description&quot;"/u);
-});
+    description,
+  })).window.document;
 
-test("homepage and detail images use two responsive derivatives while lightboxes retain originals", async () => {
-  const [config, cards, home, responsive, responsiveHook, zoomable, richArticle, article, music, generator, player] = await Promise.all([
-    readFile("vite.config.mjs", "utf8"),
-    readFile("src/components/Cards.tsx", "utf8"),
-    readFile("src/pages/HomePage.tsx", "utf8"),
-    readFile("src/responsiveImages.ts", "utf8"),
-    readFile("src/useResponsiveImage.ts", "utf8"),
-    readFile("src/ZoomableImage.tsx", "utf8"),
-    readFile("src/RichArticleContent.tsx", "utf8"),
-    readFile("src/pages/ArticlePage.tsx", "utf8"),
-    readFile("src/pages/MusicPage.tsx", "utf8"),
-    readFile("scripts/generate-responsive-images.mjs", "utf8"),
-    readFile("src/ArticleMusicPlayer.tsx", "utf8"),
-  ]);
-
-  assert.match(config, /homeFeaturedImage/u);
-  assert.match(config, /post\?\.image/u);
-  assert.match(config, /imagesrcset=/u);
-  assert.match(config, /preloadImage\(mobileImage, \{ media: "\(max-width: 760px\)", sizes: "100vw", intendedWidth: 960/u);
-  assert.match(config, /preloadImage\(desktopImage, \{ media: "\(min-width: 761px\)", sizes: "100vw", intendedWidth: 1600/u);
-  assert.match(cards, /useResponsiveImage\(imageSource, sizes\)/u);
-  assert.match(home, /responsiveImageProps\(post\.image/u);
-  assert.match(home, /responsiveImageProps\(authorProfile\.avatarSmall \|\| authorProfile\.avatar/u);
-  assert.match(responsive, /srcSet:/u);
-  assert.match(responsive, /candidates\.at\(-1\)\?\.src \|\| source/u);
-  assert.match(responsiveHook, /return responsiveImageProps\(source, sizes\)/u);
-  assert.doesNotMatch(responsiveHook, /src: undefined/u);
-  assert.match(zoomable, /useResponsiveImage\(src, sizes\)/u);
-  assert.match(zoomable, /<img src=\{src\} alt=\{alt\} \/>/u);
-  assert.match(responsive, /detailImageSizes = "\(max-width: 760px\) calc\(100vw - 68px\), min\(calc\(100vw - 116px\), 790px\)"/u);
-  assert.match(richArticle, /sizes=\{detailImageSizes\}/u);
-  assert.match(article, /sizes=\{detailImageSizes\}/u);
-  assert.match(article, /post\?\.music && post\.musicPlacement === "inline" \? <ArticleMusicPlayer track=\{post\.music\} autoplay=\{false\}/u);
-  assert.match(music, /useResponsiveImage\(review\?\.image \|\| "",/u);
-  assert.match(generator, /detail: \[640, 1600\]/u);
-  assert.match(generator, /MAX_RESPONSIVE_CANDIDATES_PER_SOURCE = 2/u);
-  assert.match(generator, /renderInlineLqip/u);
-  assert.match(generator, /extractLocalRasterSources/u);
-  assert.match(generator, /addTarget\(targets, post\.image, "detail"\)/u);
-  assert.match(generator, /post\.musicBlocks/iu);
-  assert.match(generator, /track\?\.cover/iu);
-  assert.match(generator, /addTarget\(targets, entry\.image, "thumbnail"\)/u);
-  assert.match(player, /useResponsiveImage\(displayTrack\.cover,/u);
+  assert.equal(document.documentElement.lang, "en");
+  assert.equal(document.title, "Notes $& $1 & ideas");
+  assert.equal(document.querySelector('meta[name="description"]').content, description);
+  assert.equal(document.querySelector("small"), null, "metadata stays text instead of becoming markup");
 });

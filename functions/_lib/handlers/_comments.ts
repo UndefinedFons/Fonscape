@@ -11,6 +11,7 @@ import {
   requireUser,
   sha256,
   validateTarget,
+  versionedAvatarUrl,
 } from "../community.ts";
 import {
   assertTargetExists,
@@ -291,7 +292,7 @@ export async function myReplies(context: RequestContext): Promise<Response> {
       id: row.user_id,
       nickname: row.nickname,
       role: row.user_role,
-      avatarUrl: row.avatar_user_id === row.user_id && row.avatar_updated_at ? `/api/avatar/${row.user_id}?v=${row.avatar_updated_at}` : null,
+      avatarUrl: versionedAvatarUrl(row.user_id, row.avatar_user_id, row.avatar_updated_at),
       avatarUpdatedAt: row.avatar_user_id === row.user_id && row.avatar_updated_at ? Number(row.avatar_updated_at) : null,
     },
   })) });
