@@ -53,8 +53,6 @@ export function contentDateTimestamp(value: unknown): number {
   return date.getTime();
 }
 
-/**
- */
 export function sortNewestFirst(left: SortableContentEntry, right: SortableContentEntry): number {
   const dateDifference = contentDateTimestamp(right.date) - contentDateTimestamp(left.date);
   if (dateDifference) return dateDifference;

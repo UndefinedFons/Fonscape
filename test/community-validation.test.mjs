@@ -31,6 +31,7 @@ test("nicknames accept letters from any language plus digits and spaces", () => 
 test("passwords accept letters and digits only with a length limit", () => {
   assert.equal(validatePassword("abc123"), "abc123");
   assert.equal(validatePassword("1234567890"), "1234567890");
+  for (const value of [123456, null, undefined, true, ["123456"], {}]) rejected(validatePassword, value);
   rejected(validatePassword, "abc12");
   rejected(validatePassword, "abc_123456");
   rejected(validatePassword, "abc123!");

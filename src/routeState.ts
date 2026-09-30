@@ -15,9 +15,6 @@ function rawRouteLocation(): string {
 
 /**
  * Replace the current browser URL without adding a history entry.
- * @param {unknown} path
- * @param {{notify?: boolean}} [options]
- * @returns {string}
  */
 export function replaceRoute(path: unknown, options: { notify?: boolean } = {}): string {
   const destination = normalizeRouteLocation(path);
@@ -34,8 +31,6 @@ export function replaceRoute(path: unknown, options: { notify?: boolean } = {}):
 
 /**
  * Replace an invalid or retired route with the home page.
- * @param {{notify?: boolean}} [options]
- * @returns {string}
  */
 export function replaceRouteWithHome(options: { notify?: boolean } = {}): string {
   return replaceRoute("/", options);
@@ -44,23 +39,16 @@ export function replaceRouteWithHome(options: { notify?: boolean } = {}): string
 /**
  * Parse the canonical pathname route. The hash is only handled once by the
  * entry module during legacy URL conversion.
- * @returns {string}
  */
 export function parseRoutePath(): string {
   return normalizeRoutePath(rawRouteLocation());
 }
 
-/** @returns {string} */
 export function parseRouteQuery(): string {
   const search = typeof window === "undefined" ? "" : String(window.location?.search || "");
   return search.replace(/^\?/u, "");
 }
 
-/**
- * @param {string} path
- * @param {string|URLSearchParams} [query]
- * @returns {string}
- */
 export function formatRouteLocation(path: string, query?: string | URLSearchParams): string {
   if (query === undefined) return normalizeRouteLocation(path);
   const route = normalizeRoutePath(path);
@@ -68,7 +56,6 @@ export function formatRouteLocation(path: string, query?: string | URLSearchPara
   return serialized ? `${route}?${serialized}` : route;
 }
 
-/** @returns {string} */
 export function currentRouteLocation(): string {
   return formatRouteLocation(parseRoutePath(), parseRouteQuery());
 }
@@ -131,8 +118,6 @@ export function updateArticleIndexState(next: ArticleIndexState): void {
   articleIndexState = { ...next };
 }
 
-/**
- */
 export function rememberDetailSource(detailPath: string, sourcePath: string): void {
   const detail = normalizeRoutePath(detailPath);
   if (!isDetailRoute(detail) || !isSiteRouteEnabled(detail, siteConfig)) return;
@@ -216,7 +201,6 @@ export function markPopNavigation(event?: PopStateEvent): void {
  * Return whether the current popstate came from a history entry created by
  * the app. Unknown entries (for example a direct browser URL) must clear
  * stale detail return targets instead of reusing them.
- * @returns {boolean}
  */
 export function consumeKnownPopNavigation(): boolean {
   const known = knownPopNavigation;

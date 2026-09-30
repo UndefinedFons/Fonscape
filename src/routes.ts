@@ -3,8 +3,6 @@ import { normalizeRouteLocation, normalizeRoutePath } from "./sectionAvailabilit
 /**
  * Encode a route segment while preserving slash boundaries for content slugs
  * that intentionally contain nested path segments.
- * @param {unknown} value
- * @returns {string}
  */
 export function encodeRoutePath(value: unknown): string {
   return String(value ?? "")
@@ -17,9 +15,6 @@ export function encodeRoutePath(value: unknown): string {
 /**
  * Build a query-bearing application route. Query values are encoded through
  * URLSearchParams so every internal link uses the same serialization rules.
- * @param {unknown} path
- * @param {URLSearchParams|Record<string, unknown>|string} [query]
- * @returns {string}
  */
 export function routeHref(
   path: unknown,
@@ -44,8 +39,6 @@ export function poemRoute(slug: unknown): string {
   return `/poem/${encodeRoutePath(slug)}`;
 }
 
-/**
- */
 export function musicRoute(section: unknown, slug: unknown): string {
   return `/music/${encodeRoutePath(section)}/${encodeRoutePath(slug)}`;
 }

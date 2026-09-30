@@ -5,8 +5,6 @@
  * exactly the same rules after its source file is loaded.
  */
 
-/**
- */
 export function markdownToPlainText(markdown: string): string {
   return markdown
     .replace(/```[\s\S]*?```/g, " ")
@@ -21,8 +19,6 @@ export function markdownToPlainText(markdown: string): string {
     .trim();
 }
 
-/**
- */
 export function getFirstParagraph(markdown: string): string {
   const blocks = markdown.split(/\n\s*\n/);
   for (const block of blocks) {
@@ -87,8 +83,6 @@ export function getArticleOutline(markdown: string): ArticleOutlineItem[] {
   return outline;
 }
 
-/**
- */
 export function getPoemLines(markdown: string): string[] {
   return markdown ? markdown.split(/\r?\n/u).map((line) => line.trimEnd()) : [];
 }

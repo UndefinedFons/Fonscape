@@ -48,9 +48,6 @@ interface RateLimitRow extends DatabaseRow {
  * libSQL serialize the conditional INSERT together with its counter triggers,
  * so concurrent writers cannot pass a stale read-side capacity check. The
  * comment rate-limit windows remain enforced before this capacity write.
- * @param {Database} db
- * @param {CommentInsertInput} input
- * @param {AppEnv} env
  */
 export async function insertCommentAtomically(db: Database, {
   id,
@@ -111,11 +108,6 @@ export async function insertCommentAtomically(db: Database, {
   throw new ApiError(503, "评论区暂时无法接收更多内容。", "comment_capacity_reached");
 }
 
-/**
- * @param {Database} db
- * @param {CommentInsertInput & { env: AppEnv; requestHash: string }} input
- * @param {RateLimitPolicyResult[]} policies
- */
 export async function insertCommentWithRateLimitsAtomically(db: Database, {
   id,
   userId,
@@ -208,12 +200,6 @@ export async function insertCommentWithRateLimitsAtomically(db: Database, {
     throw error;
   }
   const rateLimit = policies.reduce(
-    /**
-     * @param {RateLimitDecision | null} current
-     * @param {RateLimitPolicyResult} policy
-     * @param {number} index
-     * @returns {RateLimitDecision | null}
-     */
     (current: RateLimitDecision | null, policy: RateLimitPolicyResult, index: number) => {
     const row = results[index + 1]?.results?.[0];
     if (!row) return current;
@@ -228,7 +214,6 @@ export async function insertCommentWithRateLimitsAtomically(db: Database, {
   };
 }
 
-/** @param {unknown} error */
 export function isCommentMutationRollback(error: unknown): boolean {
   const code = String(error && typeof error === "object" && "code" in error ? error.code : "");
   const message = error instanceof Error ? error.message : String(error);
@@ -236,11 +221,6 @@ export function isCommentMutationRollback(error: unknown): boolean {
     && /comment_mutations|pending|completed/iu.test(message);
 }
 
-/**
- * @param {RequestContext} context
- * @param {import("../../types.ts").UserRow} user
- * @returns {Promise<RateLimitPolicyResult[]>}
- */
 export async function prepareCommentRatePolicies(context: RequestContext, user: UserRow): Promise<RateLimitPolicyResult[]> {
   const definitions = commentPolicyDefinitions(context, user);
   const secret = definitions.length ? await rateLimitSecret(context) : "";
@@ -251,10 +231,6 @@ export async function prepareCommentRatePolicies(context: RequestContext, user: 
   })));
 }
 
-/**
- * @param {Database} db
- * @param {{ role: UserRole; userId: string; target: ContentTarget; env: AppEnv }} input
- */
 export async function commentCapacityFailure(
   db: Database,
   { role, userId, target, env }: { role: UserRole; userId: string; target: ContentTarget; env: AppEnv },
@@ -280,11 +256,6 @@ export async function commentCapacityFailure(
   return null;
 }
 
-/**
- * @param {Database} db
- * @param {RateLimitPolicyResult[]} policies
- * @param {number} [now]
- */
 export async function commentRateLimitFailure(db: Database, policies: RateLimitPolicyResult[], now = Date.now()): Promise<RateLimitDecision | null> {
   for (const policy of policies) {
     const row = await db.prepare("SELECT window_started_at, count FROM rate_limits WHERE key = ? LIMIT 1").bind(policy.key).first<RateLimitRow>();
@@ -296,7 +267,6 @@ export async function commentRateLimitFailure(db: Database, policies: RateLimitP
   return null;
 }
 
-/** @param {Database} db @param {ContentTarget} target */
 export async function assertTargetExists(db: Database, target: ContentTarget): Promise<void> {
   if (isStaticContentTarget(target.type, target.slug)) return;
   throw new ApiError(404, "目标内容不存在。", "content_not_found");

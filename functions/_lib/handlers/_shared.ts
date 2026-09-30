@@ -6,7 +6,6 @@ export const USER_FIELDS = `u.id, u.username, u.password_hash, u.password_salt, 
   u.created_at, u.updated_at, u.notifications_seen_at, u.admin_comments_seen_at,
   ua.user_id AS avatar_user_id, ua.updated_at AS avatar_updated_at`;
 
-/** @param {unknown} error */
 export function isUsernameConflict(error: unknown): boolean {
   const code = String(error && typeof error === "object" && "code" in error ? error.code : "");
   const message = error instanceof Error ? error.message : String(error);
@@ -15,20 +14,17 @@ export function isUsernameConflict(error: unknown): boolean {
     || /users_username_unique_idx/iu.test(message);
 }
 
-/** @param {Database} db @param {string} userId */
 export async function userById(db: Database, userId: string): Promise<UserRow | null> {
   return db.prepare(`SELECT ${USER_FIELDS} FROM users u
     LEFT JOIN user_avatars ua ON ua.user_id = u.id
     WHERE u.id = ? LIMIT 1`).bind(userId).first<UserRow>();
 }
 
-/** @param {RequestContext} context */
 export function routeParts(context: RequestContext): string[] {
   const value = context.params.path;
   return (Array.isArray(value) ? value : String(value || "").split("/")).filter(Boolean);
 }
 
-/** @param {Database} db */
 export async function adminSetupState(db: Database): Promise<{ initialized: boolean }> {
   const row = await db.prepare(`SELECT
     admin_initialized_at,

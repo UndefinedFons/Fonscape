@@ -4,10 +4,6 @@ import { isSiteRouteEnabled as isConfiguredSiteRouteEnabled } from "./sectionAva
 
 export const DEFAULT_POST_CATEGORIES = Object.freeze(["随笔", "评谈", "记录", "笔记", "指南"]);
 
-/**
- * @param {unknown} value
- * @returns {string[]}
- */
 export function normalizePostCategories(value: unknown): string[] {
   const source = value === undefined ? DEFAULT_POST_CATEGORIES : value;
   if (!Array.isArray(source)) return [...DEFAULT_POST_CATEGORIES];
@@ -22,10 +18,6 @@ export function normalizePostCategories(value: unknown): string[] {
   }, []);
 }
 
-/**
- * @param {unknown} value
- * @returns {unknown}
- */
 function freezeConfig<T>(value: T): T {
   if (!value || typeof value !== "object" || Object.isFrozen(value)) return value;
   Object.values(value as Record<string, unknown>).forEach(freezeConfig);
@@ -49,8 +41,6 @@ export const siteConfig: Readonly<SiteConfig> = freezeConfig({
 
 export const authorProfile = siteConfig.author;
 
-/**
- */
 export function getPostCategories(config: Partial<SiteConfig> = siteConfig): string[] {
   return ["全部", ...normalizePostCategories(config.postCategories)];
 }
@@ -66,14 +56,10 @@ const allNavItems: NavItem[] = [
   ["/about", "关于"],
 ];
 
-/**
- */
 export function isSiteRouteEnabled(path: string, config: Partial<SiteConfig> = siteConfig): boolean {
   return isConfiguredSiteRouteEnabled(path, config);
 }
 
-/**
- */
 export function getNavItems(config: Partial<SiteConfig> = siteConfig): NavItem[] {
   return allNavItems.filter(([path]) => isSiteRouteEnabled(path, config));
 }

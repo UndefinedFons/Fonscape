@@ -50,11 +50,6 @@ export const DEFAULT_ABUSE_LIMITS: Readonly<Record<AbuseLimitName, number>> = Ob
 
 const RATE_LIMIT_SECRET_BYTES = 32;
 
-/**
- * @param {AppEnv} env
- * @param {string} name
- * @param {number} [fallback]
- */
 export function limitFromEnv(env: AppEnv, name: string, fallback: number = DEFAULT_ABUSE_LIMITS[name as AbuseLimitName]): number {
   const configured = env?.[name as AbuseLimitName];
   if (configured === undefined || configured === null || String(configured).trim() === "") return fallback;
@@ -72,7 +67,6 @@ function randomSecret(): string {
   return Array.from(bytes, (value) => value.toString(16).padStart(2, "0")).join("");
 }
 
-/** @param {RequestContext} context */
 export async function rateLimitSecret(context: RequestContext): Promise<string> {
   context.data ||= {};
   if (context.data.rateLimitSecret) return context.data.rateLimitSecret;
@@ -95,14 +89,12 @@ export async function rateLimitSecret(context: RequestContext): Promise<string> 
   return secret;
 }
 
-/** @param {string} address */
 function ipv4Prefix(address: string): string | null {
   const parts = address.split(".");
   if (parts.length !== 4 || parts.some((part) => !/^\d{1,3}$/u.test(part) || Number(part) > 255)) return null;
   return `${parts[0]}.${parts[1]}.${parts[2]}.0/24`;
 }
 
-/** @param {string} address */
 function expandIpv6(address: string): string[] | null {
   const clean = address.toLowerCase().split("%")[0];
   if (!clean.includes(":")) return null;
@@ -110,7 +102,6 @@ function expandIpv6(address: string): string[] | null {
   if (halves.length > 2) return null;
   const head = halves[0] ? halves[0].split(":") : [];
   const tail = halves[1] ? halves[1].split(":") : [];
-  /** @param {string[]} parts */
   const convertIpv4Tail = (parts: string[]): string[] => {
     const last = parts.at(-1);
     const prefix = last && ipv4Prefix(last);
@@ -129,7 +120,6 @@ function expandIpv6(address: string): string[] | null {
   return parts.map((part) => Number.parseInt(part, 16).toString(16));
 }
 
-/** @param {string} address */
 export function networkPrefix(address: string): string {
   const ipv4 = ipv4Prefix(address);
   if (ipv4) return ipv4;
@@ -137,21 +127,11 @@ export function networkPrefix(address: string): string {
   return ipv6 ? `${ipv6.slice(0, 4).join(":")}::/64` : "unknown";
 }
 
-/** @param {Request} request */
 export function clientSubjects(request: Request): { address: string; network: string } {
   const address = String(request.headers.get("CF-Connecting-IP") || "local").trim().slice(0, 96) || "local";
   return { address, network: networkPrefix(address) };
 }
 
-/**
- * @param {boolean} allowed
- * @param {number} limit
- * @param {number} count
- * @param {number} windowStartedAt
- * @param {number} windowMs
- * @param {number} now
- * @returns {RateLimitDecision}
- */
 export function rateLimitDecision(
   allowed: boolean,
   limit: number,
@@ -170,7 +150,6 @@ export function rateLimitDecision(
   };
 }
 
-/** @param {RequestContext} context @param {RateLimitDecision} decision */
 export function recordRateLimitDecision(context: RequestContext, decision: RateLimitDecision): void {
   context.data ||= {};
   const current = context.data.rateLimit;
@@ -180,13 +159,6 @@ export function recordRateLimitDecision(context: RequestContext, decision: RateL
   }
 }
 
-/**
- * @param {Database} db
- * @param {string} key
- * @param {number} limit
- * @param {number} windowMs
- * @param {number} [now]
- */
 export async function consumeFixedWindowDecision(db: Database, key: string, limit: number, windowMs: number, now = Date.now()): Promise<RateLimitDecision> {
   const resetBefore = now - windowMs;
   const result = await db.prepare(`INSERT INTO rate_limits (key, window_started_at, count, updated_at)
@@ -210,34 +182,15 @@ export async function consumeFixedWindowDecision(db: Database, key: string, limi
   return rateLimitDecision(false, limit, Number(current.count), Number(current.window_started_at), windowMs, now);
 }
 
-/**
- * @param {Database} db
- * @param {string} key
- * @param {number} limit
- * @param {number} windowMs
- * @param {number} [now]
- */
 export async function consumeFixedWindow(db: Database, key: string, limit: number, windowMs: number, now = Date.now()): Promise<boolean> {
   return (await consumeFixedWindowDecision(db, key, limit, windowMs, now)).allowed;
 }
 
-/**
- * @param {RequestContext} context
- * @param {string} action
- * @param {string} scope
- * @param {string} subject
- * @param {number} windowMs
- */
 export async function policyKey(context: RequestContext, action: string, scope: string, subject: string, windowMs: number): Promise<string> {
   const secret = await rateLimitSecret(context);
   return sha256(`${secret}:${action}:${scope}:${windowMs}:${subject}`);
 }
 
-/**
- * @param {RequestContext} context
- * @param {string} action
- * @param {RateLimitPolicy[]} policies
- */
 export async function enforcePolicies(context: RequestContext, action: string, policies: RateLimitPolicy[]): Promise<void> {
   const db = requireDatabase(context.env);
   context.data ||= {};
@@ -257,7 +210,6 @@ export async function enforcePolicies(context: RequestContext, action: string, p
   }
 }
 
-/** @param {RequestContext} context @param {UserRow} user */
 export function commentPolicyDefinitions(context: RequestContext, user: UserRow): CommentRateLimitPolicy[] {
   if (user.role === "admin") return [];
   const { address } = clientSubjects(context.request);
@@ -270,7 +222,6 @@ export function commentPolicyDefinitions(context: RequestContext, user: UserRow)
   ];
 }
 
-/** @param {RequestContext} context */
 export async function protectRegistration(context: RequestContext): Promise<void> {
   const { address, network } = clientSubjects(context.request);
   await enforcePolicies(context, "register", [
@@ -280,7 +231,6 @@ export async function protectRegistration(context: RequestContext): Promise<void
   ]);
 }
 
-/** @param {RequestContext} context */
 export async function protectAdminBootstrap(context: RequestContext): Promise<void> {
   const { address } = clientSubjects(context.request);
   await enforcePolicies(context, "admin-bootstrap", [
@@ -289,7 +239,6 @@ export async function protectAdminBootstrap(context: RequestContext): Promise<vo
   ]);
 }
 
-/** @param {RequestContext} context @param {string} username */
 export async function protectLogin(context: RequestContext, username: string): Promise<void> {
   const { address } = clientSubjects(context.request);
   await enforcePolicies(context, "login", [
@@ -300,12 +249,10 @@ export async function protectLogin(context: RequestContext, username: string): P
   ]);
 }
 
-/** @param {RequestContext} context @param {UserRow} user */
 export async function protectComment(context: RequestContext, user: UserRow): Promise<void> {
   await enforcePolicies(context, "comment", commentPolicyDefinitions(context, user));
 }
 
-/** @param {RequestContext} context @param {UserRow} user */
 export async function protectAvatar(context: RequestContext, user: UserRow): Promise<void> {
   if (user.role === "admin") return;
   const { address } = clientSubjects(context.request);
@@ -316,7 +263,6 @@ export async function protectAvatar(context: RequestContext, user: UserRow): Pro
   ]);
 }
 
-/** @param {RequestContext} context @param {UserRow} user */
 export async function protectProfileUpdate(context: RequestContext, user: UserRow): Promise<void> {
   if (user.role === "admin") return;
   await enforcePolicies(context, "profile", [
@@ -324,7 +270,6 @@ export async function protectProfileUpdate(context: RequestContext, user: UserRo
   ]);
 }
 
-/** @param {RequestContext} context */
 export async function protectContentView(context: RequestContext): Promise<void> {
   await enforcePolicies(context, "content-view", [
     { scope: "global-hour", subject: "global", limitName: "VIEW_GLOBAL_HOURLY", limit: DEFAULT_ABUSE_LIMITS.VIEW_GLOBAL_HOURLY, windowMs: HOUR },

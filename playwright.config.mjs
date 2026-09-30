@@ -1,9 +1,7 @@
 import { defineConfig, devices } from "@playwright/test";
-import siteConfig from "./fonscape.config.js";
 
 export default defineConfig({
   testDir: "./e2e",
-  testIgnore: siteConfig.showCommunity === false ? ["**/comment-reliability.spec.mjs"] : [],
   fullyParallel: false,
   workers: 1,
   retries: process.env.CI ? 1 : 0,
@@ -14,8 +12,8 @@ export default defineConfig({
   },
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
   webServer: {
-    command: "pnpm dev --host 127.0.0.1 --port 4173",
+    command: "pnpm generate && pnpm exec vite --config e2e/vite.config.mjs --host 127.0.0.1 --port 4173",
     url: "http://127.0.0.1:4173",
-    reuseExistingServer: !process.env.CI,
+    reuseExistingServer: false,
   },
 });

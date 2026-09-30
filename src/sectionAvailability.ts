@@ -31,10 +31,6 @@ export const sectionAvailability: ReadonlyArray<Readonly<SectionDefinition>> = O
   }),
 ]);
 
-/**
- * @param {unknown} path
- * @returns {string}
- */
 export function normalizeRoutePath(path: unknown): string {
   let value = String(path || "/").trim();
   if (value.startsWith("#")) value = value.slice(1);
@@ -48,8 +44,6 @@ export function normalizeRoutePath(path: unknown): string {
 /**
  * Preserve a hash route's query while normalizing its path. This is used for
  * return targets so article filters and section selections survive.
- * @param {unknown} path
- * @returns {string}
  */
 export function normalizeRouteLocation(path: unknown): string {
   let value = String(path || "/").trim();
@@ -60,21 +54,15 @@ export function normalizeRouteLocation(path: unknown): string {
   return query ? `${route}?${query}` : route;
 }
 
-/**
- */
 export function getSectionDefinition(value: unknown): Readonly<SectionDefinition> | null {
   const route = normalizeRoutePath(value);
   return sectionAvailability.find(({ id, indexPath, detailPrefix }) => value === id || route === indexPath || route.startsWith(detailPrefix)) || null;
 }
 
-/**
- */
 export function getSectionAvailability(config: Partial<SiteConfig> = {}): Readonly<Record<OptionalSectionId, boolean>> {
   return Object.freeze(Object.fromEntries(sectionAvailability.map(({ id, flag }) => [id, config?.[flag] === true])) as Record<OptionalSectionId, boolean>);
 }
 
-/**
- */
 export function isSiteRouteEnabled(path: unknown, config: Partial<SiteConfig> = {}): boolean {
   const route = normalizeRoutePath(path);
   if (route === "/friends") return config.showCommunity !== false;
@@ -83,8 +71,6 @@ export function isSiteRouteEnabled(path: unknown, config: Partial<SiteConfig> = 
   return !section || config?.[section.flag] === true;
 }
 
-/**
- */
 export function getEnabledCollectionTypes(config: Partial<SiteConfig> = {}): ContentType[] {
   const availability = getSectionAvailability(config);
   return ["post", ...sectionAvailability.filter(({ id }) => availability[id]).map(({ collectionType }) => collectionType)];

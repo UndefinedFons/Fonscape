@@ -17,16 +17,16 @@ import type {
 } from "../types.ts";
 
 export class ApiError extends Error {
-  /**
-   * @param {number} status
-   * @param {string} message
-   * @param {string} [code]
-   * @param {Record<string, string>} [headers]
-   */
   declare status: number;
   declare code: string;
   declare headers: Record<string, string>;
 
+  /**
+   * @param status HTTP status returned to the client.
+   * @param message Public error message.
+   * @param code Machine-readable error code.
+   * @param headers Additional response headers.
+   */
   constructor(status: number, message: string, code = "request_error", headers: Record<string, string> = {}) {
     super(message);
     this.status = status;
@@ -35,11 +35,6 @@ export class ApiError extends Error {
   }
 }
 
-/**
- * @param {unknown} data
- * @param {number} [status]
- * @param {Record<string, string>} [headers]
- */
 export function json(data: unknown, status = 200, headers: Record<string, string> = {}): Response {
   return new Response(JSON.stringify(data), {
     status,
@@ -52,7 +47,6 @@ export function json(data: unknown, status = 200, headers: Record<string, string
   });
 }
 
-/** @param {unknown} error */
 export function errorResponse(error: unknown): Response {
   if (error instanceof ApiError) {
     return json({ error: error.message, code: error.code }, error.status, error.headers);
@@ -64,13 +58,11 @@ export function errorResponse(error: unknown): Response {
   return json({ error: "服务暂时不可用，请稍后再试。", code: "internal_error" }, 500);
 }
 
-/** @param {AppEnv} env @returns {Database} */
 export function requireDatabase(env: AppEnv): Database {
   if (!env.DB) throw new ApiError(503, "评论服务尚未完成数据库配置。", "database_unavailable");
   return env.DB;
 }
 
-/** @param {Request} request */
 export function assertSameOrigin(request: Request): void {
   if (["GET", "HEAD", "OPTIONS"].includes(request.method)) return;
   if (request.headers.get("Sec-Fetch-Site") === "cross-site") {
@@ -82,11 +74,6 @@ export function assertSameOrigin(request: Request): void {
   }
 }
 
-/**
- * @param {Request} request
- * @param {number} maximumBytes
- * @returns {Promise<Uint8Array>}
- */
 export async function readLimitedBody(request: Request, maximumBytes: number): Promise<Uint8Array<ArrayBuffer>> {
   const declaredLength = request.headers.get("Content-Length");
   if (declaredLength !== null) {
@@ -123,11 +110,6 @@ export async function readLimitedBody(request: Request, maximumBytes: number): P
   return body;
 }
 
-/**
- * @param {Request} request
- * @param {number} [maximumBytes]
- * @returns {Promise<Record<string, unknown>>}
- */
 export async function readJson(request: Request, maximumBytes = 16 * 1024): Promise<Record<string, unknown>> {
   const type = request.headers.get("Content-Type") || "";
   if (!type.includes("application/json")) throw new ApiError(415, "请使用 JSON 提交数据。", "invalid_content_type");
@@ -144,37 +126,29 @@ export async function readJson(request: Request, maximumBytes = 16 * 1024): Prom
   }
 }
 
-/** @param {Uint8Array} bytes */
 function bytesToBase64Url(bytes: Uint8Array): string {
   let binary = "";
   for (const byte of bytes) binary += String.fromCharCode(byte);
   return btoa(binary).replaceAll("+", "-").replaceAll("/", "_").replace(/=+$/u, "");
 }
 
-/** @param {string} value */
 function base64UrlToBytes(value: string): Uint8Array<ArrayBuffer> {
   const normalized = value.replaceAll("-", "+").replaceAll("_", "/");
   const binary = atob(normalized + "=".repeat((4 - normalized.length % 4) % 4));
   return Uint8Array.from(binary, (character) => character.charCodeAt(0));
 }
 
-/** @param {number} [size] */
 export function randomToken(size = 32): string {
   const bytes = new Uint8Array(size);
   crypto.getRandomValues(bytes);
   return bytesToBase64Url(bytes);
 }
 
-/** @param {string | Uint8Array<ArrayBuffer>} value */
 export async function sha256(value: string | Uint8Array<ArrayBuffer>): Promise<string> {
   const input = typeof value === "string" ? new TextEncoder().encode(value) : value;
   return bytesToBase64Url(new Uint8Array(await crypto.subtle.digest("SHA-256", input)));
 }
 
-/**
- * @param {string} password
- * @param {string | null} [encodedSalt]
- */
 export async function hashPassword(password: string, encodedSalt: string | null = null): Promise<{ hash: string; salt: string }> {
   const salt = encodedSalt ? base64UrlToBytes(encodedSalt) : crypto.getRandomValues(new Uint8Array(16));
   const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(password), "PBKDF2", false, ["deriveBits"]);
@@ -182,7 +156,6 @@ export async function hashPassword(password: string, encodedSalt: string | null 
   return { hash: bytesToBase64Url(new Uint8Array(bits)), salt: bytesToBase64Url(salt) };
 }
 
-/** @param {string} left @param {string} right */
 export async function constantTimeEqual(left: string, right: string): Promise<boolean> {
   const encoder = new TextEncoder();
   const [leftHash, rightHash] = await Promise.all([
@@ -202,7 +175,6 @@ export async function constantTimeEqual(left: string, right: string): Promise<bo
   return difference === 0;
 }
 
-/** @param {unknown} value */
 export function normalizeUsername(value: unknown): string {
   const username = String(value || "").trim();
   if (!/^[A-Za-z0-9]{3,20}$/u.test(username)) {
@@ -211,7 +183,6 @@ export function normalizeUsername(value: unknown): string {
   return username;
 }
 
-/** @param {unknown} value */
 export function normalizeNickname(value: unknown): string {
   const nickname = String(value || "").trim().replace(/\s+/gu, " ");
   if (nickname.length < 1 || nickname.length > 10 || !/^[\p{L}\p{N}]+(?: [\p{L}\p{N}]+)*$/u.test(nickname)) {
@@ -220,27 +191,21 @@ export function normalizeNickname(value: unknown): string {
   return nickname;
 }
 
-/** @param {unknown} value */
 export function validatePassword(value: unknown): string {
-  const password = String(value || "");
+  if (typeof value !== "string") throw new ApiError(400, "密码需为 6–20 位英文字母或数字。", "invalid_password");
+  const password = value;
   if (password.length < 6 || password.length > 20 || !/^[A-Za-z0-9]{6,20}$/u.test(password)) {
     throw new ApiError(400, "密码需为 6–20 位英文字母或数字。", "invalid_password");
   }
   return password;
 }
 
-/** @param {unknown} value */
 export function normalizeComment(value: unknown): string {
   const body = String(value || "").trim().replace(/\r\n?/gu, "\n");
   if (!body || body.length > 500) throw new ApiError(400, "评论需为 1–500 个字符。", "invalid_comment");
   return body;
 }
 
-/**
- * @param {unknown} type
- * @param {unknown} slug
- * @returns {ContentTarget}
- */
 export function validateTarget(type: unknown, slug: unknown): ContentTarget {
   const normalizedType = String(type || "").trim();
   if (!/^[a-z][a-z0-9_-]{0,31}$/u.test(normalizedType)) throw new ApiError(400, "内容类型无效。", "invalid_target");
@@ -249,7 +214,6 @@ export function validateTarget(type: unknown, slug: unknown): ContentTarget {
   return { type: normalizedType, slug: normalizedSlug };
 }
 
-/** @param {Request} request @returns {Record<string, string>} */
 export function parseCookies(request: Request): Record<string, string> {
   const entries: [string, string][] = [];
   for (const part of (request.headers.get("Cookie") || "").split(";")) {
@@ -267,27 +231,15 @@ export function parseCookies(request: Request): Record<string, string> {
   return Object.fromEntries(entries);
 }
 
-/**
- * @param {string} token
- * @param {Request} request
- * @param {number} [maxAge]
- */
 export function sessionCookie(token: string, request: Request, maxAge = SESSION_TTL_SECONDS): string {
   const secure = new URL(request.url).protocol === "https:" ? "; Secure" : "";
   return `${SESSION_COOKIE}=${encodeURIComponent(token)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${maxAge}${secure}`;
 }
 
-/** @param {Request} request */
 export function clearSessionCookie(request: Request): string {
   return sessionCookie("", request, 0);
 }
 
-/**
- * @param {Database} db
- * @param {string} userId
- * @param {Request} request
- * @param {number} [maximumActiveSessions]
- */
 export async function createSession(db: Database, userId: string, request: Request, maximumActiveSessions = 6): Promise<{ token: string; cookie: string }> {
   const token = randomToken();
   const now = Date.now();
@@ -303,20 +255,22 @@ export async function createSession(db: Database, userId: string, request: Reque
   return { token, cookie: sessionCookie(token, request) };
 }
 
-/** @param {Database} db @param {Request} request */
 export async function destroySession(db: Database, request: Request): Promise<void> {
   const token = parseCookies(request)[SESSION_COOKIE];
   if (token) await db.prepare("DELETE FROM sessions WHERE id_hash = ?").bind(await sha256(token)).run();
 }
 
-/** @param {UserRow} user */
-function effectiveRole(user: UserRow): UserRole {
-  return user.role;
+export function versionedAvatarUrl(
+  userId: string,
+  avatarUserId: string | null | undefined,
+  updatedAt: number | null | undefined,
+): string | null {
+  if (avatarUserId !== userId || !updatedAt) return null;
+  return `/api/avatar/${userId}?v=${updatedAt}`;
 }
 
-/** @param {UserRow} user @returns {import("../types.ts").PublicUser} */
 export function publicUser(user: UserRow): PublicUser {
-  const role = effectiveRole(user);
+  const role = user.role;
   const avatarUpdatedAt = user.avatar_user_id === user.id && user.avatar_updated_at ? Number(user.avatar_updated_at) : null;
   return {
     id: user.id,
@@ -326,13 +280,12 @@ export function publicUser(user: UserRow): PublicUser {
     status: user.status,
     unreadReplies: Number(user.unread_replies || 0),
     unreadAdminComments: role === "admin" ? Number(user.unread_admin_comments || 0) : 0,
-    avatarUrl: avatarUpdatedAt ? `/api/avatar/${user.id}?v=${avatarUpdatedAt}` : null,
+    avatarUrl: versionedAvatarUrl(user.id, user.avatar_user_id, avatarUpdatedAt),
     avatarUpdatedAt,
     createdAt: user.created_at,
   };
 }
 
-/** @param {RequestContext} context @returns {Promise<UserRow | null>} */
 export async function currentUser(context: RequestContext): Promise<UserRow | null> {
   if (context.data.currentUser !== undefined) return context.data.currentUser;
   const db = requireDatabase(context.env);
@@ -350,7 +303,6 @@ export async function currentUser(context: RequestContext): Promise<UserRow | nu
   return row;
 }
 
-/** @param {RequestContext} context @returns {Promise<UserRow>} */
 export async function requireUser(context: RequestContext): Promise<UserRow> {
   const user = await currentUser(context);
   if (!user) throw new ApiError(401, "请先登录。", "authentication_required");
@@ -358,19 +310,12 @@ export async function requireUser(context: RequestContext): Promise<UserRow> {
   return user;
 }
 
-/** @param {RequestContext} context @returns {Promise<UserRow>} */
 export async function requireAdmin(context: RequestContext): Promise<UserRow> {
   const user = await requireUser(context);
-  if (effectiveRole(user) !== "admin") throw new ApiError(403, "仅管理员可以访问。", "admin_required");
+  if (user.role !== "admin") throw new ApiError(403, "仅管理员可以访问。", "admin_required");
   return user;
 }
 
-/**
- * @param {DatabaseRow} row
- * @param {string | null} [viewerId]
- * @param {"member" | "admin" | null} [viewerRole]
- * @returns {import("../types.ts").PublicComment}
- */
 export function commentRow(
   row: DatabaseRow,
   viewerId: string | null = null,
@@ -378,6 +323,9 @@ export function commentRow(
 ): PublicComment {
   const status = row.status;
   if (!isPublicCommentStatus(status)) throw new ApiError(500, "评论状态无效。", "invalid_comment_status");
+  const replyToUserId = row.reply_to_user_id ? String(row.reply_to_user_id) : null;
+  const replyToAvatarUserId = row.reply_to_avatar_user_id == null ? null : String(row.reply_to_avatar_user_id);
+  const authorAvatarUserId = row.avatar_user_id == null ? null : String(row.avatar_user_id);
   const authorAvatarUpdatedAt = row.avatar_user_id === row.user_id && row.avatar_updated_at ? Number(row.avatar_updated_at) : null;
   const replyAvatarUpdatedAt = row.reply_to_avatar_user_id === row.reply_to_user_id && row.reply_to_avatar_updated_at
     ? Number(row.reply_to_avatar_updated_at)
@@ -386,10 +334,10 @@ export function commentRow(
     id: String(row.id),
     parentId: row.parent_id == null ? null : String(row.parent_id),
     replyTo: row.reply_to_nickname == null ? null : String(row.reply_to_nickname),
-    replyToUser: row.reply_to_user_id ? {
-      id: String(row.reply_to_user_id),
+    replyToUser: replyToUserId ? {
+      id: replyToUserId,
       nickname: String(row.reply_to_nickname || "该用户"),
-      avatarUrl: replyAvatarUpdatedAt ? `/api/avatar/${row.reply_to_user_id}?v=${replyAvatarUpdatedAt}` : null,
+      avatarUrl: versionedAvatarUrl(replyToUserId, replyToAvatarUserId, replyAvatarUpdatedAt),
       avatarUpdatedAt: replyAvatarUpdatedAt,
     } : null,
     body: String(row.body),
@@ -402,7 +350,7 @@ export function commentRow(
       id: String(row.user_id),
       nickname: row.nickname === undefined ? null : String(row.nickname),
       role: row.user_role === undefined ? null : row.user_role as UserRole | null,
-      avatarUrl: authorAvatarUpdatedAt ? `/api/avatar/${row.user_id}?v=${authorAvatarUpdatedAt}` : null,
+      avatarUrl: versionedAvatarUrl(String(row.user_id), authorAvatarUserId, authorAvatarUpdatedAt),
       avatarUpdatedAt: authorAvatarUpdatedAt,
     },
   };

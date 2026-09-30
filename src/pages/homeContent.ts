@@ -11,8 +11,6 @@ interface HomeContentResult {
   musicCount: number;
 }
 
-/**
- */
 export function sortFeaturedPosts<T extends FeaturedPost>(posts: readonly T[]): T[] {
   return [...posts]
     .filter((post) => post.featured)
@@ -20,8 +18,6 @@ export function sortFeaturedPosts<T extends FeaturedPost>(posts: readonly T[]): 
       || contentDateTimestamp(left.date) - contentDateTimestamp(right.date));
 }
 
-/**
- */
 export function getHomeContent(
   posts: readonly PostMetadata[],
   poems: readonly PoemMetadata[],

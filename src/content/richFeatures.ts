@@ -11,8 +11,6 @@ export const ALERT_TYPES = Object.freeze({
   CAUTION: Object.freeze({ label: "注意", className: "caution" }),
 });
 
-/**
- */
 export function parseAlertMarker(value: unknown): { type: keyof typeof ALERT_TYPES; label: string; className: string } | null {
   const match = /^\s*\[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION)\]\s*(?:\r?\n|$)/iu.exec(String(value ?? ""));
   if (!match) return null;
@@ -94,8 +92,6 @@ export function protectCurrencySyntax(markdown: string): string {
   }).join("");
 }
 
-/**
- */
 export function isMermaidLanguage(value: unknown): boolean {
   return String(value ?? "").trim().toLowerCase() === "mermaid";
 }
