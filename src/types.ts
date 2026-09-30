@@ -75,7 +75,7 @@ export interface SiteConfig {
 export interface DatedEntry {
   slug: string;
   date: string;
-  responsiveImages?: Record<string, ResponsiveImageMetadata>;
+  responsiveImages?: Record<string, ResponsiveImageMetadata | undefined>;
 }
 
 export type MusicSection = "songs" | "artists" | "albums";
@@ -207,21 +207,21 @@ export interface HomePost extends DatedEntry {
   wordCount: number;
   image?: string;
   cardPosition?: string;
-  responsiveImages?: Record<string, ResponsiveImageMetadata>;
+  responsiveImages?: Record<string, ResponsiveImageMetadata | undefined>;
 }
 
 export interface HomePoem extends DatedEntry {
   title: string;
   previewLines: string[];
   lineCount: number;
-  responsiveImages?: Record<string, ResponsiveImageMetadata>;
+  responsiveImages?: Record<string, ResponsiveImageMetadata | undefined>;
 }
 
 export interface HomeMusic extends DatedEntry {
   title: string;
   section: MusicSection;
   kind: string;
-  responsiveImages?: Record<string, ResponsiveImageMetadata>;
+  responsiveImages?: Record<string, ResponsiveImageMetadata | undefined>;
 }
 
 export interface PostFacet {
