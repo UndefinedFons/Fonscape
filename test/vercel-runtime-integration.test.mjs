@@ -1,11 +1,59 @@
 import assert from "node:assert/strict";
+import { execFileSync } from "node:child_process";
 import test from "node:test";
 import { createClient } from "@libsql/client";
-import { handleVercelApiRequest } from "../api/fonscape.ts";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { dirname, join } from "node:path";
+import { fileURLToPath, pathToFileURL } from "node:url";
+import ts from "typescript";
 import { migrateTurso, readMigrations } from "../scripts/migrate-turso.mjs";
-import { createTursoD1Database } from "../server/turso-d1.ts";
 
-test("Vercel and Turso execute the shared auth and comment API end to end", async () => {
+async function compileVercelRuntime() {
+  const root = fileURLToPath(new URL("../", import.meta.url));
+  const cache = join(root, ".fonscape-cache");
+  await mkdir(cache, { recursive: true });
+  const output = await mkdtemp(join(cache, "vercel-runtime-"));
+  try {
+    const configPath = ts.findConfigFile(join(root, "api"), ts.sys.fileExists);
+    const config = ts.readConfigFile(configPath, ts.sys.readFile);
+    assert.equal(config.error, undefined);
+    const { options, errors } = ts.parseJsonConfigFileContent(config.config, ts.sys, dirname(configPath));
+    assert.deepEqual(errors, []);
+    // Vercel emits JavaScript before tracing the function's dependencies.
+    // Keep the project's import-rewrite setting so this detects missing JS modules.
+    const program = ts.createProgram([join(root, "api/fonscape.ts")], {
+      ...options,
+      noEmit: false,
+      noCheck: true,
+      noEmitOnError: false,
+      rootDir: root,
+      outDir: output,
+    });
+    assert.equal(program.emit().emitSkipped, false);
+    await writeFile(join(output, "package.json"), '{"type":"module"}');
+    const apiUrl = pathToFileURL(join(output, "api/fonscape.js"));
+    // A clean function process must initialize without a native SQLite binary.
+    execFileSync(process.execPath, ["--input-type=module", "--eval", `
+      import { registerHooks } from "node:module";
+      registerHooks({ resolve(specifier, context, nextResolve) {
+        if (specifier === "libsql") throw new Error("native SQLite is unavailable in the function");
+        return nextResolve(specifier, context);
+      }});
+      const { handleVercelApiRequest } = await import(${JSON.stringify(apiUrl.href)});
+      const response = await handleVercelApiRequest(new Request("https://example.test/api/admin/setup"), {});
+      if (response.status !== 503) throw new Error("expected the structured database-missing response");
+    `]);
+    const api = await import(apiUrl);
+    const database = await import(pathToFileURL(join(output, "server/turso-d1.js")));
+    return { ...api, ...database, output };
+  } catch (error) {
+    await rm(output, { recursive: true, force: true });
+    throw error;
+  }
+}
+
+test("compiled Vercel and Turso runtime executes the shared auth and comment API end to end", async () => {
+  const { handleVercelApiRequest, createTursoD1Database, output } = await compileVercelRuntime();
   const client = createClient({ url: ":memory:" });
   const requestContextKey = Symbol.for("@vercel/request-context");
   const previousRequestContext = globalThis[requestContextKey];
@@ -195,6 +243,7 @@ test("Vercel and Turso execute the shared auth and comment API end to end", asyn
     await Promise.allSettled(deferred);
   } finally {
     await client.close();
+    await rm(output, { recursive: true, force: true });
     if (previousRequestContext === undefined) delete globalThis[requestContextKey];
     else globalThis[requestContextKey] = previousRequestContext;
   }

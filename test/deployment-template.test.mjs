@@ -47,8 +47,6 @@ test("one-click deployment asks for only an empty administrator bootstrap token"
   assert.equal(packageJson.scripts.deploy, "pnpm db:migrate:cloudflare && wrangler deploy");
   assert.equal(Object.hasOwn(vercel, "installCommand"), false, "Vercel must select the pnpm version from the lockfile");
   assert.equal(vercel.buildCommand, "pnpm build:vercel");
-  assert.equal(vercel.functions?.["api/fonscape.ts"]?.includeFiles, "functions/**", "Vercel must bundle the shared TypeScript API handler and its dependencies");
-  assert.equal((await statOptional("../functions/api/[[path]].ts"))?.isFile(), true, "the Vercel bundle must include the actual shared API entrypoint");
 
   if (readme !== null) {
     const cloudflareButtonMatch = readme.match(/\[!\[Deploy to Cloudflare\].*?\]\((https:\/\/deploy\.workers\.cloudflare\.com\/\?[^\s)]+)\)/u);

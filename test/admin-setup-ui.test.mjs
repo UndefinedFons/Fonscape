@@ -512,11 +512,16 @@ test("account messages refresh on reopening and invalidate after writes without 
   installDom("/friends");
   let comments = [commentFixture("cached", { contentType: "post", contentSlug: "site-friends" })];
   let deferComments = false;
+  let failComments = false;
   let finishComments;
+  let finishFailedComments;
   let commentRequests = 0;
   await mountFixture({ handleApi: (url, options) => {
     if (url.pathname === "/api/me/comments") {
       commentRequests += 1;
+      if (failComments) {
+        return new Promise((resolve) => { finishFailedComments = resolve; });
+      }
       if (deferComments) return new Promise((resolve) => { finishComments = resolve; });
       return Response.json({ comments });
     }
@@ -600,6 +605,23 @@ test("account messages refresh on reopening and invalidate after writes without 
   await stale;
   assert.equal(data.cachedMyComments(member.id), fresh, "an invalidated request cannot overwrite the newer cache");
   await openMessages();
+  await close();
+
+  failComments = true;
+  const beforeFailedRefresh = commentRequests;
+  await openMessages();
+  await waitFor(() => assert.ok(commentRequests > beforeFailedRefresh));
+  await waitFor(() => assert.equal(typeof finishFailedComments, "function"));
+  const failedRefresh = data.loadMyComments(member.id, true);
+  await act(async () => {
+    finishFailedComments(Response.json({ error: "temporary failure", code: "temporary_failure" }, { status: 503 }));
+    await failedRefresh.then(() => assert.fail("the injected refresh must reject"), () => undefined);
+  });
+  const retainedMessages = document.querySelector(".account-comment-list");
+  assert.ok(retainedMessages, "a failed refresh must leave the previously loaded message list visible");
+  assert.match(retainedMessages.textContent, /remote/u);
+  assert.equal(document.querySelector(".account-tab-panel .community-inline-error"), null, "a failed refresh must not replace messages that were loaded successfully");
+
   await act(async () => button("退出登录").click());
   assert.equal(data.cachedMyComments(member.id), undefined, "logout clears account data");
 });

@@ -2,6 +2,7 @@
   "compilerOptions": {
     "allowJs": true,
     "allowImportingTsExtensions": true,
+    "rewriteRelativeImportExtensions": true,
     "checkJs": false,
     "noEmit": true,
     "strict": true,
