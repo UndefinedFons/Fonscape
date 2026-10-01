@@ -16,7 +16,9 @@ export function MyMessages({ contentLookup, onClose }: AccountFeedProps) {
   useEffect(() => {
     let alive = true;
     const cachedRequest = loadMyComments(viewer.id, true);
-    cachedRequest.then((comments) => alive && setState({ loading: false, error: "", comments })).catch((error) => alive && setState({ loading: false, error: error.message, comments: [] }));
+    cachedRequest.then((comments) => alive && setState({ loading: false, error: "", comments })).catch((error) => alive && setState((current) => current.loading
+      ? { loading: false, error: error.message, comments: [] }
+      : { ...current, error: "" }));
     return () => { alive = false; };
   }, [viewer.id]);
   if (state.loading) return <div className="community-skeleton" aria-label="正在读取我的消息"><i /><i /><i /></div>;

@@ -1,4 +1,5 @@
-import { createClient } from "@libsql/client";
+import { createRequire } from "node:module";
+import { createClient } from "@libsql/client/web";
 import type { Client, InValue, ResultSet, Row, Value } from "@libsql/client";
 import type { Database, DatabaseField, DatabaseResult, DatabaseRow, DatabaseValue } from "../functions/types.ts";
 
@@ -77,7 +78,11 @@ export class TursoD1PreparedStatement {
 }
 
 export function createTursoD1Database({ url, authToken, client }: { url?: string; authToken?: string; client?: Client } = {}): Database {
-  const databaseClient = client || createClient({ url: url as string, ...(authToken ? { authToken } : {}) });
+  // Remote Turso connections must not load the native local-SQLite driver.
+  // Keep local file support for Node tooling without loading it on Vercel.
+  const local = url === ":memory:" || url?.startsWith("file:");
+  const factory: typeof createClient = !client && local ? createRequire(import.meta.url)("@libsql/client").createClient : createClient;
+  const databaseClient = client || factory({ url: url as string, ...(authToken ? { authToken } : {}) });
   if (!databaseClient || typeof databaseClient.execute !== "function" || typeof databaseClient.batch !== "function") {
     throw new TypeError("a libSQL-compatible client is required");
   }
