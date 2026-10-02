@@ -73,11 +73,23 @@ function validateCommonEntry<T extends DatedEntry>(entry: T, path: string): T {
   return entry;
 }
 
+function validateOptionalStrings(data: Record<string, unknown>, fields: string[], path: string): void {
+  for (const key of fields) {
+    if (Object.hasOwn(data, key) && typeof data[key] !== "string") {
+      throw new Error(`${path} 的 Frontmatter ${key} 必须是字符串。`);
+    }
+  }
+}
+
 function validateMusicSource(track: unknown, path: string, field: string): void {
   if (!track || Array.isArray(track) || typeof track !== "object") {
     throw new Error(`${path} 的 ${field} 必须是对象。`);
   }
   const music = (track) as Record<string, unknown>;
+  validateOptionalStrings(music, ["url", "src", "title", "artist", "cover", "id"], `${path} 的 ${field}`);
+  if (Object.hasOwn(music, "autoplay") && typeof music.autoplay !== "boolean") {
+    throw new Error(`${path} 的 ${field}.autoplay 必须是布尔值。`);
+  }
   const hasUrl = typeof music.url === "string" && music.url.trim() !== "";
   const hasSource = typeof music.src === "string" && music.src.trim() !== "";
   if (hasUrl === hasSource) throw new Error(`${path} 的 ${field} 必须且只能配置 url 或 src。`);
@@ -95,6 +107,13 @@ export function parsePost(path: string, source: string, options: ParserOptions):
 export function parsePost(path: string, source: string, options: ParserOptions = {}): Post | PostMetadata {
   const { data, filename, content } = parseMarkdownSource(path, source);
   const { content: _frontmatterContent, coverPosition: _coverPosition, ...frontmatter } = data;
+  validateOptionalStrings(data, ["slug", "excerpt", "image", "cardPosition"], path);
+  if (Object.hasOwn(data, "featured") && typeof data.featured !== "boolean") {
+    throw new Error(`${path} 的 Frontmatter featured 必须是布尔值。`);
+  }
+  if (Object.hasOwn(data, "musicPlacement") && data.musicPlacement !== "inline") {
+    throw new Error(`${path} 的 Frontmatter musicPlacement 必须是 inline。`);
+  }
   if (Object.hasOwn(data, "tags") && (!Array.isArray(data.tags) || !data.tags.every((tag) => typeof tag === "string"))) {
     throw new Error(`${path} 的 Frontmatter tags 必须是字符串数组。`);
   }
@@ -139,6 +158,7 @@ export function parsePoem(path: string, source: string, options: ParserOptions):
 export function parsePoem(path: string, source: string, options: ParserOptions = {}): Poem | PoemMetadata {
   const { data, filename, content } = parseMarkdownSource(path, source);
   const { lines: _frontmatterLines, ...frontmatter } = data;
+  validateOptionalStrings(data, ["slug", "note"], path);
   const lines = getPoemLines(content);
   const poem = {
     ...frontmatter,
@@ -158,6 +178,7 @@ export function parseMusicReview(path: string, source: string, options: ParserOp
 export function parseMusicReview(path: string, source: string, options: ParserOptions = {}): MusicReview | MusicReviewMetadata {
   const { data, filename, content } = parseMarkdownSource(path, source);
   const { content: _frontmatterContent, reading: _reading, ...frontmatter } = data;
+  validateOptionalStrings(data, ["slug", "section", "excerpt", "image", "url", "sourceTitle", "sourceMeta", "action"], path);
   const review = {
     ...frontmatter,
     slug: data.slug || filename,

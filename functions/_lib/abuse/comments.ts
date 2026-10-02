@@ -177,11 +177,24 @@ export async function insertCommentWithRateLimitsAtomically(db: Database, {
         SELECT active_comments FROM comment_target_usage
         WHERE content_type = ? AND content_slug = ?
       ), 0) < ?
+      AND (? IS NULL OR EXISTS (
+        SELECT 1 FROM comments reply_parent
+        JOIN comments thread_root ON thread_root.id = ?
+        WHERE reply_parent.id = COALESCE(?, ?)
+          AND reply_parent.status = 'published'
+          AND reply_parent.content_type = ? AND reply_parent.content_slug = ?
+          AND thread_root.parent_id IS NULL AND thread_root.status = 'published'
+          AND thread_root.content_type = ? AND thread_root.content_slug = ?
+          AND (reply_parent.id = thread_root.id AND reply_parent.parent_id IS NULL
+            OR reply_parent.parent_id = thread_root.id)
+      ))
       ${rateReadyClause}`).bind(
     id, target.type, target.slug, parentId, replyToUserId,
     replyToCommentId, userId, body, now, now,
     id, claimToken, id, totalMaximum, role, userId, userMaximum,
     target.type, target.slug, targetMaximum,
+    parentId, parentId, replyToCommentId, parentId,
+    target.type, target.slug, target.type, target.slug,
     ...rateReadyBindings,
   ));
   // The CHECK constraint deliberately aborts this batch when the claimed

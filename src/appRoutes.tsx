@@ -9,6 +9,7 @@ import { loadCollectionPageChunk, loadMusicReview, loadPoem, loadPost, siteConfi
 import { PageHero } from "./components/PageHero.tsx";
 import { replaceRouteWithHome, returnFromDetail } from "./routeState.ts";
 import { setRouteDocumentTitle } from "./navigation.ts";
+import { parseMusicContentKey } from "./routes.ts";
 import { isSiteRouteEnabled, normalizeRoutePath } from "./sectionAvailability.ts";
 import { HomePage } from "./pages/HomePage.tsx";
 import { NotFound } from "./pages/NotFound.tsx";
@@ -139,8 +140,8 @@ export function preloadRouteContent(path: string): Promise<unknown> {
   if (routePath.startsWith("/post/")) return loadPost(decodeRoutePath(routePath.slice("/post/".length))).catch(() => null);
   if (routePath.startsWith("/poem/")) return loadPoem(decodeRoutePath(routePath.slice("/poem/".length))).catch(() => null);
   if (routePath.startsWith("/music/")) {
-    const [, section, ...slugParts] = routePath.split("/");
-    if (section && slugParts.length) return loadMusicReview(decodeRoutePath(section), decodeRoutePath(slugParts.join("/"))).catch(() => null);
+    const { section, slug } = parseMusicContentKey(decodeRoutePath(routePath.slice("/music/".length)));
+    if (section && slug) return loadMusicReview(section, slug).catch(() => null);
   }
   if (routePath === "/posts") return loadCollectionPageChunk("post", 0).catch(() => null);
   if (routePath === "/poems") return loadCollectionPageChunk("poem", 0).catch(() => null);

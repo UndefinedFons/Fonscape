@@ -169,6 +169,7 @@ export function loadFeaturedChunk<T extends string>(type: T, index: number): Pro
   return cachedRequest(featuredRequests, key, () => fetchJson<CollectionMetadata<T>[]>(pathFor("featured", type, index), `${type} 置顶内容`)
     .then((value) => {
       if (!Array.isArray(value)) throw new Error(`${type} 置顶内容格式无效。`);
+      value.forEach((entry) => registerResponsiveImages(entry?.responsiveImages));
       return Object.freeze(value.map((entry) => Object.freeze({ ...entry }) as CollectionMetadata<T>));
     }));
 }
