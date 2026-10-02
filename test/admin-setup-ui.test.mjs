@@ -244,6 +244,51 @@ async function mountApp(server = viteServer) {
   });
 }
 
+test("session refreshes cannot overwrite newer authentication or session results", async () => {
+  const { document } = installDom("/");
+  await loadApplication();
+  const { CommunityProvider, useCommunity } = await viteServer.ssrLoadModule("/src/community/CommunityProvider.tsx");
+  const pending = [];
+  globalThis.fetch = async (input) => {
+    if (input === "/api/auth/session") return new Promise((resolve, reject) => pending.push({ resolve, reject }));
+    if (input === "/api/auth/logout") return makeResponse({ ok: true });
+    return makeResponse({ user: member });
+  };
+  let community;
+  function Viewer() {
+    community = useCommunity();
+    return createElement("p", null, `${community.viewer?.id || "guest"}:${community.loading ? "loading" : "ready"}`);
+  }
+  mountedRoot = createRoot(document.getElementById("root"));
+  await act(async () => mountedRoot.render(createElement(CommunityProvider, null, createElement(Viewer))));
+  assert.equal(pending.length, 1);
+  await act(async () => community.login({ username: member.username, password: "password" }));
+  assert.equal(document.querySelector("p").textContent, "member-1:ready");
+  await act(async () => pending[0].resolve(makeResponse({ user: null, accountNotice: "stale" })));
+  assert.equal(document.querySelector("p").textContent, "member-1:ready");
+  assert.equal(community.accountNotice, "");
+
+  let older;
+  let newer;
+  await act(async () => { older = community.refresh(); newer = community.refresh(); });
+  await act(async () => { pending[2].resolve(makeResponse({ user: member, accountNotice: "current" })); await newer; });
+  await act(async () => { pending[1].resolve(makeResponse({ user: null, accountNotice: "stale" })); await older; });
+  assert.equal(document.querySelector("p").textContent, "member-1:ready");
+  assert.equal(community.accountNotice, "current");
+
+  let beforeLogout;
+  await act(async () => { beforeLogout = community.refresh(); });
+  await act(async () => community.logout());
+  await act(async () => { pending[3].resolve(makeResponse({ user: member })); await beforeLogout; });
+  assert.equal(document.querySelector("p").textContent, "guest:ready");
+
+  let beforeRegister;
+  await act(async () => { beforeRegister = community.refresh(); });
+  await act(async () => community.register({ username: member.username, password: "password" }));
+  await act(async () => { pending[4].reject(new Error("stale network failure")); await beforeRegister; });
+  assert.equal(document.querySelector("p").textContent, "member-1:ready");
+});
+
 async function waitFor(assertion, timeout = 3000) {
   const startedAt = Date.now();
   let lastError;

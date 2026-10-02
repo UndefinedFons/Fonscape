@@ -1,5 +1,5 @@
 import { mkdir, readFile, readdir, rm, stat, writeFile } from "node:fs/promises";
-import { dirname, join, relative, resolve } from "node:path";
+import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { contentRepositoryConfig } from "../content-repository.config.mjs";
 import {
@@ -15,10 +15,6 @@ import { extractLocalRasterSources, isLocalRasterSource } from "./generate-respo
 import { parseMetingSongUrl } from "../src/musicSources.ts";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
-const outputPath = join(root, "functions", "_generated", "content-targets.js");
-const metadataOutputPath = join(root, "functions", "_generated", "content-metadata.js");
-const generatedContentRoot = join(root, "public", "fonscape", "content");
-const responsiveImageBuildPath = join(root, "functions", "_generated", "responsive-images-build.json");
 
 export const CONTENT_SCHEMA_VERSION = 3;
 export const CONTENT_PAGE_CHUNK_SIZE = 50;
@@ -41,6 +37,40 @@ export function resolveCollectionDefinitions(collections) {
 
 const definitions = resolveCollectionDefinitions(contentRepositoryConfig.collections);
 
+function assertSafeRelativePath(path, label) {
+  if (typeof path !== "string"
+    || !path
+    || path.startsWith("/")
+    || path.includes("\\")
+    || path.split("/").some((segment) => !segment || segment === "." || segment === "..")) {
+    throw new Error(`${label}路径无效：${path}`);
+  }
+  return path;
+}
+
+function generatedContentDestination(directory, path) {
+  assertSafeRelativePath(path, "生成内容");
+  const outputRoot = resolve(directory);
+  const destination = resolve(outputRoot, ...path.split("/"));
+  const relativeDestination = relative(outputRoot, destination);
+  if (!relativeDestination
+    || relativeDestination === ".."
+    || relativeDestination.startsWith(`..${sep}`)
+    || isAbsolute(relativeDestination)) {
+    throw new Error(`生成内容路径超出输出目录：${path}`);
+  }
+  return destination;
+}
+
+function prepareGeneratedContentFiles(files, directory) {
+  const outputRoot = resolve(directory);
+  return [...files].map(([path, content]) => ({
+    path,
+    content,
+    destination: generatedContentDestination(outputRoot, path),
+  }));
+}
+
 async function findMarkdownFiles(directory, extension, prefix = "") {
   const entries = await readdir(directory, { withFileTypes: true }).catch((error) => {
     if (error.code === "ENOENT") return [];
@@ -50,6 +80,7 @@ async function findMarkdownFiles(directory, extension, prefix = "") {
   for (const entry of entries.sort((left, right) => left.name.localeCompare(right.name))) {
     if (entry.name.startsWith(".")) continue;
     const name = prefix ? `${prefix}/${entry.name}` : entry.name;
+    assertSafeRelativePath(name, "内容文件");
     const path = join(directory, entry.name);
     if (entry.isSymbolicLink()) throw new Error(`内容文件不能是符号链接：${name}`);
     if (entry.isDirectory()) files.push(...await findMarkdownFiles(path, extension, name));
@@ -58,12 +89,12 @@ async function findMarkdownFiles(directory, extension, prefix = "") {
   return files;
 }
 
-async function readCollection(definition) {
-  const sourceDirectory = join(root, definition.directory);
+async function readCollection(definition, projectRoot) {
+  const sourceDirectory = join(projectRoot, definition.directory);
   const names = await findMarkdownFiles(sourceDirectory, definition.extension);
   return Promise.all(names.map(async (name) => {
     const path = join(sourceDirectory, name);
-    const sourcePath = relative(root, path).replaceAll("\\", "/");
+    const sourcePath = relative(projectRoot, path).replaceAll("\\", "/");
     const raw = await readFile(path, "utf8");
     return {
       name,
@@ -202,6 +233,7 @@ export function buildContentDistribution(collections, imageCatalog = {}) {
   const descriptors = {};
   const addJson = (path, value) => files.set(path, `${JSON.stringify(value)}\n`);
   for (const [type, records] of collections) {
+    records.forEach(({ name }) => assertSafeRelativePath(name, "内容文件"));
     const ordered = records.slice().sort((left, right) => sortNewestFirst(left.entry, right.entry));
     const metadata = ordered.map((record) => {
       const { content: _content, lines: _lines, outline: _outline, source: _source, ...lightweight } = record.entry;
@@ -255,7 +287,7 @@ export function buildContentDistribution(collections, imageCatalog = {}) {
   };
 }
 
-async function generatedFiles(directory = generatedContentRoot, prefix = "") {
+async function generatedFiles(directory = join(root, "public", "fonscape", "content"), prefix = "") {
   const entries = await readdir(directory, { withFileTypes: true }).catch((error) => {
     if (error.code === "ENOENT") return [];
     throw error;
@@ -271,8 +303,26 @@ async function generatedFiles(directory = generatedContentRoot, prefix = "") {
   return files.sort();
 }
 
-export async function generateContentArtifacts({ check = false } = {}) {
-  const collections = await Promise.all(definitions.map(async (definition) => [definition.type, await readCollection(definition)]));
+export async function writeGeneratedContentFiles(files, directory) {
+  const outputs = prepareGeneratedContentFiles(files, directory);
+  await writePreparedGeneratedContentFiles(outputs, directory);
+}
+
+async function writePreparedGeneratedContentFiles(outputs, directory) {
+  const outputRoot = resolve(directory);
+  await rm(outputRoot, { recursive: true, force: true });
+  await Promise.all(outputs.map(async ({ destination, content }) => {
+    await mkdir(dirname(destination), { recursive: true });
+    await writeFile(destination, content);
+  }));
+}
+
+export async function generateContentArtifacts({ check = false, projectRoot = root } = {}) {
+  const outputPath = join(projectRoot, "functions", "_generated", "content-targets.js");
+  const metadataOutputPath = join(projectRoot, "functions", "_generated", "content-metadata.js");
+  const generatedContentRoot = join(projectRoot, "public", "fonscape", "content");
+  const responsiveImageBuildPath = join(projectRoot, "functions", "_generated", "responsive-images-build.json");
+  const collections = await Promise.all(definitions.map(async (definition) => [definition.type, await readCollection(definition, projectRoot)]));
   collections.forEach(([type, entries]) => {
     assertUniqueEntries(
       entries.map(({ entry }) => entry),
@@ -283,7 +333,7 @@ export async function generateContentArtifacts({ check = false } = {}) {
   const targets = Object.fromEntries(collections.map(([type, entries]) => [type, entries.map(({ entry }) => contentKey(type, entry))]));
   if (targets.post) targets.post.push("site-about", "site-friends");
   for (const values of Object.values(targets)) values.sort();
-  const audioAssetSizes = await readAudioAssetSizes();
+  const audioAssetSizes = await readAudioAssetSizes(join(projectRoot, "public", "audio"));
   const metingSongTargets = collectMetingSongTargets(collections);
   const imageCatalog = await readFile(responsiveImageBuildPath, "utf8").then(JSON.parse).catch(() => ({}));
   const { manifest, files } = buildContentDistribution(collections, imageCatalog);
@@ -308,16 +358,17 @@ export async function generateContentArtifacts({ check = false } = {}) {
   const renderedMetadata = `// Generated by scripts/generate-content-targets.mjs. Do not edit by hand.\n`
     + `const contentManifest = Object.freeze(${JSON.stringify(manifest, null, 2)});\n\n`
     + `export { contentManifest };\n`;
+  const preparedContentFiles = prepareGeneratedContentFiles(files, generatedContentRoot);
   if (check) {
     const [currentTargets, currentMetadata, existing] = await Promise.all([
       readFile(outputPath, "utf8").catch(() => ""),
       readFile(metadataOutputPath, "utf8").catch(() => ""),
-      generatedFiles(),
+      generatedFiles(generatedContentRoot),
     ]);
-    const expected = [...files.keys()].sort();
-    const contentMatches = await Promise.all(expected.map(async (path) => (
-      await readFile(join(generatedContentRoot, path), "utf8").catch(() => "")
-    ) === files.get(path)));
+    const expected = preparedContentFiles.map(({ path }) => path).sort();
+    const contentMatches = await Promise.all(preparedContentFiles.map(async ({ destination, content }) => (
+      await readFile(destination, "utf8").catch(() => "")
+    ) === content));
     if (currentTargets !== renderedTargets
       || currentMetadata !== renderedMetadata
       || JSON.stringify(existing) !== JSON.stringify(expected)
@@ -327,15 +378,10 @@ export async function generateContentArtifacts({ check = false } = {}) {
     return;
   }
   await mkdir(dirname(outputPath), { recursive: true });
-  await rm(generatedContentRoot, { recursive: true, force: true });
   await Promise.all([
     writeFile(outputPath, renderedTargets),
     writeFile(metadataOutputPath, renderedMetadata),
-    ...[...files].map(async ([path, content]) => {
-      const destination = join(generatedContentRoot, path);
-      await mkdir(dirname(destination), { recursive: true });
-      await writeFile(destination, content);
-    }),
+    writePreparedGeneratedContentFiles(preparedContentFiles, generatedContentRoot),
   ]);
 }
 

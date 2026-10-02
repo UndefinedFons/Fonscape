@@ -279,6 +279,115 @@ test("published comment totals exclude replies whose parent is deleted", async (
   }
 });
 
+test("reply creation requires a published thread root and still allows replies to replies", async (t) => {
+  for (const rootStatus of ["deleted", "hidden"]) {
+    await t.test(`rejects a ${rootStatus} thread`, async () => {
+      const { client, db } = await migratedDatabase();
+      try {
+        const now = Date.now();
+        const owner = await seedUser(client, { now });
+        const firstReplier = await seedUser(client, { id: "member-2", username: "writer02", nickname: "写作者", now });
+        const nextReplier = await seedUser(client, { id: "member-3", username: "writer03", nickname: "新读者", now });
+        const limits = { MAX_COMMENTS_PER_USER: "10", MAX_COMMENTS_PER_TARGET: "10", MAX_TOTAL_COMMENTS: "10" };
+        const target = { type: "post", slug: "site-about" };
+        await insertCommentAtomically(db, {
+          id: "reply-root", userId: owner.id, role: "member", target, body: "主题评论", now,
+        }, limits);
+        await insertCommentAtomically(db, {
+          id: "reply-child", userId: firstReplier.id, role: "member", target, body: "第一条回复",
+          parentId: "reply-root", replyToUserId: owner.id, replyToCommentId: "reply-root", now: now + 1,
+        }, limits);
+
+        const validNested = requestContext({
+          path: ["comments"], method: "POST", db, currentUser: nextReplier,
+          body: { ...target, body: "回复回复", parentId: "reply-child", clientMutationId: "52077f51-0ea2-4d77-b107-70af56a21d2c" },
+        });
+        const validResponse = await onRequest(validNested);
+        await validNested.settle();
+        assert.equal(validResponse.status, 201);
+        const validPayload = await validResponse.json();
+        assert.equal(validPayload.comment.parentId, "reply-root");
+        assert.equal(validPayload.comment.replyTo, firstReplier.nickname);
+
+        await client.execute({
+          sql: "UPDATE comments SET body = CASE WHEN ? = 'deleted' THEN '[已删除]' ELSE body END, status = ?, updated_at = ? WHERE id = 'reply-root'",
+          args: [rootStatus, rootStatus, now + 2],
+        });
+        const chargedWindows = (await client.execute("SELECT COALESCE(SUM(count), 0) AS count FROM rate_limits")).rows[0].count;
+        const rejected = requestContext({
+          path: ["comments"], method: "POST", db, currentUser: nextReplier,
+          body: { ...target, body: `不能回复${rootStatus}主题`, parentId: "reply-child", clientMutationId: "eaa3f067-1598-4d52-8d0b-af67729d521f" },
+        });
+        const rejectedResponse = await onRequest(rejected);
+        await rejected.settle();
+        assert.equal(rejectedResponse.status, 400);
+        assert.equal((await rejectedResponse.json()).code, "invalid_parent");
+        assert.equal((await client.execute({ sql: "SELECT COUNT(*) AS count FROM comments WHERE id = ?", args: ["eaa3f067-1598-4d52-8d0b-af67729d521f"] })).rows[0].count, 0);
+        assert.equal((await client.execute("SELECT COALESCE(SUM(count), 0) AS count FROM rate_limits")).rows[0].count, chargedWindows);
+
+        const replay = requestContext({
+          path: ["comments"], method: "POST", db, currentUser: nextReplier,
+          body: { ...target, body: "回复回复", parentId: "reply-child", clientMutationId: "52077f51-0ea2-4d77-b107-70af56a21d2c" },
+        });
+        const replayResponse = await onRequest(replay);
+        await replay.settle();
+        assert.equal(replayResponse.status, 200);
+        assert.equal((await replayResponse.json()).replayed, true);
+      } finally {
+        await client.close();
+      }
+    });
+  }
+});
+
+test("reply insertion rechecks the visible thread root inside the atomic write", async () => {
+  const { client, db } = await migratedDatabase();
+  try {
+    const now = Date.now();
+    const owner = await seedUser(client, { now });
+    const replier = await seedUser(client, { id: "member-2", username: "writer02", nickname: "写作者", now });
+    const target = { type: "post", slug: "site-about" };
+    const limits = { MAX_COMMENTS_PER_USER: "10", MAX_COMMENTS_PER_TARGET: "10", MAX_TOTAL_COMMENTS: "10" };
+    await insertCommentAtomically(db, {
+      id: "racing-root", userId: owner.id, role: "member", target, body: "主题评论", now,
+    }, limits);
+    await insertCommentAtomically(db, {
+      id: "racing-child", userId: owner.id, role: "member", target, body: "已有回复",
+      parentId: "racing-root", replyToUserId: owner.id, replyToCommentId: "racing-root", now: now + 1,
+    }, limits);
+
+    let deletedBetweenReadAndWrite = false;
+    const racingDb = {
+      prepare: (...args) => db.prepare(...args),
+      async batch(statements) {
+        if (!deletedBetweenReadAndWrite) {
+          deletedBetweenReadAndWrite = true;
+          await client.execute({
+            sql: "UPDATE comments SET body = '[已删除]', status = 'deleted', updated_at = ? WHERE id = 'racing-root'",
+            args: [now + 2],
+          });
+        }
+        return db.batch(statements);
+      },
+    };
+    const mutationId = "8493b823-1686-4fa4-aee2-daf66a0c33f6";
+    const context = requestContext({
+      path: ["comments"], method: "POST", db: racingDb, currentUser: replier,
+      body: { ...target, body: "并发删除后不应写入", parentId: "racing-child", clientMutationId: mutationId },
+    });
+    const response = await onRequest(context);
+    await context.settle();
+    assert.equal(deletedBetweenReadAndWrite, true);
+    assert.equal(response.status, 400);
+    assert.equal((await response.json()).code, "invalid_parent");
+    assert.equal((await client.execute({ sql: "SELECT COUNT(*) AS count FROM comments WHERE id = ?", args: [mutationId] })).rows[0].count, 0);
+    assert.equal((await client.execute("SELECT COUNT(*) AS count FROM rate_limits")).rows[0].count, 0);
+    assert.equal((await client.execute("SELECT COUNT(*) AS count FROM comment_mutations")).rows[0].count, 0);
+  } finally {
+    await client.close();
+  }
+});
+
 test("maintenance reconciliation remains consistent with concurrent writes", async () => {
   const { client, db } = await migratedDatabase();
   try {

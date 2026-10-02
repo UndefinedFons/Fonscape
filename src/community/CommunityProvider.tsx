@@ -35,23 +35,26 @@ export function CommunityProvider({ children }: { children?: ReactNode }) {
   const [authMode, setAuthMode] = useState("login");
   const [accountNotice, setAccountNotice] = useState("");
   const viewerId = useRef<string | null>(null);
+  const sessionRevision = useRef(0);
   const updateViewer = useCallback((user: PublicUser | null) => {
+    sessionRevision.current += 1;
     const nextId = user?.id || null;
     if (viewerId.current !== nextId) invalidateAccountData();
     viewerId.current = nextId;
     setViewer(user);
+    setLoading(false);
   }, []);
 
   const refresh = useCallback(async () => {
     if (!siteConfig.showCommunity) return;
+    const revision = ++sessionRevision.current;
     try {
       const result = await api("/auth/session");
+      if (revision !== sessionRevision.current) return;
       updateViewer(result.user);
       if (result.accountNotice) setAccountNotice(result.accountNotice);
     } catch {
-      updateViewer(null);
-    } finally {
-      setLoading(false);
+      if (revision === sessionRevision.current) updateViewer(null);
     }
   }, [updateViewer]);
 
@@ -62,7 +65,7 @@ export function CommunityProvider({ children }: { children?: ReactNode }) {
     const onVisible = () => { if (!document.hidden) refresh(); };
     window.addEventListener("focus", refresh);
     document.addEventListener("visibilitychange", onVisible);
-    return () => { window.clearInterval(timer); window.removeEventListener("focus", refresh); document.removeEventListener("visibilitychange", onVisible); };
+    return () => { sessionRevision.current += 1; window.clearInterval(timer); window.removeEventListener("focus", refresh); document.removeEventListener("visibilitychange", onVisible); };
   }, [refresh]);
 
   const openAccount = useCallback((mode = "login") => {

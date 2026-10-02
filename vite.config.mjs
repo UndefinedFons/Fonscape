@@ -112,18 +112,23 @@ function heroPreloadPlugin() {
   };
 }
 
+export function createContentGenerationQueue(runGeneration) {
+  let generation = Promise.resolve();
+  return () => {
+    const currentGeneration = generation.then(runGeneration);
+    generation = currentGeneration.catch(() => undefined);
+    return currentGeneration;
+  };
+}
+
 function contentMetadataPlugin() {
   const contentRoot = resolve(process.cwd(), "src/content");
   const imageRoot = resolve(process.cwd(), "public/assets");
   const metadataPath = resolve(process.cwd(), "functions/_generated/content-metadata.js");
-  let generation = Promise.resolve();
-  const regenerate = () => {
-    generation = generation.then(async () => {
-      await generateResponsiveImages();
-      await Promise.all([generateContentArtifacts(), generateFontStylesheets(), generateRssFeed(), generateSitemap()]);
-    });
-    return generation;
-  };
+  const regenerate = createContentGenerationQueue(async () => {
+    await generateResponsiveImages();
+    await Promise.all([generateContentArtifacts(), generateFontStylesheets(), generateRssFeed(), generateSitemap()]);
+  });
   return {
     name: "fonscape-content-metadata",
     async handleHotUpdate({ file, modules, server }) {

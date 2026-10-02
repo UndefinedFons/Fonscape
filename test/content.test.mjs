@@ -104,6 +104,27 @@ test("required content labels must be non-empty strings", () => {
   );
 });
 
+test("optional content fields reject values that cannot be rendered or used as their declared types", () => {
+  const post = (field) => `---\ntitle: Post\ndate: 2026-07-30\ncategory: 记录\n${field}\n---\nBody`;
+  const music = (field) => `---\ntitle: Music\ndate: 2026-07-30\nkind: 歌曲\n${field}\n---\nBody`;
+  for (const field of ["excerpt", "image", "cardPosition", "slug"]) {
+    assert.throws(() => parsePost("post.md", post(`${field}: {"text":"invalid"}`)), new RegExp(`${field} 必须是字符串`, "u"));
+  }
+  assert.throws(() => parsePost("post.md", post('featured: "false"')), /featured 必须是布尔值/u);
+  assert.throws(() => parsePost("post.md", post("musicPlacement: false")), /musicPlacement 必须是 inline/u);
+  assert.throws(() => parsePost("post.md", post('music: {"src":"/audio/a.mp3","title":{},"artist":"B"}')), /title 必须是字符串/u);
+  assert.throws(() => parsePost("post.md", post('musicBlocks: [{"url":"https://music.163.com/song?id=1","autoplay":"false"}]')), /autoplay 必须是布尔值/u);
+  assert.throws(() => parsePoem("poem.md", "---\ntitle: Poem\ndate: 2026-07-30\nnote: []\n---\nLine"), /note 必须是字符串/u);
+  for (const field of ["slug", "section", "excerpt", "image", "url", "sourceTitle", "sourceMeta", "action"]) {
+    assert.throws(() => parseMusicReview("music.md", music(`${field}: []`)), new RegExp(`${field} 必须是字符串`, "u"));
+  }
+  const valid = parsePost("post.md", post('excerpt: ""\nfeatured: false\nseries: null\nmusicPlacement: "inline"\nmusic: {"src":"/audio/a.mp3","title":"A","artist":"B","autoplay":false}'));
+  assert.equal(valid.excerpt, "");
+  assert.equal(valid.featured, false);
+  assert.equal(valid.series, null);
+  assert.equal(valid.music.autoplay, false);
+});
+
 test("article outlines ignore headings inside fenced code blocks", () => {
   const outline = getArticleOutline("引言\n\n~~~md\n## 假标题\n~~~\n\n## 第一节\n\n## 第二节");
   assert.deepEqual(outline.map((item) => item.title), ["序章", "第一节", "第二节"]);

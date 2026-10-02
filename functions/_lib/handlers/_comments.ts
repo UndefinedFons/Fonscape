@@ -44,6 +44,11 @@ type ParentCommentRow = DatabaseRow & {
   content_type: string;
   content_slug: string;
   status: string;
+  thread_root_id: string | null;
+  thread_root_parent_id: string | null;
+  thread_root_content_type: string | null;
+  thread_root_content_slug: string | null;
+  thread_root_status: string | null;
 };
 type ReplyRow = CommentRow & {
   content_type: string;
@@ -100,6 +105,26 @@ function commentMutationMatches(
 
 async function commentById(db: Database, id: string): Promise<CommentRow | null> {
   return db.prepare(`${commentSelect} WHERE c.id = ? LIMIT 1`).bind(id).first<CommentRow>();
+}
+
+async function commentReplyParent(db: Database, id: string): Promise<ParentCommentRow | null> {
+  return db.prepare(`SELECT parent.id, parent.parent_id, parent.user_id, parent.content_type, parent.content_slug, parent.status,
+    thread_root.id AS thread_root_id, thread_root.parent_id AS thread_root_parent_id,
+    thread_root.content_type AS thread_root_content_type, thread_root.content_slug AS thread_root_content_slug,
+    thread_root.status AS thread_root_status
+    FROM comments parent
+    LEFT JOIN comments thread_root ON thread_root.id = COALESCE(parent.parent_id, parent.id)
+    WHERE parent.id = ? LIMIT 1`).bind(id).first<ParentCommentRow>();
+}
+
+function isVisibleReplyParent(parent: ParentCommentRow | null, target: { type: string; slug: string }): parent is ParentCommentRow {
+  if (!parent || parent.status !== "published" || parent.content_type !== target.type || parent.content_slug !== target.slug) return false;
+  const rootId = parent.parent_id || parent.id;
+  return parent.thread_root_id === rootId
+    && parent.thread_root_parent_id === null
+    && parent.thread_root_status === "published"
+    && parent.thread_root_content_type === target.type
+    && parent.thread_root_content_slug === target.slug;
 }
 
 export async function listComments(context: RequestContext, url: URL): Promise<Response> {
@@ -190,8 +215,8 @@ export async function createComment(context: RequestContext): Promise<Response> 
   let replyToUserId = null;
   let replyToCommentId = null;
   if (requestedParentId) {
-    const parent = await db.prepare("SELECT id, parent_id, user_id, content_type, content_slug, status FROM comments WHERE id = ? LIMIT 1").bind(requestedParentId).first<ParentCommentRow>();
-    if (!parent || parent.status !== "published" || parent.content_type !== target.type || parent.content_slug !== target.slug) throw new ApiError(400, "回复的评论不存在。", "invalid_parent");
+    const parent = await commentReplyParent(db, requestedParentId);
+    if (!isVisibleReplyParent(parent, target)) throw new ApiError(400, "回复的评论不存在。", "invalid_parent");
     parentId = parent.parent_id || parent.id;
     replyToUserId = parent.user_id;
     replyToCommentId = parent.id;
@@ -226,6 +251,9 @@ export async function createComment(context: RequestContext): Promise<Response> 
     return json({ comment: commentRow(row, user.id, publicUser(user).role), ...(created ? {} : { replayed: true }) }, created ? 201 : 200);
   } catch (error) {
     if (!(error instanceof ApiError) || error.code !== "comment_mutation_not_created") throw error;
+    if (requestedParentId && !isVisibleReplyParent(await commentReplyParent(db, requestedParentId), target)) {
+      throw new ApiError(400, "回复的评论不存在。", "invalid_parent");
+    }
     const capacity = await commentCapacityFailure(db, { role: user.role, userId: user.id, target, env: context.env });
     if (capacity) throw new ApiError(capacity.status, capacity.message, capacity.code);
     const rateLimit = await commentRateLimitFailure(db, policies, now);
