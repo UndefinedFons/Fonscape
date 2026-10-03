@@ -2,7 +2,7 @@ import type { DatedEntry, GenericContentMetadata, MusicReview, MusicReviewMetada
 
 type ParserOptions = { includeContent?: boolean };
 
-import { countWords, getArticleOutline, getFirstParagraph, getPoemLines, markdownToPlainText } from "./markdown.ts";
+import { countWords, getArticleOutline, getFirstParagraph, getPoemLines } from "./markdown.ts";
 import { parseMetingLibraryUrl, parseMetingSongUrl } from "../musicSources.ts";
 import { parseContentDate } from "./date.ts";
 
@@ -204,7 +204,7 @@ export function parseMusicReview(path: string, source: string, options: ParserOp
     slug: data.slug || filename,
     section,
     featured: Boolean(data.featured),
-    firstParagraph: getFirstParagraph(content) || markdownToPlainText(content),
+    firstParagraph: getFirstParagraph(content),
     wordCount: countWords(content),
     ...(options.includeContent === false ? {} : { content }),
   };
