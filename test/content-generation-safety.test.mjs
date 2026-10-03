@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { execFileSync } from "node:child_process";
 import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, sep } from "node:path";
@@ -94,4 +95,32 @@ test("a failed content generation surfaces its error and queued hot updates stay
   assert.equal(await queuedGeneration, "recovered");
   assert.deepEqual(events, ["start 1", "finish 1", "start 2", "finish 2"]);
   assert.equal(attempts, 2);
+});
+
+test("a Markdown hot update uses resolved music metadata when regenerating fonts", () => {
+  execFileSync(process.execPath, ["--input-type=module", "--eval", `
+    import assert from "node:assert/strict";
+    import { registerHooks } from "node:module";
+    import { resolve } from "node:path";
+    globalThis.generationFixture = { metadata: "旧音乐名称" };
+    const modules = new Map([
+      ["generate-responsive-images.mjs", "export async function generateResponsiveImages() {}"],
+      ["generate-content-targets.mjs", 'export async function generateContentArtifacts() { await new Promise((finish) => { globalThis.generationFixture.finishMetadata = () => { globalThis.generationFixture.metadata = "新音乐名称"; finish(); }; }); }'],
+      ["generate-font-css.mjs", "export async function generateFontStylesheets() { globalThis.generationFixture.fontInput = globalThis.generationFixture.metadata; }"],
+      ["generate-rss.mjs", "export async function generateRssFeed() {}"],
+      ["generate-sitemap.mjs", "export async function generateSitemap() {}"],
+    ]);
+    registerHooks({ load(url, context, nextLoad) {
+      const module = [...modules].find(([name]) => url.endsWith("/scripts/" + name));
+      return module ? { format: "module", source: module[1], shortCircuit: true } : nextLoad(url, context);
+    }});
+    const { default: config } = await import("./vite.config.mjs");
+    const plugin = config.plugins.find((item) => item.name === "fonscape-content-metadata");
+    const update = plugin.handleHotUpdate({ file: resolve("src/content/music/new.md"), modules: [], server: { moduleGraph: { getModuleById() {} } } });
+    for (let attempt = 0; attempt < 10 && !globalThis.generationFixture.finishMetadata; attempt += 1) await Promise.resolve();
+    assert.equal(typeof globalThis.generationFixture.finishMetadata, "function");
+    globalThis.generationFixture.finishMetadata();
+    await update;
+    assert.equal(globalThis.generationFixture.fontInput, "新音乐名称", "font inputs must include metadata resolved by this update");
+  `], { cwd: new URL("../", import.meta.url), stdio: "pipe" });
 });

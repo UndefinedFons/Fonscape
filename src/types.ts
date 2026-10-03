@@ -173,7 +173,7 @@ export interface ContentMetadataByType {
   music: MusicReviewMetadata;
 }
 
-export type ContentLookup = ReadonlyMap<string, { title: string; category?: string; kind?: string }>;
+export type ContentLookup = ReadonlyMap<string, { title: string; category?: string; section?: MusicSection }>;
 export interface StatsTarget {
   type: ContentType;
   slug: string;

@@ -4,6 +4,7 @@ import type { AccountReply } from "../../functions/public-api.ts";
 import { api, contentHref, formatCommunityTime } from "./api.ts";
 import { go, parseRoutePath, replaceRoute } from "../routeState.ts";
 import { routeHref } from "../routes.ts";
+import { getMusicSectionLabel } from "../musicSections.ts";
 
 const commentsCache = new Map<string, AccountComment[]>();
 const commentsRequests = new Map<string, Promise<AccountComment[]>>();
@@ -47,7 +48,7 @@ export function contentMeta(item: Pick<AccountComment, "contentType" | "contentS
   const contentSlug = String(item.contentSlug || "");
   const slug = contentSlug.split("/").slice(1).join("/");
   const review = contentLookup.get(`music:${contentSlug}`);
-  return { title: item.contentTitle || review?.title || slug || contentSlug, section: `音乐 · ${review?.kind || "内容"}` };
+  return { title: item.contentTitle || review?.title || slug || contentSlug, section: `音乐 · ${review?.section ? getMusicSectionLabel(review.section) : "内容"}` };
 }
 
 export function loadMyReplies(viewerId: string, refresh = false): Promise<AccountCommentFeed<AccountReply>> {
