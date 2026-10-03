@@ -11,3 +11,7 @@ export const musicSections = [
 export function getMusicSectionIcon(section: string): (typeof musicSections)[number]["icon"] {
   return musicSections.find((item) => item.id === section)?.icon || Disc;
 }
+
+export function getMusicSectionLabel(section: string): string {
+  return musicSections.find((item) => item.id === section)?.label || "音乐";
+}

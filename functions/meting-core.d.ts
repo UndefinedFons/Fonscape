@@ -3,6 +3,8 @@ declare module "@meting/core" {
     constructor(source?: string);
     format(enabled?: boolean): this;
     song(id: string): Promise<string>;
+    album(id: string): Promise<string>;
+    playlist(id: string): Promise<string>;
     pic(id: string, size?: number): Promise<string>;
     url(id: string, bitrate?: number): Promise<string>;
   }

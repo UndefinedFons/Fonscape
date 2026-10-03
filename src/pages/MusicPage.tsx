@@ -90,10 +90,10 @@ export function MusicDetailPage({ path, stats, onView, onStatsTargets, onComment
   const statsSlug = review ? `${section}/${review.slug}` : "";
   useEffect(() => { if (statsSlug) onView("music", statsSlug); }, [statsSlug, onView]);
   useEffect(() => { if (statsSlug) onStatsTargets([{ type: "music", slug: statsSlug }]); }, [statsSlug, onStatsTargets]);
-  useEffect(() => { setDocumentTitle(review?.sourceTitle || review?.title || "页面不存在", siteConfig.title); }, [review?.sourceTitle, review?.title]);
+  useEffect(() => { setDocumentTitle(review?.sourceTitle || "页面不存在", siteConfig.title); }, [review?.sourceTitle]);
   if (!review) return <NotFound embedded />;
   return <><MusicStage seed={review} />{review.content.trim() && <article className="article-detail article-detail--music music-listening-note">
-    <div className="article-intro-copy"><span className="category">MUSIC NOTE</span><h1>{review.title}</h1>{review.excerpt && <p className="article-lede">{review.excerpt}</p>}<PostMeta post={review} showTags={false} stats={stats[statsSlug]} /></div>
+    <div className="article-intro-copy"><span className="category">MUSIC NOTE</span>{review.title && <h1>{review.title}</h1>}{review.excerpt && <p className="article-lede">{review.excerpt}</p>}<PostMeta post={review} showTags={false} stats={stats[statsSlug]} /></div>
     {review.content && <RichArticleContent post={review} />}
   </article>}{siteConfig.showCommunity && <section className="music-comments-panel comments-material-panel material-panel"><CommentsSection targetType="music" slug={`${section}/${review.slug}`} onStatsChange={onCommentStats} /></section>}</>;
 }

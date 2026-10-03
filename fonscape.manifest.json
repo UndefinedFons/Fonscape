@@ -75,7 +75,8 @@
       "src/components/MusicRecord.tsx",
       "src/styles/music.css",
       "src/styles/music-queue.css",
-      "src/styles/music-mini-player.css"
+      "src/styles/music-mini-player.css",
+      "scripts/music-metadata.ts"
     ]
   }
 }

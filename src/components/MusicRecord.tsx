@@ -6,6 +6,7 @@ import { Pause } from "@phosphor-icons/react/Pause";
 import { SpinnerGap } from "@phosphor-icons/react/SpinnerGap";
 import { PushPin } from "@phosphor-icons/react/PushPin";
 import { parseMetingLibraryUrl } from "../musicSources.ts";
+import { getMusicSectionLabel } from "../musicSections.ts";
 import { musicSession } from "../musicSession.ts";
 import { useMusicSession } from "../useMusicSession.ts";
 import { activeLyricIndex, centerLyricLine } from "../musicLyrics.ts";
@@ -36,12 +37,12 @@ export function MusicRecord({ entry, eager = false, order = 0 }: { entry: MusicR
   const image = useResponsiveImage(artwork, "(max-width: 760px) 44vw, (max-width: 1040px) 30vw, 280px");
   const href = contentRoute("music", entry);
   return <article className={`music-record${album ? " music-record--album" : ""}${active ? " is-active" : ""}${playing ? " is-playing" : ""}`} style={{ "--music-order": order } as CSSProperties}>
-    <a className="music-record-art" href={href} aria-label={`聆听 ${entry.sourceTitle || entry.title}`}>
-      {image.src ? <img key={image.src} {...image} alt={`${entry.sourceTitle || entry.title}的封面`} loading={eager ? "eager" : "lazy"} decoding="async" /> : <Disc className="music-record-fallback" size={68} weight="duotone" />}
+    <a className="music-record-art" href={href} aria-label={`聆听 ${entry.sourceTitle}`}>
+      {image.src ? <img key={image.src} {...image} alt={`${entry.sourceTitle}的封面`} loading={eager ? "eager" : "lazy"} decoding="async" /> : <Disc className="music-record-fallback" size={68} weight="duotone" />}
       {playing && state.lyrics.length > 0 && <div className="music-record-lyric" ref={lyricScroll} aria-label="同步歌词">{state.lyrics.map((line, index) => <p key={`${line.time}-${index}`} data-line={index} className={index === activeLine ? "is-current" : ""}><span>{line.text}</span>{line.translation && <small>{line.translation}</small>}</p>)}</div>}
-      <span className="music-record-kind">{entry.kind}</span>{entry.featured && <span className="music-record-pinned"><PushPin size={12} weight="fill" />置顶</span>}<div className="music-record-copy" key={track?.id || "collection"}><h3>{track?.title || entry.sourceTitle || entry.title}</h3><p>{track?.artist || entry.sourceMeta || ""}</p></div>
+      <span className="music-record-kind">{getMusicSectionLabel(entry.section)}</span>{entry.featured && <span className="music-record-pinned"><PushPin size={12} weight="fill" />置顶</span>}<div className="music-record-copy" key={track?.id || "collection"}><h3>{track?.title || entry.sourceTitle}</h3><p>{track?.artist || entry.sourceMeta || ""}</p></div>
     </a>
-    <button aria-label={`${playing ? "暂停" : "播放"} ${entry.sourceTitle || entry.title}`} aria-pressed={playing} aria-busy={loading} onClick={toggle}><span className={`music-control-icon${loading ? " is-loading" : ""}`} key={loading ? "loading" : String(playing)}>{loading ? <SpinnerGap size={20} /> : playing ? <Pause size={20} weight="fill" /> : <Play size={20} weight="fill" />}</span></button>
+    <button aria-label={`${playing ? "暂停" : "播放"} ${entry.sourceTitle}`} aria-pressed={playing} aria-busy={loading} onClick={toggle}><span className={`music-control-icon${loading ? " is-loading" : ""}`} key={loading ? "loading" : String(playing)}>{loading ? <SpinnerGap size={20} /> : playing ? <Pause size={20} weight="fill" /> : <Play size={20} weight="fill" />}</span></button>
     {playing && <div className="music-record-progress" aria-hidden="true"><span style={{ width: `${progress}%` }} /></div>}
   </article>;
 }

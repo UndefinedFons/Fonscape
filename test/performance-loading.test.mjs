@@ -66,7 +66,7 @@ test("music intent preloads the same section and complete slug used by detail lo
         const path = String(input);
         requests.push(path);
         if (path === metadataPath) return Response.json({ key: `${section}/${slug}`, source: "music.md", body: bodyPath });
-        if (path === bodyPath) return new Response(`---\ntitle: Music\nkind: 歌曲\nsection: ${section}\nslug: ${slug}\ndate: 2026-01-01\n---\nBody`);
+        if (path === bodyPath) return new Response(`---\ntitle: Music\nsourceTitle: Music\nsection: ${section}\nslug: ${slug}\ndate: 2026-01-01\n---\nBody`);
         return new Response("not found", { status: 404 });
       };
       const entry = await preloadRouteContent(route);

@@ -75,7 +75,7 @@ export function parseMetingLibraryUrl(value: unknown): MusicLibraryTarget | null
   }
 
   if (TENCENT_HOSTS.has(hostname)) {
-    const directPath = url.pathname.match(/\/(?:n\/ryqq\/(songDetail|albumDetail|playlistDetail)|n\/yqq\/(song|album|playlist))\/([A-Za-z0-9]{6,32})(?:\.html)?\/?$/u);
+    const directPath = url.pathname.match(/\/(?:n\/ryqq\/(songDetail|albumDetail|playlistDetail|playlist)|n\/yqq\/(song|album|playlist))\/([A-Za-z0-9]{6,32})(?:\.html)?\/?$/u);
     if (!directPath) return null;
     const route = directPath[1] || directPath[2];
     const type = route === "songDetail" || route === "song" ? "song"

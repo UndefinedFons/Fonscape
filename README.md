@@ -131,11 +131,13 @@ pnpm check
 
 ## 鸣谢
 
-感谢 [folia-major](https://github.com/chthollyphile/folia-major) 为音乐板块开发提供的灵感与参考，也感谢以下项目为 Fonscape 开发提供灵感与参考：
+感谢以下项目为 Fonscape 开发提供的灵感与参考：
 
 - [astro-koharu](https://github.com/cosZone/astro-koharu)
 - [Firefly](https://github.com/CuteLeaf/Firefly)
 - [XinghuisamaBlogs](https://github.com/heiehiehi/XinghuisamaBlogs)
+
+感谢 [folia-major](https://github.com/chthollyphile/folia-major) 为音乐板块开发提供的灵感与参考。
 
 ## 许可
 

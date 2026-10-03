@@ -3,5 +3,5 @@
   "compilerOptions": {
     "types": ["node"]
   },
-  "include": ["functions/**/*.ts", "worker/**/*.ts", "api/**/*.ts", "server/**/*.ts"]
+  "include": ["functions/**/*.ts", "worker/**/*.ts", "api/**/*.ts", "server/**/*.ts", "scripts/music-metadata.ts"]
 }

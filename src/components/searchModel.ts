@@ -1,6 +1,7 @@
 import { sortNewestFirst } from "../content/frontmatter.ts";
 import { contentRoute } from "../routes.ts";
 import { getEnabledCollectionTypes, getSectionAvailability } from "../sectionAvailability.ts";
+import { getMusicSectionLabel } from "../musicSections.ts";
 import type { ContentSearchEntry, ContentType, SearchItem, SiteConfig } from "../types.ts";
 
 export type SearchScope = "all" | ContentType;
@@ -26,7 +27,7 @@ export function buildSearchItems(entries: readonly ContentSearchEntry[]): Search
   return entries.map<SearchItem>((entry) => {
     if (entry.type === "post") return { id: `post-${entry.key}`, slug: entry.key, kind: "post", type: "文章", title: entry.title, meta: entry.category, date: entry.date, href: contentRoute("post", entry) };
     if (entry.type === "poem") return { id: `poem-${entry.key}`, slug: entry.key, kind: "poem", type: "小诗", title: entry.title, meta: "", date: entry.date, href: contentRoute("poem", entry) };
-    return { id: `music-${entry.key}`, slug: entry.key, kind: "music", type: "音乐", title: entry.title, sourceTitle: entry.sourceTitle !== entry.title ? entry.sourceTitle : undefined, meta: entry.kind, date: entry.date, href: contentRoute("music", entry) };
+    return { id: `music-${entry.key}`, slug: entry.key, kind: "music", type: "音乐", title: entry.title, sourceTitle: entry.sourceTitle !== entry.title ? entry.sourceTitle : undefined, meta: getMusicSectionLabel(entry.section), date: entry.date, href: contentRoute("music", entry) };
   }).sort(sortNewestFirst);
 }
 

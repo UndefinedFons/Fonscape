@@ -127,7 +127,8 @@ function contentMetadataPlugin() {
   const metadataPath = resolve(process.cwd(), "functions/_generated/content-metadata.js");
   const regenerate = createContentGenerationQueue(async () => {
     await generateResponsiveImages();
-    await Promise.all([generateContentArtifacts(), generateFontStylesheets(), generateRssFeed(), generateSitemap()]);
+    await generateContentArtifacts();
+    await Promise.all([generateFontStylesheets(), generateRssFeed(), generateSitemap()]);
   });
   return {
     name: "fonscape-content-metadata",

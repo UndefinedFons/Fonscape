@@ -81,8 +81,8 @@ export function MusicStage({ seed }: { seed: MusicReviewMetadata }) {
     <div className="music-stage-content">
       <div className="music-stage-record">
         <span className="music-stage-kicker"><MusicNotes size={16} />NOW PLAYING</span>
-        <div className="music-stage-art">{image.src ? <img {...image} alt={`${track?.title || entry.sourceTitle || entry.title}的封面`} decoding="async" /> : <Disc size={96} weight="duotone" />}</div>
-        <h2>{track?.title || entry.sourceTitle || entry.title}</h2>
+        <div className="music-stage-art">{image.src ? <img {...image} alt={`${track?.title || entry.sourceTitle}的封面`} decoding="async" /> : <Disc size={96} weight="duotone" />}</div>
+        <h2>{track?.title || entry.sourceTitle}</h2>
         <p className="music-stage-artist">{track?.artist || entry.sourceMeta || ""}</p>
         {!track && <div className="music-stage-start">{target && state.status === "error" && <button className="music-play-primary" onClick={() => void musicSession.load(seed)}><Play size={17} weight="fill" />重试加载</button>}{!target && entry.url && <a href={entry.url} target="_blank" rel="noreferrer">{entry.action || "查看来源"}<ArrowUpRight size={15} /></a>}</div>}
       </div>

@@ -249,34 +249,38 @@ music: {"src":"/audio/example.mp3","cover":"/assets/example.webp","title":"曲�
 
 ### 新建音乐收藏
 
-在 `src/content/music/` 新建文件，例如 `an-album.md`：
+在 `src/content/music/` 新建文件，例如 `an-album.md`。收藏网易云音乐或 QQ 音乐的歌曲、专辑与歌单时，只需填写音乐页面链接和日期：
 
 ```md
 ---
-title: "一张专辑的听后感"
-kind: "专辑"
-section: "albums"
-date: "2026-07-27T20:00"
-excerpt: "关于这张专辑的一段简介。"
-image: "/assets/an-album.webp"
 url: "https://music.163.com/album?id=34720827"
-sourceTitle: "专辑名称"
-sourceMeta: "音乐人"
-featured: true
-featuredOrder: 10
+date: "2026-07-27T20:00"
 ---
-
-这里写可选的聆听手记，也可以留空。
 ```
 
-歌曲、专辑与歌单共同显示在一个唱片架中。`section` 标记条目类型：`songs` 对应歌曲，`albums` 对应专辑，`playlists` 对应歌单；省略时默认为 `songs`。`kind` 是唱片架上显示的类型文字，通常与 `section` 对应。必填字段为 `title`、`kind` 和 `date`。
+构建时，主题从 URL 识别歌曲、专辑或歌单，并读取音乐名称、音乐人或创建者和封面。三类收藏共同显示在一个唱片架中，类型标签自动显示为 `歌曲`、`专辑` 或 `歌单`。
 
-Markdown 正文是可选的聆听手记；正文留空时仍可发布音乐收藏，详情页不显示手记面板。正文存在时，`title` 用作手记标题，`excerpt` 可提供摘要。`sourceTitle` 填写曲名、专辑名或歌单名，`sourceMeta` 填写音乐人或创作者，`image` 提供唱片架和播放器的封面。
+Markdown 正文是可选的聆听手记。正文为空时，详情页只显示播放器和已开启的评论区；写正文时，`title` 和 `excerpt` 也可省略：
 
-`url` 填入网易云音乐或 QQ 音乐的歌曲、专辑或歌单页面链接时，站点会载入对应曲目。其他外部链接可作为来源入口，不会在站内播放：
+```md
+---
+url: "https://music.163.com/album?id=34720827"
+date: "2026-07-27T20:00"
+---
+
+在这里留下此刻的听后感。
+```
+
+`title` 只作为手记标题，`excerpt` 只作为手记摘要。唱片架、首页和播放器始终显示音乐本身的信息；搜索结果同时显示已填写的手记标题和音乐名称，没有手记标题时直接显示音乐名称。
+
+`sourceTitle`、`sourceMeta` 和 `image` 用于手动修正音乐名称、音乐人或创建者和封面。手动填写的信息优先于平台信息。读取失败时，构建会指出对应文件和 URL；可重试，或手动填写这三个字段，`sourceMeta` 和 `image` 允许留空。成功读取的信息缓存在 `.fonscape-cache/music-metadata/`，定期重新读取；平台暂时不可用时保留上次成功的信息。需要立即重新读取时，可删除对应缓存后重新构建。
+
+其他外部链接作为来源入口，不会在站内播放。无法从 URL 识别类型时，需要手动填写 `section`（`songs`、`albums` 或 `playlists`）和 `sourceTitle`：
 
 ```yaml
-url: "https://music.163.com/playlist?id=34720828"
+section: "albums"
+sourceTitle: "专辑名称"
+url: "https://example.com/album"
 ```
 
 唱片上的播放按钮会就地播放或暂停；点击封面打开该条目的详情页。带有可识别 `url` 的条目会在详情页载入曲目并尝试播放；如果浏览器阻止自动播放，点击播放按钮即可继续，曲目暂时无法载入时可重试。
@@ -289,19 +293,20 @@ url: "https://music.163.com/playlist?id=34720828"
 
 | 字段 | 必填 | 说明 |
 | --- | --- | --- |
-| `title` | 是 | 收藏标题；有正文时也作为聆听手记标题 |
-| `kind` | 是 | 唱片架显示的类型文字，例如 `歌曲`、`专辑`、`歌单` |
+| `url` | 是¹ | 网易云音乐或 QQ 音乐的歌曲、专辑、歌单页面链接；其他链接作为外部来源入口 |
 | `date` | 是 | 发布时间，使用 ISO 日期 |
-| `section` | 否 | 条目类型：`songs`、`albums` 或 `playlists`；默认 `songs` |
+| `title` | 否 | 手记标题，仅用于有正文的手记 |
+| `excerpt` | 否 | 手记摘要，仅用于有正文的手记 |
+| `section` | 否¹ | 条目类型：`songs`、`albums` 或 `playlists`；可识别的音乐 URL 会自动确定类型 |
 | `slug` | 否 | 自定义地址；默认取文件名 |
-| `excerpt` | 否 | 有手记正文时显示的摘要 |
-| `image` | 否 | 唱片架封面；也作为播放器封面的备用图片 |
-| `url` | 否 | 网易云音乐或 QQ 音乐的歌曲、专辑、歌单链接；其他链接作为外部来源入口 |
+| `image` | 否 | 手动指定音乐封面，优先于平台封面 |
 | `action` | 否 | 外部来源入口的按钮文字，默认 `查看来源` |
-| `sourceTitle` | 否 | 曲名、专辑名或歌单名；省略时使用 `title` |
-| `sourceMeta` | 否 | 音乐人或创作者；省略时不显示 |
+| `sourceTitle` | 否¹ | 手动指定音乐名称，优先于平台名称 |
+| `sourceMeta` | 否 | 手动指定音乐人或创作者，优先于平台信息 |
 | `featured` | 否 | 是否置顶到音乐空间列表和首页 MUSIC ROOM 前部，默认 `false` |
 | `featuredOrder` | 否 | 置顶顺序，必须是正整数；仅可在 `featured: true` 时使用 |
+
+¹ 无法自动识别音乐 URL 或不填写 URL 时，`section` 和 `sourceTitle` 必填。
 
 ### 新建小诗
 
