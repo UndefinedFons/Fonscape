@@ -45,7 +45,7 @@ const loadAccountModule = () => withFullFonts(() => import("./community/AccountD
 const primaryRouteShells = {
   "/posts": { kicker: "ARTICLE INDEX", title: "文章", description: siteConfig.pages.postsDescription, icon: BookOpenText, variant: "posts" },
   "/poems": { kicker: "SMALL POEMS", title: "小诗", description: siteConfig.pages.poemsDescription, icon: Feather, variant: "poems" },
-  "/music": { kicker: "MUSIC NOTES", title: "音乐", description: siteConfig.pages.musicDescription, icon: MusicNotes, variant: "music" },
+  "/music": { kicker: "MUSIC ROOM", title: "音乐", description: siteConfig.pages.musicDescription, icon: MusicNotes, variant: "music" },
   "/friends": { kicker: "FRIEND LINKS", title: "友链", description: siteConfig.pages.friendsDescription, icon: LinkSimple, variant: "friends" },
   "/about": { kicker: "HELLO", title: "关于我", description: siteConfig.about.heroDescription, icon: UserCircle, variant: "about" },
 } as const;
@@ -53,7 +53,7 @@ const primaryRouteShells = {
 type PrimaryRoutePath = keyof typeof primaryRouteShells;
 
 function PrimaryRoute({ path, children }: { path: PrimaryRoutePath; children: ReactNode }) {
-  return <main className={path === "/about" ? "about-page" : undefined}><PageHero {...primaryRouteShells[path]} /><Suspense fallback={null}>{children}</Suspense></main>;
+  return <main className={path === "/about" ? "about-page" : path === "/music" ? "music-page" : undefined}><PageHero {...primaryRouteShells[path]} /><Suspense fallback={null}>{children}</Suspense></main>;
 }
 
 export const AboutPage = lazy(() => loadAboutModule().then((module) => ({ default: module.AboutPage })));

@@ -179,17 +179,25 @@ export function parseMusicReview(path: string, source: string, options: ParserOp
   const { data, filename, content } = parseMarkdownSource(path, source);
   const { content: _frontmatterContent, reading: _reading, ...frontmatter } = data;
   validateOptionalStrings(data, ["slug", "section", "excerpt", "image", "url", "sourceTitle", "sourceMeta", "action"], path);
+  if (Object.hasOwn(data, "featured") && typeof data.featured !== "boolean") {
+    throw new Error(`${path} 的 Frontmatter featured 必须是布尔值。`);
+  }
+  if (!data.featured && Object.hasOwn(data, "featuredOrder")) throw new Error(`${path} 未置顶，不能配置 featuredOrder。`);
+  if (Object.hasOwn(data, "featuredOrder") && (!Number.isInteger(data.featuredOrder) || (data.featuredOrder as number) < 1)) {
+    throw new Error(`${path} 的 featuredOrder 必须是正整数。`);
+  }
   const review = {
     ...frontmatter,
     slug: data.slug || filename,
     section: data.section || "songs",
+    featured: Boolean(data.featured),
     firstParagraph: getFirstParagraph(content),
     wordCount: countWords(content),
     ...(options.includeContent === false ? {} : { content }),
   };
   requireFields(review, ["title", "kind", "date"], path);
-  if (!["songs", "artists", "albums"].includes(review.section as string)) {
-    throw new Error(`${path} 的 section 必须是 songs、artists 或 albums。`);
+  if (!["songs", "albums", "playlists"].includes(review.section as string)) {
+    throw new Error(`${path} 的 section 必须是 songs、albums 或 playlists。`);
   }
   return validateCommonEntry((review) as MusicReview | MusicReviewMetadata, path);
 }

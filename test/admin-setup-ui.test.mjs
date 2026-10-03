@@ -39,9 +39,9 @@ function themeDistribution() {
     const path = "src/content/posts/" + name;
     return { name, source: path, raw, entry: parsePost(path, raw) };
   });
-  const musicRaw = ['---', 'title: "artist"', 'kind: "音乐人"', 'section: "artists"', 'date: "2026-09-29"', '---', '音乐笔记。'].join("\n");
+  const musicRaw = ['---', 'title: "album"', 'kind: "专辑"', 'section: "albums"', 'date: "2026-09-29"', '---', '音乐笔记。'].join("\n");
   return buildContentDistribution([
-    ["post", posts], ["poem", []], ["music", [{ name: "artist.md", source: "src/content/music/artist.md", raw: musicRaw, entry: parseMusicReview("src/content/music/artist.md", musicRaw) }]],
+    ["post", posts], ["poem", []], ["music", [{ name: "album.md", source: "src/content/music/album.md", raw: musicRaw, entry: parseMusicReview("src/content/music/album.md", musicRaw) }]],
   ]);
 }
 
@@ -420,35 +420,399 @@ test("recent route intent postpones idle prefetch and upgrades its hero priority
   }
 });
 
-test("music query navigation follows the URL and retains the detail return section", async () => {
-  installDom("/music?section=artists");
-  await mountFixture();
-  const active = () => document.querySelector('.music-tabs [aria-selected="true"]')?.textContent;
-  await waitFor(() => assert.equal(active(), "音乐人"));
-  await act(async () => document.querySelector('nav[aria-label="主导航"] a[href="/music"]').click());
-  await waitFor(() => assert.equal(active(), "歌曲"));
-  assert.equal(location.search, "");
-  await traverse("back");
-  await waitFor(() => assert.equal(active(), "音乐人"));
-  await traverse("forward");
-  await waitFor(() => assert.equal(active(), "歌曲"));
-  let scroll = 260;
-  const scrollCalls = [];
-  Object.defineProperty(window, "scrollY", { configurable: true, get: () => scroll });
-  Object.defineProperty(document.documentElement, "scrollHeight", { configurable: true, value: 2000 });
-  window.scrollTo = (options) => { scroll = options.top; scrollCalls.push(options.top); };
-  await act(async () => button("音乐人").click());
-  await waitFor(() => assert.equal(active(), "音乐人"));
-  await waitFor(() => {
-    assert.ok(scrollCalls.length, "the query navigation must complete its scroll restoration");
-    assert.equal(scrollCalls.at(-1), 260, "switching sections must retain the current reading position");
+test("music shelf opens a detail and returns to the complete shelf", async () => {
+  installDom("/music");
+  const oldAudioDescriptor = Object.getOwnPropertyDescriptor(globalThis, "Audio");
+  const metricsPrototype = HTMLElement.prototype;
+  const metricNames = ["offsetLeft", "offsetTop", "offsetWidth", "offsetHeight", "animate"];
+  const oldMetrics = new Map(metricNames.map((name) => [name, Object.getOwnPropertyDescriptor(metricsPrototype, name)]));
+  const animations = [];
+  Object.defineProperties(metricsPrototype, {
+    offsetLeft: { configurable: true, get() { return 0; } },
+    offsetTop: { configurable: true, get() { return 0; } },
+    offsetWidth: { configurable: true, get() { return this.classList?.contains("music-record") ? this.classList.contains("is-playing") ? 140 : 100 : 0; } },
+    offsetHeight: { configurable: true, get() { return this.classList?.contains("music-record") ? this.classList.contains("is-playing") ? 120 : 100 : 0; } },
+    animate: {
+      configurable: true,
+      value(frames, options) {
+        const animation = { element: this, frames, options, cancelCalls: 0, cancel() { this.cancelCalls += 1; } };
+        animations.push(animation);
+        return animation;
+      },
+    },
   });
-  assert.equal(location.search, "?section=artists");
-  await act(async () => document.querySelector('.music-review-card[href="/music/artists/artist"]').click());
-  await waitFor(() => assert.equal(document.querySelector(".article-intro-copy h1")?.textContent, "artist"));
-  await act(async () => button("返回").click());
-  await waitFor(() => assert.equal(active(), "音乐人"));
-  assert.equal(location.search, "?section=artists");
+  const audios = [];
+  class AudioFixture {
+    constructor(src) { this.src = src; this.paused = true; this.currentTime = 0; this.duration = 90; this.listeners = new Map(); audios.push(this); }
+    load() {}
+    removeAttribute(name) { if (name === "src") this.src = ""; }
+    addEventListener(name, callback) { this.listeners.set(name, callback); }
+    removeEventListener(name) { this.listeners.delete(name); }
+    async play() { this.paused = false; this.listeners.get("play")?.(); }
+    pause() { this.paused = true; this.listeners.get("pause")?.(); }
+    emit(name) { this.listeners.get(name)?.(); }
+  }
+  let fixtureFetch;
+  let musicSession;
+  try {
+    await mountFixture();
+    fixtureFetch = globalThis.fetch;
+    const module = await fixtureServer.ssrLoadModule("/src/musicSession.ts");
+    musicSession = module.musicSession;
+    await act(async () => musicSession.stop());
+    globalThis.Audio = AudioFixture;
+    globalThis.fetch = async (input, options) => {
+      const requestUrl = String(input);
+      if (requestUrl.includes("/api/music/library?")) return makeResponse({ truncated: false, tracks: [1, 2, 3].map((id) => ({ id: String(id), source: "netease", title: `Track ${id}`, artist: `Artist ${id}`, cover: "", src: `/audio/${id}`, lyricUrl: `/lyrics/${id}` })) });
+      if (requestUrl.includes("/lyrics/")) return makeResponse({ lyric: "", translation: "" });
+      return fixtureFetch(input, options);
+    };
+
+    await waitFor(() => assert.ok(document.querySelector('a[aria-label="聆听 album"]')));
+    assert.equal(document.querySelector('[aria-label="音乐播放器"]'), null);
+    assert.equal(document.querySelector('[role="tablist"][aria-label="音乐分类"]'), null);
+    const seed = { title: "album", sourceTitle: "album", sourceMeta: "Artist", kind: "专辑", section: "albums", slug: "album", date: "2026-10-02", wordCount: 0, firstParagraph: "", image: "", url: "https://music.163.com/album?id=123" };
+    await act(async () => musicSession.load(seed));
+    await waitFor(() => assert.equal(document.querySelector('button[aria-label="暂停 album"]')?.getAttribute("aria-pressed"), "true"));
+    const card = document.querySelector(".music-record");
+    const playbackAnimation = animations.at(-1);
+    assert.equal(animations.length, 1, "starting playback animates the changed card size");
+    assert.equal(playbackAnimation.element, card);
+    assert.equal(playbackAnimation.options.duration, 520);
+
+    const audio = audios.at(-1);
+    audio.currentTime = 12;
+    await act(async () => audio.emit("timeupdate"));
+    assert.equal(musicSession.getSnapshot().time, 12);
+    assert.equal(playbackAnimation.cancelCalls, 0, "time updates must not cancel the active size animation");
+    assert.equal(animations.length, 1);
+
+    await act(async () => document.querySelector('button[aria-label="暂停 album"]').click());
+    await waitFor(() => assert.equal(document.querySelector('button[aria-label="播放 album"]')?.getAttribute("aria-pressed"), "false"));
+    assert.equal(playbackAnimation.cancelCalls, 1);
+    assert.equal(animations.length, 2, "pausing starts a new animation for the shrinking card");
+    assert.match(animations.at(-1).frames[0].transform, /scale\(1\.4,1\.2\)/u);
+
+    await act(async () => document.querySelector('a[aria-label="聆听 album"]').click());
+    await waitFor(() => assert.equal(document.querySelector(".article-intro-copy h1")?.textContent, "album"));
+    await act(async () => button("返回").click());
+    await waitFor(() => assert.ok(document.querySelector('a[aria-label="聆听 album"]')));
+    assert.equal(location.pathname, "/music");
+  } finally {
+    await act(async () => musicSession?.stop());
+    if (fixtureFetch) globalThis.fetch = fixtureFetch;
+    if (oldAudioDescriptor) Object.defineProperty(globalThis, "Audio", oldAudioDescriptor);
+    else delete globalThis.Audio;
+    for (const name of metricNames) {
+      const descriptor = oldMetrics.get(name);
+      if (descriptor) Object.defineProperty(metricsPrototype, name, descriptor);
+      else delete metricsPrototype[name];
+    }
+  }
+});
+
+test("music playback continues outside the music section until explicitly stopped", async () => {
+  installDom("/music/albums/test-album");
+  const matchMedia = window.matchMedia;
+  window.matchMedia = (query) => query === "(prefers-reduced-motion: reduce)"
+    ? { matches: true, media: query, onchange: null, addListener() {}, removeListener() {}, addEventListener() {}, removeEventListener() {}, dispatchEvent() { return false; } }
+    : matchMedia(query);
+  await loadApplication();
+  const oldAudio = globalThis.Audio;
+  const audios = [];
+  class AudioFixture {
+    constructor(src) { this.src = src; this.paused = true; this.currentTime = 0; this.duration = 90; this.listeners = new Map(); audios.push(this); }
+    load() {}
+    removeAttribute(name) { if (name === "src") this.src = ""; }
+    addEventListener(name, callback) { this.listeners.set(name, callback); }
+    removeEventListener(name) { this.listeners.delete(name); }
+    async play() { this.paused = false; this.listeners.get("play")?.(); }
+    pause() { this.paused = true; this.listeners.get("pause")?.(); }
+  }
+  globalThis.Audio = AudioFixture;
+  HTMLElement.prototype.scrollIntoView = () => {};
+  const libraryRequests = [];
+  globalThis.fetch = async (url) => {
+    const requestUrl = String(url);
+    if (requestUrl.includes("lyrics")) return makeResponse({ lyric: "", translation: "" });
+    if (requestUrl.includes("/api/music/library?")) libraryRequests.push(requestUrl);
+    return makeResponse({ truncated: false, tracks: [1, 2, 3].map((id) => ({ id: String(id), source: "netease", title: `Track ${id}`, artist: "Artist", cover: "", src: `/audio/${id}`, lyricUrl: `/lyrics/${id}` })) });
+  };
+  const [{ MusicStage }, { MusicRecord }, { musicSession }] = await Promise.all([
+    viteServer.ssrLoadModule("/src/components/MusicStage.tsx"),
+    viteServer.ssrLoadModule("/src/components/MusicRecord.tsx"),
+    viteServer.ssrLoadModule("/src/musicSession.ts"),
+  ]);
+  musicSession.stop();
+  try {
+    mountedRoot = createRoot(document.getElementById("root"));
+    const seed = { title: "Album", sourceTitle: "Album", sourceMeta: "Artist", kind: "专辑", section: "albums", slug: "test-album", date: "2026-10-02", wordCount: 0, firstParagraph: "", image: "", url: "https://music.163.com/album?id=123" };
+    await act(async () => mountedRoot.render(createElement(MusicStage, { seed })));
+    await waitFor(() => assert.equal(document.querySelector("h2")?.textContent, "Track 1"));
+    assert.equal(audios.at(-1).paused, false, "entering the detail attempts playback directly");
+    assert.equal(document.querySelector('a[aria-label="前往音乐平台收听"]'), null);
+    assert.equal(document.body.textContent.includes("已暂停"), false);
+    assert.equal(document.querySelector(".music-stage-story header button"), null);
+    await act(async () => musicSession.setVolume(.4));
+    await act(async () => document.querySelector('button[aria-label="静音"]').click());
+    assert.equal(musicSession.getSnapshot().volume, 0);
+    assert.equal(audios.at(-1).volume, 0);
+    await act(async () => document.querySelector('button[aria-label="恢复满音量"]').click());
+    assert.equal(musicSession.getSnapshot().volume, 1);
+    assert.equal(audios.at(-1).volume, 1);
+    await act(async () => document.querySelector('button[aria-label="顺序播放，切换播放模式"]').click());
+    assert.equal(musicSession.getSnapshot().repeat, true);
+    await act(async () => document.querySelector('button[aria-label="单曲循环，切换播放模式"]').click());
+    assert.equal(musicSession.getSnapshot().shuffle, true);
+    assert.equal(musicSession.getSnapshot().repeat, false);
+    await act(async () => document.querySelector('button[aria-label="随机播放，切换播放模式"]').click());
+    assert.equal(musicSession.getSnapshot().shuffle, false);
+    await act(async () => document.querySelector('button[aria-label="选择曲目，当前第 1 首，共 3 首"]').click());
+    assert.ok(document.querySelector('[role="dialog"][aria-modal="true"]'));
+    const trackList = document.querySelector('[aria-label="播放队列"]');
+    const scrollRail = document.querySelector('[role="scrollbar"][aria-label="播放队列滚动条"]');
+    const scrollThumb = scrollRail.querySelector("span");
+    Object.defineProperties(trackList, { clientHeight: { value: 136 }, scrollHeight: { value: 204 } });
+    Object.defineProperty(scrollRail, "clientHeight", { value: 136 });
+    scrollRail.getBoundingClientRect = () => ({ top: 10, height: 136 });
+    scrollThumb.getBoundingClientRect = () => ({ top: 10 + trackList.scrollTop / 68 * 45, bottom: 101 + trackList.scrollTop / 68 * 45 });
+    await act(async () => trackList.dispatchEvent(new Event("scroll")));
+    await waitFor(() => assert.equal(scrollRail.getAttribute("aria-valuemax"), "68"));
+    await act(async () => scrollRail.dispatchEvent(new KeyboardEvent("keydown", { key: "End", bubbles: true })));
+    assert.equal(trackList.scrollTop, 68);
+    await act(async () => scrollRail.dispatchEvent(new KeyboardEvent("keydown", { key: "Home", bubbles: true })));
+    assert.equal(trackList.scrollTop, 0);
+    const pointer = (type, clientY) => {
+      const event = new MouseEvent(type, { clientY, button: 0, bubbles: true });
+      Object.defineProperty(event, "pointerId", { value: 1 });
+      return event;
+    };
+    await act(async () => {
+      scrollRail.dispatchEvent(pointer("pointerdown", 30));
+      scrollRail.dispatchEvent(pointer("pointermove", 75));
+      scrollRail.dispatchEvent(pointer("pointerup", 75));
+    });
+    assert.equal(trackList.scrollTop, 68, "dragging the custom thumb reaches the bottom of the queue");
+    await act(async () => [...document.querySelectorAll('[aria-label="播放队列"] button')].find((node) => node.textContent.includes("Track 3")).click());
+    await waitFor(() => assert.equal(document.querySelector(".music-stage-record h2")?.textContent, "Track 3"));
+    await waitFor(() => assert.equal(document.querySelector('[role="dialog"]'), null));
+    await act(async () => {
+      history.pushState({}, "", "/music");
+      window.dispatchEvent(new Event("fonscape:navigate"));
+      mountedRoot.render(createElement(MusicRecord, { entry: seed }));
+    });
+    await waitFor(() => assert.equal(document.querySelector(".music-record-copy h3")?.textContent, "Track 3"));
+    assert.equal(audios.at(-1).paused, false, "returning to the music shelf keeps the selected track playing");
+    assert.equal(audios.at(-1).src, "/audio/3");
+    await act(async () => {
+      history.pushState({}, "", "/music/albums/test-album");
+      window.dispatchEvent(new Event("fonscape:navigate"));
+      mountedRoot.render(createElement(MusicStage, { seed }));
+    });
+    await waitFor(() => assert.equal(document.querySelector(".music-stage-record h2")?.textContent, "Track 3"));
+    assert.equal(libraryRequests.length, 1);
+    const audioCountBeforeStop = audios.length;
+    await act(async () => musicSession.stop());
+    await waitFor(() => {
+      assert.equal(musicSession.getSnapshot().entry, null);
+      assert.equal(document.querySelector(".music-stage-record h2")?.textContent, "Album");
+      assert.equal(audios.at(-1).src, "");
+    });
+    await new Promise((resolve) => setTimeout(resolve, 25));
+    assert.equal(audios.length, audioCountBeforeStop, "stopping on the detail route must not allocate another audio element");
+    assert.equal(libraryRequests.length, 1, "stopping on the detail route must not reload the library");
+    await act(async () => {
+      history.pushState({}, "", "/music");
+      window.dispatchEvent(new Event("fonscape:navigate"));
+      mountedRoot.render(createElement(MusicRecord, { entry: seed }));
+    });
+    await act(async () => document.querySelector('button[aria-label="播放 Album"]').click());
+    await waitFor(() => assert.equal(document.querySelector('button[aria-label="暂停 Album"]')?.getAttribute("aria-pressed"), "true"));
+    assert.equal(location.pathname, "/music");
+    assert.equal(audios.at(-1).paused, false, "playing from the shelf starts audio after an explicit stop");
+    assert.equal(audios.at(-1).src, "/audio/1");
+    assert.equal(libraryRequests.length, 2);
+    await act(async () => {
+      history.pushState({}, "", "/posts");
+      window.dispatchEvent(new Event("fonscape:navigate"));
+    });
+    assert.equal(location.pathname, "/posts");
+    assert.equal(audios.at(-1).paused, false, "leaving the music section keeps global playback active");
+    assert.equal(musicSession.getSnapshot().playing, true);
+    assert.equal(document.querySelector('button[aria-label="暂停 Album"]')?.getAttribute("aria-pressed"), "true");
+    await act(async () => musicSession.stop());
+    assert.equal(audios.at(-1).paused, true);
+    assert.equal(audios.at(-1).src, "");
+    assert.equal(musicSession.getSnapshot().playing, false);
+  } finally {
+    if (mountedRoot) {
+      await act(async () => mountedRoot.unmount());
+      mountedRoot = null;
+    }
+    musicSession.stop();
+    globalThis.Audio = oldAudio;
+  }
+});
+
+test("music shelf play control toggles playback without navigating and its cover keeps the detail link", async () => {
+  installDom("/music");
+  await loadApplication();
+  const oldAudio = globalThis.Audio;
+  const audios = [];
+  class AudioFixture {
+    constructor(src) { this.src = src; this.paused = true; this.currentTime = 0; this.duration = 90; this.listeners = new Map(); audios.push(this); }
+    load() {}
+    removeAttribute(name) { if (name === "src") this.src = ""; }
+    addEventListener(name, callback) { this.listeners.set(name, callback); }
+    removeEventListener(name) { this.listeners.delete(name); }
+    async play() { this.paused = false; this.listeners.get("play")?.(); }
+    pause() { this.paused = true; this.listeners.get("pause")?.(); }
+  }
+  globalThis.Audio = AudioFixture;
+  globalThis.fetch = async (url) => makeResponse(String(url).includes("lyrics")
+    ? { lyric: "", translation: "" }
+    : { truncated: false, tracks: [1, 2, 3].map((id) => ({ id: String(id), source: "netease", title: `Track ${id}`, artist: `Artist ${id}`, cover: "", src: `/audio/${id}`, lyricUrl: `/lyrics/${id}` })) });
+  const [{ MusicRecord }, { musicSession }] = await Promise.all([
+    viteServer.ssrLoadModule("/src/components/MusicRecord.tsx"),
+    viteServer.ssrLoadModule("/src/musicSession.ts"),
+  ]);
+  musicSession.stop();
+  try {
+    const entry = { title: "Album note", sourceTitle: "Album", sourceMeta: "Artist", kind: "专辑", section: "albums", slug: "test-album", date: "2026-10-02", wordCount: 0, firstParagraph: "", image: "/assets/cover.webp", url: "https://music.163.com/album?id=123" };
+    mountedRoot = createRoot(document.getElementById("root"));
+    await act(async () => mountedRoot.render(createElement(MusicRecord, { entry })));
+    const cover = document.querySelector("a.music-record-art");
+    assert.equal(cover?.getAttribute("href"), "/music/albums/test-album");
+    assert.equal(document.querySelector('button[aria-label="播放 Album"]')?.getAttribute("aria-pressed"), "false");
+
+    await act(async () => document.querySelector('button[aria-label="播放 Album"]').click());
+    await waitFor(() => assert.equal(document.querySelector('button[aria-label="暂停 Album"]')?.getAttribute("aria-pressed"), "true"));
+    assert.equal(location.pathname, "/music", "playing from the shelf does not open the detail route");
+    assert.equal(cover.getAttribute("href"), "/music/albums/test-album");
+    await act(async () => musicSession.selectTrack(2));
+    await waitFor(() => {
+      assert.equal(document.querySelector(".music-record-copy h3")?.textContent, "Track 3");
+      assert.equal(document.querySelector(".music-record-copy p")?.textContent, "Artist 3");
+    });
+
+    await act(async () => document.querySelector('button[aria-label="暂停 Album"]').click());
+    await waitFor(() => {
+      assert.equal(document.querySelector('button[aria-label="播放 Album"]')?.getAttribute("aria-pressed"), "false");
+      assert.equal(document.querySelector(".music-record-copy h3")?.textContent, "Album");
+      assert.equal(document.querySelector(".music-record-copy p")?.textContent, "Artist");
+    });
+    assert.equal(audios.at(-1).paused, true, "the pause control pauses the audio element");
+    assert.equal(location.pathname, "/music");
+
+    await act(async () => document.querySelector('button[aria-label="播放 Album"]').click());
+    await waitFor(() => {
+      assert.equal(document.querySelector('button[aria-label="暂停 Album"]')?.getAttribute("aria-pressed"), "true");
+      assert.equal(document.querySelector(".music-record-copy h3")?.textContent, "Track 3");
+      assert.equal(document.querySelector(".music-record-copy p")?.textContent, "Artist 3");
+    });
+    assert.equal(audios.at(-1).paused, false);
+    assert.equal(location.pathname, "/music");
+  } finally {
+    if (mountedRoot) {
+      await act(async () => mountedRoot.unmount());
+      mountedRoot = null;
+    }
+    musicSession.stop();
+    globalThis.Audio = oldAudio;
+  }
+});
+
+test("global music mini player seeks and pauses without discarding its queue", async () => {
+  installDom("/music");
+  await loadApplication();
+  const oldAudioDescriptor = Object.getOwnPropertyDescriptor(globalThis, "Audio");
+  const oldFetchDescriptor = Object.getOwnPropertyDescriptor(globalThis, "fetch");
+  const audios = [];
+  class AudioFixture {
+    constructor(src) { this.src = src; this.paused = true; this.currentTime = 0; this.duration = 90; this.listeners = new Map(); audios.push(this); }
+    load() {}
+    removeAttribute(name) { if (name === "src") this.src = ""; }
+    addEventListener(name, callback) { this.listeners.set(name, callback); }
+    removeEventListener(name) { this.listeners.delete(name); }
+    async play() { this.paused = false; this.listeners.get("play")?.(); }
+    pause() { this.paused = true; this.listeners.get("pause")?.(); }
+    emit(name) { this.listeners.get(name)?.(); }
+  }
+  globalThis.Audio = AudioFixture;
+  let trackCount = 1;
+  globalThis.fetch = async (url) => makeResponse(String(url).includes("lyrics")
+    ? { lyric: "", translation: "" }
+    : { truncated: false, tracks: Array.from({ length: trackCount }, (_, index) => ({ id: String(index + 1), source: "netease", title: `Track ${index + 1}`, artist: "Artist", cover: "", src: `/audio/${index + 1}`, lyricUrl: `/lyrics/${index + 1}` })) });
+  const [{ MusicMiniPlayer }, { musicSession }] = await Promise.all([
+    viteServer.ssrLoadModule("/src/components/MusicMiniPlayer.tsx"),
+    viteServer.ssrLoadModule("/src/musicSession.ts"),
+  ]);
+  await act(async () => musicSession.stop());
+  try {
+    mountedRoot = createRoot(document.getElementById("root"));
+    await act(async () => mountedRoot.render(createElement("div", { className: "main-nav-music" }, createElement("a", { href: "/music" }, "音乐"), createElement(MusicMiniPlayer))));
+    const entry = { title: "Album note", sourceTitle: "Album", sourceMeta: "Artist", kind: "专辑", section: "albums", slug: "test-album", date: "2026-10-02", wordCount: 0, firstParagraph: "", image: "https://fonstage.test/cover.jpg", url: "https://music.163.com/album?id=123" };
+    await act(async () => musicSession.load(entry));
+    const audio = audios.at(-1);
+    await act(async () => audio.emit("loadedmetadata"));
+    const timeline = document.querySelector('input[aria-label="全局音乐播放进度"]');
+    assert.ok(timeline);
+    assert.equal(timeline.disabled, false);
+    await setInputValue(timeline, "27");
+    assert.equal(audio.currentTime, 27);
+    assert.equal(musicSession.getSnapshot().time, 27);
+
+    assert.equal(document.querySelector('button[aria-label="关闭全局音乐播放器"]'), null);
+    await act(async () => document.querySelector('button[aria-label="暂停全局音乐"]').click());
+    assert.equal(audio.paused, true);
+    assert.equal(musicSession.getSnapshot().time, 27);
+    assert.equal(musicSession.getSnapshot().entry.slug, "test-album");
+    assert.ok(document.querySelector(".music-mini-player"));
+    await act(async () => document.querySelector('button[aria-label="播放全局音乐"]').click());
+    assert.equal(audio.paused, false);
+    assert.equal(audios.length, 1, "resume uses the existing audio and position");
+    assert.equal(document.querySelector('a[aria-label="查看正在播放的音乐详情"]')?.getAttribute("href"), "/music/albums/test-album");
+    assert.equal(document.querySelector(".music-mini-player__mode"), null, "single tracks hide playback-mode selection");
+    const volumeToggle = document.querySelector('.music-mini-player__volume button');
+    assert.equal(volumeToggle.getAttribute("aria-expanded"), "false");
+    await act(async () => volumeToggle.click());
+    assert.equal(volumeToggle.getAttribute("aria-expanded"), "true");
+    assert.equal(document.querySelector(".music-mini-player__transport").hasAttribute("inert"), true, "expanded volume takes the transport space without leaving hidden controls focusable");
+    const volume = document.querySelector('input[aria-label="音乐音量"]');
+    await setInputValue(volume, ".37");
+    assert.equal(audio.volume, .37);
+    await setInputValue(volume, "0");
+    assert.equal(audio.volume, 0);
+    await setInputValue(volume, "1");
+    assert.equal(audio.volume, 1);
+    await act(async () => volumeToggle.click());
+    assert.equal(volumeToggle.getAttribute("aria-expanded"), "false");
+    assert.equal(document.querySelector(".music-mini-player__transport").hasAttribute("inert"), false);
+    assert.equal(audio.volume, 1, "collapsing the slider retains the selected volume");
+    trackCount = 3;
+    await act(async () => musicSession.load(entry));
+    await act(async () => document.querySelector('button[aria-label="顺序播放，切换播放模式"]').click());
+    assert.equal(musicSession.getSnapshot().repeat, true);
+    await act(async () => document.querySelector('button[aria-label="单曲循环，切换播放模式"]').click());
+    assert.equal(musicSession.getSnapshot().shuffle, true);
+    assert.equal(musicSession.getSnapshot().repeat, false);
+    await act(async () => document.querySelector('button[aria-label="随机播放，切换播放模式"]').click());
+    assert.equal(musicSession.getSnapshot().shuffle, false);
+    const cover = document.querySelector('a[aria-label="查看正在播放的音乐详情"]');
+    cover.addEventListener("click", (event) => event.preventDefault(), { once: true });
+    await act(async () => cover.click());
+    assert.equal(document.querySelector(".music-mini-player__desktop").getAttribute("aria-hidden"), "true", "cover navigation dismisses the mini player");
+    await act(async () => document.querySelector(".main-nav-music").dispatchEvent(new Event("pointerleave")));
+    assert.equal(document.querySelector(".music-mini-player__desktop").getAttribute("aria-hidden"), "true", "the close-induced pointerleave cannot reopen the player");
+    await act(async () => document.querySelector(".main-nav-music>a").dispatchEvent(new Event("pointerenter")));
+    assert.equal(document.querySelector(".music-mini-player__desktop").getAttribute("aria-hidden"), null, "a fresh pointer entry can reopen the player");
+  } finally {
+    await act(async () => musicSession.stop());
+    if (oldAudioDescriptor) Object.defineProperty(globalThis, "Audio", oldAudioDescriptor);
+    else delete globalThis.Audio;
+    if (oldFetchDescriptor) Object.defineProperty(globalThis, "fetch", oldFetchDescriptor);
+    else delete globalThis.fetch;
+  }
 });
 
 test("post URL filters clear on navigation and detail return preserves category and reading position", async () => {

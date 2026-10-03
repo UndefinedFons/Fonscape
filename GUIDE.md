@@ -133,7 +133,7 @@ home: {
 | --- | --- |
 | 文章 | `src/content/posts/*.md` |
 | 小诗 | `src/content/poems/*.md` |
-| 音乐手记 | `src/content/music/*.md` |
+| 音乐收藏 | `src/content/music/*.md` |
 | 图片 | `public/assets/` |
 | 音频 | `public/audio/` |
 
@@ -149,7 +149,7 @@ Cloudflare 通过 `wrangler.jsonc` 中的 `DB` 绑定连接 D1。真实密钥不
 
 ## 内容撰写
 
-文章、小诗与音乐手记都采用“单个 Markdown + Frontmatter + 自动扫描”。新增内容时只需在对应目录新建一个 `.md` 文件，不需要维护 JavaScript 索引，也不需要在 API 中再次登记评论或浏览量目标。
+文章、小诗与音乐收藏都采用“单个 Markdown + Frontmatter + 自动扫描”。新增内容时只需在对应目录新建一个 `.md` 文件，不需要维护 JavaScript 索引，也不需要在 API 中再次登记评论或浏览量目标。
 
 Frontmatter 使用 `key: value` 写法。字符串统一使用双引号；布尔值、数字与 `null` 不加引号；数组和对象必须写成合法 JSON，例如 `tags: ["阅读", "技术"]`。
 
@@ -223,7 +223,7 @@ musicPlacement: "inline"
 music: {"url":"https://music.163.com/song?id=123456"}
 ```
 
-Fonscape 会在文章打开时取得曲名、音乐人、封面和可播放地址。`url` 仅接受能够直接识别歌曲 ID 的网易云音乐或 QQ 音乐单曲链接；专辑、歌单、歌手页面和跳转短链不受支持。
+Fonscape 会在文章打开时取得曲名、音乐人、封面和可播放地址。`url` 必须是可识别单曲 ID 的网易云音乐或 QQ 音乐歌曲页面链接；专辑和歌单链接请放入音乐收藏。
 
 构建时，Fonscape 会根据 Markdown 内容生成歌曲白名单。运行时接口只解析当前站点文章实际引用的歌曲；新增或更换 URL 后，需要重新构建并部署站点。
 
@@ -247,42 +247,61 @@ music: {"src":"/audio/example.mp3","cover":"/assets/example.webp","title":"曲�
 
 `musicPlacement: "inline"` 对 Meting 单曲 URL 和本地媒体都生效，并沿用同一套播放器样式。内联播放器不会自动播放；浏览器也可能阻止详情页播放器的有声自动播放，此时读者可手动点击播放。
 
-### 新建音乐手记
+### 新建音乐收藏
 
-在 `src/content/music/` 新建文件，例如 `a-song.md`：
+在 `src/content/music/` 新建文件，例如 `an-album.md`：
 
 ```md
 ---
-title: "一首歌"
-kind: "歌曲"
-section: "songs"
+title: "一张专辑的听后感"
+kind: "专辑"
+section: "albums"
 date: "2026-07-27T20:00"
-excerpt: "关于这首歌的一段简介。"
-image: "/assets/a-song.webp"
-url: "https://example.com"
-action: "前往收听"
-sourceTitle: "曲名"
+excerpt: "关于这张专辑的一段简介。"
+image: "/assets/an-album.webp"
+url: "https://music.163.com/album?id=34720827"
+sourceTitle: "专辑名称"
 sourceMeta: "音乐人"
+featured: true
+featuredOrder: 10
 ---
 
-这里直接撰写 Markdown 正文。
+这里写可选的聆听手记，也可以留空。
 ```
 
-`section` 可使用 `songs`、`artists` 或 `albums`，分别对应歌曲、音乐人和专辑。必填字段为 `title`、`kind`、`date`；`section` 未填写时默认为 `songs`。
+歌曲、专辑与歌单共同显示在一个唱片架中。`section` 标记条目类型：`songs` 对应歌曲，`albums` 对应专辑，`playlists` 对应歌单；省略时默认为 `songs`。`kind` 是唱片架上显示的类型文字，通常与 `section` 对应。必填字段为 `title`、`kind` 和 `date`。
+
+Markdown 正文是可选的聆听手记；正文留空时仍可发布音乐收藏，详情页不显示手记面板。正文存在时，`title` 用作手记标题，`excerpt` 可提供摘要。`sourceTitle` 填写曲名、专辑名或歌单名，`sourceMeta` 填写音乐人或创作者，`image` 提供唱片架和播放器的封面。
+
+`url` 填入网易云音乐或 QQ 音乐的歌曲、专辑或歌单页面链接时，站点会载入对应曲目。其他外部链接可作为来源入口，不会在站内播放：
+
+```yaml
+url: "https://music.163.com/playlist?id=34720828"
+```
+
+唱片上的播放按钮会就地播放或暂停；点击封面打开该条目的详情页。带有可识别 `url` 的条目会在详情页载入曲目并尝试播放；如果浏览器阻止自动播放，点击播放按钮即可继续，曲目暂时无法载入时可重试。
+
+播放器提供上一首、下一首、进度和音量控制。多曲目时可切换顺序、单曲循环或随机播放：顺序模式到队尾后回到第一首，单曲循环重复当前曲目，随机模式从其他曲目中随机切换。只有一首曲目时会在结束后自动重播。曲目列表弹窗支持选择曲目，并提供可拖动的自定义滚动条。歌词按时间同步显示，平台提供译文时会一并显示；点击歌词可跳到对应位置。
+
+播放状态会在页面导航时保留。导航中的迷你播放器显示当前曲目；点击封面进入该条目的详情页并收起迷你播放器。音乐播放和文章配乐共用播放控制，同一时间只播放其中一种。
+
+置顶收藏排在普通收藏之前。置顶条目按 `featuredOrder` 从小到大排列；未填写该字段的置顶条目接在已编号条目之后，并按发布时间从新到旧排列。普通收藏也按发布时间从新到旧排列。编号可以有间隔；`featuredOrder` 必须是正整数，且只能与 `featured: true` 一起使用。
 
 | 字段 | 必填 | 说明 |
 | --- | --- | --- |
-| `title` | 是 | 手记标题 |
-| `kind` | 是 | 内容类型，例如 `歌曲`、`音乐人`、`专辑` |
-| `date` | 是 | 发布时间 |
-| `section` | 否 | `songs`、`artists` 或 `albums` |
+| `title` | 是 | 收藏标题；有正文时也作为聆听手记标题 |
+| `kind` | 是 | 唱片架显示的类型文字，例如 `歌曲`、`专辑`、`歌单` |
+| `date` | 是 | 发布时间，使用 ISO 日期 |
+| `section` | 否 | 条目类型：`songs`、`albums` 或 `playlists`；默认 `songs` |
 | `slug` | 否 | 自定义地址；默认取文件名 |
-| `excerpt` | 否 | 手记摘要 |
-| `image` | 否 | 封面路径 |
-| `url` | 否 | 外部收听或资料地址 |
-| `action` | 否 | 外部跳转按钮文字，默认“前往收听” |
-| `sourceTitle` | 否 | 外部来源卡片标题，默认使用手记标题 |
-| `sourceMeta` | 否 | 外部来源卡片副标题，默认使用 `kind` |
+| `excerpt` | 否 | 有手记正文时显示的摘要 |
+| `image` | 否 | 唱片架封面；也作为播放器封面的备用图片 |
+| `url` | 否 | 网易云音乐或 QQ 音乐的歌曲、专辑、歌单链接；其他链接作为外部来源入口 |
+| `action` | 否 | 外部来源入口的按钮文字，默认 `查看来源` |
+| `sourceTitle` | 否 | 曲名、专辑名或歌单名；省略时使用 `title` |
+| `sourceMeta` | 否 | 音乐人或创作者；省略时不显示 |
+| `featured` | 否 | 是否置顶到音乐空间列表和首页 MUSIC ROOM 前部，默认 `false` |
+| `featuredOrder` | 否 | 置顶顺序，必须是正整数；仅可在 `featured: true` 时使用 |
 
 ### 新建小诗
 
@@ -306,7 +325,7 @@ date: "2026-07-27T20:00"
 
 ### Markdown 正文
 
-文章与音乐手记正文支持 GFM Markdown，包括：
+文章与音乐收藏正文支持 GFM Markdown，包括：
 
 - 标题、段落、链接、引用、列表与任务列表
 - 表格
@@ -326,7 +345,7 @@ date: "2026-07-27T20:00"
 
 #### 提示块
 
-文章与音乐手记支持 GitHub 风格的提示块。将提示标记放在引用块的第一行，后面继续写正文：
+文章与音乐收藏正文支持 GitHub 风格的提示块。将提示标记放在引用块的第一行，后面继续写正文：
 
 ```md
 > [!NOTE]

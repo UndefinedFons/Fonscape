@@ -1,5 +1,5 @@
 import type { ImgHTMLAttributes } from "react";
-import type { ContentStats, HomePost, OnStatsTargets } from "../types.ts";
+import type { ContentStats, HomeMusic, HomePost, OnStatsTargets } from "../types.ts";
 import { Article } from "@phosphor-icons/react/Article";
 import { BookOpenText } from "@phosphor-icons/react/BookOpenText";
 import { ChatCircleDots } from "@phosphor-icons/react/ChatCircleDots";
@@ -13,7 +13,14 @@ import { authorProfile, contentRoute, homeContent, loadFeaturedChunk, siteConfig
 import { ArticleCover } from "../components/Cards.tsx";
 import { HeroShell } from "../components/PageHero.tsx";
 import { useHorizontalScroller } from "../hooks.ts";
-import { getMusicSectionIcon } from "../musicSections.ts";
+import { SpinnerGap } from "@phosphor-icons/react/SpinnerGap";
+import { Pause } from "@phosphor-icons/react/Pause";
+import { Play } from "@phosphor-icons/react/Play";
+import { musicSession } from "../musicSession.ts";
+import { useMusicSession } from "../useMusicSession.ts";
+import { parseMetingLibraryUrl } from "../musicSources.ts";
+import { Disc } from "@phosphor-icons/react/Disc";
+import { useResponsiveImage } from "../useResponsiveImage.ts";
 import { getPostFirstParagraph } from "../richContent.ts";
 import { responsiveImageProps, responsiveImageUrl } from "../responsiveImages.ts";
 import { getSectionAvailability } from "../sectionAvailability.ts";
@@ -24,6 +31,25 @@ const sectionState = getSectionAvailability(siteConfig);
 const showPoems = sectionState.poems;
 const showMusic = sectionState.music;
 const homeStatsCount = 1 + Number(showPoems) + Number(showMusic);
+
+function HomeMusicCard({ entry }: { entry: HomeMusic }) {
+  const image = useResponsiveImage(entry.image, "64px");
+  const state = useMusicSession();
+  const active = state.entry?.section === entry.section && state.entry?.slug === entry.slug;
+  const playing = active && state.playing;
+  const loading = active && state.status === "loading";
+  const toggle = () => {
+    if (active && state.status === "ready") musicSession.toggle();
+    else if (!loading) void musicSession.load({ ...entry, firstParagraph: "", wordCount: 0 });
+  };
+  return <div className="home-music-card">
+    <a href={contentRoute("music", entry)}>
+      <div className="home-music-cover">{image.src ? <img {...image} alt={`${entry.sourceTitle || entry.title}的封面`} loading="lazy" decoding="async" /> : <Disc size={28} weight="duotone" />}</div>
+      <span><strong>{entry.sourceTitle || entry.title}</strong>{entry.sourceMeta && <small>{entry.sourceMeta}</small>}</span>
+    </a>
+    {parseMetingLibraryUrl(entry.url) && <button className="home-music-play" aria-label={`${playing ? "暂停" : "播放"} ${entry.sourceTitle || entry.title}`} aria-pressed={playing || loading} aria-busy={loading} onClick={toggle}><span className={loading ? "is-loading" : ""} key={loading ? "loading" : String(playing)}>{loading ? <SpinnerGap size={17} /> : playing ? <Pause size={17} weight="fill" /> : <Play size={17} weight="fill" />}</span></button>}
+  </div>;
+}
 
 function applyFeaturedTone(image: HTMLImageElement) {
   const feature = image.closest<HTMLElement>(".home-refresh-feature");
@@ -153,7 +179,7 @@ export function HomePage({ stats, onStatsTargets }: { stats: ContentStats; onSta
             <span><small>ABOUT ME</small><strong id="home-profile-name">{authorProfile.name}</strong><em>{authorProfile.tagline}</em></span>
           </div>
           <p>{authorProfile.introduction}</p>
-          <div className="home-refresh-stats" style={{ "--home-stats-count": homeStatsCount }} aria-label={[`${homeContent.counts.post || 0} 篇文章`, showPoems && `${homeContent.counts.poem || 0} 首小诗`, showMusic && `${homeContent.counts.music || 0} 篇音乐手记`].filter(Boolean).join("，")}>
+          <div className="home-refresh-stats" style={{ "--home-stats-count": homeStatsCount }} aria-label={[`${homeContent.counts.post || 0} 篇文章`, showPoems && `${homeContent.counts.poem || 0} 首小诗`, showMusic && `${homeContent.counts.music || 0} 张音乐收藏`].filter(Boolean).join("，")}>
             <span><strong>{homeContent.counts.post || 0}</strong><small>文章</small></span>
             {showPoems && <span><strong>{homeContent.counts.poem || 0}</strong><small>小诗</small></span>}
             {showMusic && <span><strong>{homeContent.counts.music || 0}</strong><small>音乐</small></span>}
@@ -195,17 +221,11 @@ export function HomePage({ stats, onStatsTargets }: { stats: ContentStats; onSta
 
         {showMusic && <section className="home-refresh-section home-refresh-music material-panel" aria-labelledby="home-music-title">
           <header className="home-refresh-section-heading">
-            <span><small>MUSIC NOTES</small><h2 id="home-music-title">耳边正在发生</h2></span>
-            <a href={routeHref("/music")}>音乐手记</a>
+            <span><small>MUSIC ROOM</small><h2 id="home-music-title">耳边正在发生</h2></span>
+            <a href={routeHref("/music")}>走进音乐</a>
           </header>
           {latestMusic.length ? <div className="home-refresh-list home-refresh-mini-track" {...musicScroller}>
-            {latestMusic.map((entry) => {
-              const EntryIcon = getMusicSectionIcon(entry.section);
-              return <a href={contentRoute("music", entry)} key={`${entry.section}-${entry.slug}`}>
-                <EntryIcon size={21} weight="duotone" />
-                <span><small>{entry.kind} · {formatContentDate(entry.date).slice(0, 10)}</small><strong>{entry.title}</strong></span>
-              </a>;
-            })}
+            {latestMusic.map((entry) => <HomeMusicCard entry={entry} key={`${entry.section}-${entry.slug}`} />)}
           </div> : <div className="home-refresh-empty" role="status"><MusicNotes size={29} weight="duotone" /><strong>暂无音乐</strong></div>}
         </section>}
       </div>}

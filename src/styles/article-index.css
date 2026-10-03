@@ -87,132 +87,6 @@
 .article-card .post-meta span { font-size:9px; }
 .article-card .post-meta span:nth-child(2) { margin-left:0; }
 
-.music-review-card {
-  display:block;
-}
-.music-review-grid {
-  width:100%;
-  max-width:980px;
-  margin-inline:auto;
-}
-.music-review-layout {
-  display:grid;
-  grid-template-columns:clamp(150px,20cqw,188px) minmax(0,1fr);
-  gap:clamp(20px,3cqw,32px);
-  align-items:center;
-  padding:clamp(14px,1.9cqw,20px);
-}
-.music-review-media {
-  position:relative;
-  grid-column:1;
-  grid-row:1;
-  align-self:center;
-  width:100%;
-  aspect-ratio:1;
-  overflow:hidden;
-  border:1px solid color-mix(in srgb,var(--line) 78%,transparent);
-  border-radius:clamp(16px,2cqw,21px);
-  background:var(--surface-soft);
-  box-shadow:0 11px 30px color-mix(in srgb,var(--shadow-color) 34%,transparent);
-}
-.music-review-card .article-card-media-image { object-fit:cover; }
-.music-review-card .article-card-copy {
-  grid-column:2;
-  grid-row:1;
-  min-height:0;
-  align-items:flex-start;
-  justify-content:start;
-  align-self:stretch;
-  padding:0;
-  text-align:left;
-}
-.music-review-card .category,
-.music-review-card h2 { text-align:left; }
-.music-review-card h2 { margin:clamp(4px,1cqw,9px) 0 clamp(5px,1.1cqw,10px); font-size:clamp(14px,2.5cqw,25px); line-height:1.46; }
-.music-review-card .article-card-excerpt {
-  max-width:620px;
-  justify-items:start;
-  margin-bottom:clamp(6px,1cqw,10px);
-  padding:clamp(2px,.5cqw,4px) 0 clamp(5px,.8cqw,8px);
-  background:transparent;
-  text-align:left;
-}
-.music-review-card .article-card-excerpt>p { font-size:clamp(8px,1.25cqw,10px); line-height:1.58; }
-.music-review-credits {
-  width:100%;
-  min-width:0;
-  display:grid;
-  grid-template-columns:auto minmax(0,1fr);
-  align-items:center;
-  gap:clamp(6px,.9cqw,9px);
-  margin-top:clamp(2px,.5cqw,5px);
-  color:var(--muted);
-  text-align:left;
-}
-.music-review-credits>svg { flex:none; color:var(--accent); }
-.music-review-credits>span { min-width:0; display:grid; gap:1px; }
-.music-review-credits strong {
-  display:-webkit-box;
-  overflow:hidden;
-  color:color-mix(in srgb,var(--text) 88%,var(--accent));
-  font:600 clamp(9px,1.15cqw,11px)/1.45 "Zen Maru Gothic",sans-serif;
-  -webkit-box-orient:vertical;
-  -webkit-line-clamp:2;
-}
-.music-review-credits em {
-  overflow:hidden;
-  color:var(--muted);
-  font-size:clamp(8px,1cqw,10px);
-  font-style:normal;
-  line-height:1.45;
-  text-overflow:ellipsis;
-  white-space:nowrap;
-}
-.music-review-card .post-meta {
-  justify-content:flex-start;
-  gap:clamp(5px,.9cqw,9px) clamp(8px,1.3cqw,12px);
-  margin:auto 0 0;
-  padding-top:clamp(7px,1.3cqw,13px);
-}
-@container (max-width:700px) {
-  .music-review-layout {
-    grid-template-columns:clamp(92px,29cqw,118px) minmax(0,1fr);
-    gap:clamp(12px,4cqw,17px);
-    align-items:center;
-    padding:clamp(12px,4cqw,17px);
-  }
-  .music-review-media {
-    grid-column:1;
-    grid-row:1;
-    width:100%;
-    aspect-ratio:1;
-    align-self:center;
-  }
-  .music-review-card .article-card-copy {
-    grid-column:2;
-    grid-row:1;
-    min-height:0;
-    justify-content:start;
-    padding:0;
-  }
-  .music-review-card h2 {
-    margin-block:3px 5px;
-    font-size:clamp(13px,4.2cqw,17px);
-    line-height:1.4;
-  }
-  .music-review-card .article-card-excerpt { margin-bottom:5px; padding-bottom:4px; }
-  .music-review-card .article-card-excerpt>p { font-size:clamp(8px,2.5cqw,10px); }
-  .music-review-credits { gap:5px; margin-top:2px; }
-  .music-review-credits>svg { width:13px; height:13px; }
-  .music-review-credits strong { font-size:clamp(7px,2.3cqw,9px); line-height:1.4; }
-  .music-review-credits em { font-size:clamp(7px,2.1cqw,8px); white-space:normal; }
-}
-@container (max-width:460px) {
-  .music-review-card .post-meta { flex-wrap:nowrap; justify-content:flex-start; gap:clamp(4px,1cqw,7px); }
-  .music-review-card .post-meta span { min-width:0; justify-content:flex-start; gap:3px; font-size:clamp(7px,2.2cqw,8px); white-space:nowrap; }
-  .music-review-card .post-meta svg { width:12px; height:12px; }
-}
-
 .article-filter-backdrop { z-index:80; }
 .article-filter-dialog { width:min(590px,calc(100% - 24px)); max-height:min(720px,calc(100vh - 56px)); overflow:auto; padding:26px; border:1px solid var(--line); border-radius:24px; background:var(--surface); box-shadow:0 25px 80px rgba(43,23,52,.25); animation:dialog-panel-in .34s cubic-bezier(.22,1,.36,1) both; }
 .article-filter-dialog>header { display:flex; align-items:center; justify-content:space-between; gap:16px; margin-bottom:22px; }
@@ -369,7 +243,6 @@
   .article-index-actions button { flex:1; justify-content:center; }
   .article-card-copy { min-height:160px; padding:16px; }
   .article-card .post-meta span:nth-child(2) { margin-left:0; }
-  .music-review-card .post-meta span:nth-child(2) { width:auto; justify-content:flex-start; }
   .article-filter-dialog { max-height:calc(100dvh - 24px); padding:20px 17px 14px; border-radius:20px; }
   .article-filter-dialog>header h2 { font-size:22px; }
   .archive-timeline { padding-left:0; }
@@ -403,7 +276,6 @@
   .friend-request form { grid-template-columns:1fr; }
   .friend-request-wide { grid-column:auto; }
   .friend-request-preview pre { min-height:0; padding:15px; font-size:10px; }
-  .music-review-card .article-card-excerpt>span { font-size:7px; }
 }
 
 /* Responsive article controls */

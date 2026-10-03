@@ -25,15 +25,23 @@ function holdInert(element: HTMLElement): () => void {
   };
 }
 
-function focusableWithin(dialog: HTMLElement): HTMLElement[] {
-  return [...dialog.querySelectorAll<HTMLElement>(focusableSelector)].map((element) => element).filter((element) => {
-    if (element.tabIndex < 0 || element.matches(":disabled") || element.closest("[hidden], [inert]")) return false;
+function focusableWithin(dialog: HTMLElement, firstOnly = false): HTMLElement[] {
+  const result: HTMLElement[] = [];
+  for (const element of dialog.querySelectorAll<HTMLElement>(focusableSelector)) {
+    if (element.tabIndex < 0 || element.matches(":disabled") || element.closest("[hidden], [inert]")) continue;
+    let visible = true;
     for (let parent: Element | null = element; parent && parent !== dialog; parent = parent.parentElement) {
       const style = window.getComputedStyle(parent);
-      if (style.display === "none" || style.visibility === "hidden") return false;
+      if (style.display === "none" || style.visibility === "hidden") {
+        visible = false;
+        break;
+      }
     }
-    return true;
-  });
+    if (!visible) continue;
+    result.push(element);
+    if (firstOnly) break;
+  }
+  return result;
 }
 
 export function containModalFocus(dialog: HTMLElement, restoreTarget: HTMLElement | null = null): () => void {
@@ -47,7 +55,7 @@ export function containModalFocus(dialog: HTMLElement, restoreTarget: HTMLElemen
     }
     branch = branch.parentElement;
   }
-  const focusFirst = () => (focusableWithin(dialog)[0] || dialog).focus({ preventScroll: true });
+  const focusFirst = () => (focusableWithin(dialog, true)[0] || dialog).focus({ preventScroll: true });
   focusFirst();
   const onKeyDown = (event: KeyboardEvent): void => {
     if (event.key !== "Tab") return;

@@ -433,14 +433,23 @@
 .home-refresh-empty>strong { font:600 13px/1.5 "Zen Maru Gothic",sans-serif; }
 .home-refresh-news-empty { min-height:220px; }
 .home-refresh-list>a:hover,
-.home-refresh-list>a:focus-visible {
+.home-refresh-list>a:focus-visible,
+.home-refresh-list>.home-music-card:has(:focus-visible) {
   border-color:color-mix(in srgb,var(--accent) 44%,var(--line));
   background:color-mix(in srgb,var(--accent-soft) 66%,var(--surface));
   box-shadow:inset 0 1px 0 color-mix(in srgb,#fff 36%,transparent),0 8px 20px color-mix(in srgb,var(--accent) 12%,transparent);
   transform:translateY(-2px);
   outline:none;
 }
-.home-refresh-list>a:active {
+@media (hover:hover) and (pointer:fine) {
+  .home-refresh-list>.home-music-card:hover {
+    border-color:color-mix(in srgb,var(--accent) 44%,var(--line));
+    background:color-mix(in srgb,var(--accent-soft) 66%,var(--surface));
+    box-shadow:inset 0 1px 0 color-mix(in srgb,#fff 36%,transparent),0 8px 20px color-mix(in srgb,var(--accent) 12%,transparent);
+    transform:translateY(-2px);
+  }
+}
+.home-refresh-list>:is(a,.home-music-card):active {
   border-color:color-mix(in srgb,var(--accent) 58%,var(--line));
   transform:translateY(0) scale(.985);
 }
@@ -462,7 +471,7 @@
   -webkit-overflow-scrolling:touch;
 }
 .home-refresh-list::-webkit-scrollbar { display:none; }
-.home-refresh-list>a {
+.home-refresh-list>:is(a,.home-music-card) {
   flex:0 0 min(270px,82%);
   min-width:0;
   min-height:92px;
@@ -547,7 +556,7 @@
   .home-refresh-news-copy { padding:15px 16px 14px; }
   .home-refresh-news-empty { min-height:150px; }
   .home-refresh-columns { grid-template-columns:1fr; gap:18px; }
-  .home-refresh-list>a { flex-basis:min(76vw,290px); min-height:82px; padding:11px 12px; }
+  .home-refresh-list>:is(a,.home-music-card) { flex-basis:min(76vw,290px); min-height:82px; padding:11px 12px; }
   .comments-material-panel { padding:22px 18px; border-radius:21px; }
   .about-layout.material-panel {
     border-radius:22px;
@@ -589,3 +598,25 @@
   .home-refresh-profile>p { font-size:11px; }
   .home-refresh-section-heading>a { font-size:11px; }
 }
+
+.home-refresh-music .home-music-card { display:flex; gap:10px; }
+.home-music-card>a { display:grid; grid-template-columns:64px minmax(0,1fr); align-items:center; gap:13px; min-width:0; flex:1; }
+.home-music-card>a>span { display:grid; min-width:0; gap:5px; }
+.home-music-cover { width:64px; height:64px; display:grid; place-items:center; border-radius:10px; overflow:hidden; background:var(--surface-soft); color:var(--blue); }
+.home-music-cover img { width:100%; height:100%; object-fit:cover; }
+.home-music-card strong { overflow:hidden; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; }
+
+.home-music-play { flex:none; width:32px; height:32px; display:grid; place-items:center; padding:0; border:0; border-radius:50%; color:var(--accent); background:color-mix(in srgb,var(--accent) 20%,var(--surface)); cursor:pointer; box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--accent) 32%,transparent),inset 0 1px 0 color-mix(in srgb,#fff 70%,transparent),0 3px 10px color-mix(in srgb,var(--accent) 12%,transparent); transition:transform .24s ease,background-color .24s ease,box-shadow .24s ease; }
+.home-music-play:active { transform:scale(.85); }
+.home-music-play>span { display:grid; place-items:center; animation:home-music-control-in .3s ease; }
+.home-music-play:focus-visible { outline:2px solid var(--accent); outline-offset:3px; }
+@keyframes home-music-control-in { from { opacity:0; transform:scale(.65); } to { opacity:1; transform:scale(1); } }
+@media (prefers-reduced-motion:reduce) { .home-music-play,.home-music-play>span { animation:none; transition:none; } }
+
+.home-music-play[aria-pressed="true"] { background:var(--accent); color:var(--surface); animation:home-play-selected .4s cubic-bezier(.22,1,.36,1); }
+@keyframes home-play-selected { 0% { transform:scale(.82); } 55% { transform:scale(1.12); } 100% { transform:scale(1); } }
+@media (prefers-reduced-motion:reduce) { .home-music-play[aria-pressed="true"] { animation:none; } }
+
+.home-music-play>span.is-loading { animation:home-music-loading 1s linear infinite; }
+@keyframes home-music-loading { to { transform:rotate(360deg); } }
+@media (prefers-reduced-motion:reduce) { .home-music-play>span.is-loading { animation:none; } }

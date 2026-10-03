@@ -56,7 +56,7 @@ test("music intent preloads the same section and complete slug used by detail lo
     const { loadMusicReview } = await server.ssrLoadModule("/src/content/index.ts");
     for (const [section, slug, route] of [
       ["songs", "nested/review", "/music/%73ongs/nested/review?from=search"],
-      ["artists", "artist", "/music/artists/artist"],
+      ["albums", "artist", "/music/albums/artist"],
       ["albums", "album", "/music/albums/album"],
     ]) {
       const requests = [];

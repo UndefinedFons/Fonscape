@@ -22,9 +22,18 @@ test("modal focus stays inside and returns to the opener after close", () => {
     const background = document.getElementById("background");
     const first = document.getElementById("first");
     const last = document.getElementById("last");
+    const tracks = document.createElement("div");
+    tracks.innerHTML = Array.from({ length: 1427 }, (_, index) => `<button>Track ${index + 1}</button>`).join("");
+    first.after(tracks);
+    const getStyle = window.getComputedStyle.bind(window);
+    let styleReads = 0;
+    window.getComputedStyle = (...args) => { styleReads += 1; return getStyle(...args); };
     opener.focus();
     const release = containModalFocus(document.getElementById("dialog"));
     assert.equal(document.activeElement, first);
+    assert.ok(styleReads < 10, "opening a large queue must not inspect every track before focusing the close control");
+    window.getComputedStyle = getStyle;
+    tracks.remove();
     assert.equal(opener.parentElement.inert, true);
     assert.equal(background.inert, true);
 

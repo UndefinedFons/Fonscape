@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "version": "1.19.0",
+  "version": "2.0.0",
   "ownership": {
     "user": [
       ".env",
@@ -64,7 +64,18 @@
       "tsconfig.json",
       "tsconfig.backend.json",
       "vite.config.mjs",
-      "worker/**"
+      "worker/**",
+      "src/musicTypes.ts",
+      "src/musicLyrics.ts",
+      "src/musicSession.ts",
+      "src/useMusicSession.ts",
+      "src/components/MusicMiniPlayer.tsx",
+      "src/components/MusicStage.tsx",
+      "src/components/MusicQueueDialog.tsx",
+      "src/components/MusicRecord.tsx",
+      "src/styles/music.css",
+      "src/styles/music-queue.css",
+      "src/styles/music-mini-player.css"
     ]
   }
 }

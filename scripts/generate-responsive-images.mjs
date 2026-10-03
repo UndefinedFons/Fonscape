@@ -174,8 +174,8 @@ async function referencedLocalImages() {
       addMarkdownTargets(targets, content);
     } else if (sourcePath.startsWith("src/content/music/")) {
       const entry = parseMusicReviewMetadata(sourcePath, source);
-      addTarget(targets, entry.image, "thumbnail");
-      if (!entry.url) addTarget(targets, entry.image, "detail");
+      addTarget(targets, entry.image, "card");
+      addTarget(targets, entry.image, "detail");
       addMarkdownTargets(targets, parseMarkdownSource(sourcePath, source).content);
     }
   }

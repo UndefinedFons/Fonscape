@@ -74,7 +74,6 @@
 :root[data-glass="on"] .poem-card,
 :root[data-glass="on"] .poem-page>article,
 :root[data-glass="on"] .music-tabs,
-:root[data-glass="on"] .music-source-card,
 :root[data-glass="on"] .friend-card,
 :root[data-glass="on"] .series-navigation,
 :root[data-glass="on"] .community-account-notice {
@@ -96,7 +95,7 @@
   background:color-mix(in srgb,var(--surface) 94%,transparent);
 }
 :root[data-glass="on"] .home-refresh-news-card,
-:root[data-glass="on"] .home-refresh-list>a,
+:root[data-glass="on"] .home-refresh-list>:is(a,.home-music-card),
 :root[data-glass="on"] .pagination button,
 :root[data-glass="on"] .article-index-actions button,
 :root[data-glass="on"] .comment-composer--reply,

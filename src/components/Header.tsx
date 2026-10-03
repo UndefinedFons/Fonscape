@@ -7,6 +7,7 @@ import { List } from "@phosphor-icons/react/List";
 import { ListNumbers } from "@phosphor-icons/react/ListNumbers";
 import { MagnifyingGlass } from "@phosphor-icons/react/MagnifyingGlass";
 import { Moon } from "@phosphor-icons/react/Moon";
+import { MusicMiniPlayer } from "./MusicMiniPlayer.tsx";
 import { Sun } from "@phosphor-icons/react/Sun";
 import { UserCircle } from "@phosphor-icons/react/UserCircle";
 import { UserCircleCheck } from "@phosphor-icons/react/UserCircleCheck";
@@ -141,7 +142,18 @@ export function Header({ route, theme, menuOpen, onMenu, onTheme, onSearch, onSe
     const updateIndicator = () => {
       const activeLink = nav.querySelector<HTMLAnchorElement>("a.active");
       if (!activeLink) return;
-      setIndicator({ x: activeLink.offsetLeft + (activeLink.offsetWidth - 24) / 2, ready: true });
+      let activeLeft = 0;
+      let offsetNode: HTMLElement | null = activeLink;
+      while (offsetNode && offsetNode !== nav) {
+        activeLeft += offsetNode.offsetLeft;
+        offsetNode = offsetNode.offsetParent instanceof HTMLElement ? offsetNode.offsetParent : null;
+      }
+      if (offsetNode !== nav) {
+        const navRect = nav.getBoundingClientRect();
+        const activeRect = activeLink.getBoundingClientRect();
+        activeLeft = activeRect.left - navRect.left;
+      }
+      setIndicator({ x: activeLeft + (activeLink.offsetWidth - 24) / 2, ready: true });
     };
     updateIndicator();
     const observer = new ResizeObserver(updateIndicator);
@@ -245,6 +257,10 @@ export function Header({ route, theme, menuOpen, onMenu, onTheme, onSearch, onSe
         <span className={indicator.ready ? "nav-active-indicator is-ready" : "nav-active-indicator"} style={{ "--indicator-x": `${indicator.x}px` } as CSSProperties} aria-hidden="true" />
         {navItems.map(([path, label]) => {
           const active = path === "/" ? route === "/" : route === path || route.startsWith(`${path}/`) || (path === "/posts" && route.startsWith("/post/")) || (path === "/poems" && route.startsWith("/poem/"));
+          if (path === "/music") return <div className="main-nav-music" key={path}>
+            <a className={active ? "active" : ""} href={routeHref(path)}>{label}</a>
+            <MusicMiniPlayer />
+          </div>;
           return <a key={path} className={active ? "active" : ""} href={routeHref(path)}>{label}</a>;
         })}
       </nav>

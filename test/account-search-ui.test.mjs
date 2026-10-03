@@ -41,3 +41,14 @@ test("account message previews remain clamped to two lines", async () => {
   assert.equal(properties.get("-webkit-line-clamp"), "2");
   assert.equal(properties.get("-webkit-box-orient"), "vertical");
 });
+
+
+test("music notes retain their title and expose searchable song or album names", () => {
+  const items = buildSearchItems([
+    { type: "music", key: "albums/carnelian", title: "梦里，好的故事，好的音乐", sourceTitle: "Touhou Colours: Carnelian", kind: "专辑", date: "2026-05-01" },
+    { type: "music", key: "songs/colors", title: "Colors", sourceTitle: "Colors", kind: "歌曲", date: "2026-10-02" },
+  ]);
+  assert.equal(filterSearchItems(items, "music", "carnelian")[0].title, "梦里，好的故事，好的音乐");
+  assert.equal(filterSearchItems(items, "music", "carnelian")[0].sourceTitle, "Touhou Colours: Carnelian");
+  assert.equal(items.find((item) => item.title === "Colors").sourceTitle, undefined);
+});

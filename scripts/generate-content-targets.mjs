@@ -11,8 +11,9 @@ import {
   sortNewestFirst,
 } from "../src/content/frontmatter.ts";
 import { sortFeaturedPosts } from "../src/pages/homeContent.ts";
+import { sortMusicLibrary } from "../src/pages/musicContent.ts";
 import { extractLocalRasterSources, isLocalRasterSource } from "./generate-responsive-images.mjs";
-import { parseMetingSongUrl } from "../src/musicSources.ts";
+import { parseMetingLibraryUrl, parseMetingSongUrl } from "../src/musicSources.ts";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -154,6 +155,18 @@ export function collectMetingSongTargets(collections) {
   return [...targets].sort();
 }
 
+export function collectMetingLibraryTargets(collections) {
+  const targets = new Set();
+  for (const [type, records] of collections) {
+    if (type !== "music") continue;
+    for (const { entry } of records) {
+      const target = parseMetingLibraryUrl(entry.url);
+      if (target) targets.add(`${target.source}:${target.type}:${target.id}`);
+    }
+  }
+  return [...targets].sort();
+}
+
 function collectEntryImageSources(value, sources = new Set()) {
   if (typeof value === "string") {
     if (isLocalRasterSource(value)) sources.add(value);
@@ -194,9 +207,15 @@ function homeEntry(type, entry, imageCatalog = {}) {
   };
   if (type === "music") return {
     ...common,
+    ...(entry.url ? { url: String(entry.url) } : {}),
     ...withImages,
     section: String(entry.section || "songs"),
     kind: String(entry.kind || ""),
+    ...(entry.image ? { image: String(entry.image) } : {}),
+    ...(entry.sourceTitle ? { sourceTitle: String(entry.sourceTitle) } : {}),
+    ...(entry.sourceMeta ? { sourceMeta: String(entry.sourceMeta) } : {}),
+    featured: Boolean(entry.featured),
+    ...(Number.isInteger(entry.featuredOrder) ? { featuredOrder: entry.featuredOrder } : {}),
   };
   return common;
 }
@@ -224,7 +243,7 @@ export function contentSearchEntry(type, entry) {
     title: String(entry.title || ""),
     date: String(entry.date || ""),
     ...(type === "post" ? { category: String(entry.category || "") } : {}),
-    ...(type === "music" ? { section: String(entry.section || "songs"), kind: String(entry.kind || "") } : {}),
+    ...(type === "music" ? { section: String(entry.section || "songs"), kind: String(entry.kind || ""), ...(entry.sourceTitle ? { sourceTitle: String(entry.sourceTitle) } : {}) } : {}),
   };
 }
 
@@ -235,7 +254,17 @@ export function buildContentDistribution(collections, imageCatalog = {}) {
   for (const [type, records] of collections) {
     records.forEach(({ name }) => assertSafeRelativePath(name, "内容文件"));
     const ordered = records.slice().sort((left, right) => sortNewestFirst(left.entry, right.entry));
-    const metadata = ordered.map((record) => {
+    const pageOrdered = type === "music"
+      ? (() => {
+        const recordsByEntry = new Map(ordered.map((record) => [record.entry, record]));
+        return sortMusicLibrary(ordered.map(({ entry }) => entry)).map((entry) => recordsByEntry.get(entry));
+      })()
+      : ordered;
+    const pageNumberByKey = new Map(pageOrdered.map((record, index) => [
+      contentKey(type, record.entry),
+      Math.floor(index / CONTENT_PAGE_CHUNK_SIZE),
+    ]));
+    const metadata = pageOrdered.map((record) => {
       const { content: _content, lines: _lines, outline: _outline, source: _source, ...lightweight } = record.entry;
       const key = contentKey(type, record.entry);
       return {
@@ -250,16 +279,19 @@ export function buildContentDistribution(collections, imageCatalog = {}) {
     pageChunks.forEach((chunk, index) => addJson(`pages/${encodeURIComponent(type)}/${index}.json`, chunk));
     metadata.forEach((entry, index) => {
       addJson(`entries/${encodeURIComponent(type)}/${encodePath(entry.key)}.json`, entry);
-      const record = ordered[index];
+      const record = pageOrdered[index];
       files.set(`bodies/${encodeURIComponent(type)}/${record.name.replaceAll("\\", "/")}`, record.raw);
     });
-    const facets = ordered.map((record, index) => contentFacet(type, record.entry, Math.floor(index / CONTENT_PAGE_CHUNK_SIZE)));
+    const facets = ordered.map((record) => contentFacet(type, record.entry, pageNumberByKey.get(contentKey(type, record.entry)) ?? 0));
     const search = ordered.map((record) => contentSearchEntry(type, record.entry));
     chunkValues(facets, CONTENT_INDEX_CHUNK_SIZE).forEach((chunk, index) => addJson(`facets/${encodeURIComponent(type)}/${index}.json`, chunk));
     chunkValues(search, CONTENT_INDEX_CHUNK_SIZE).forEach((chunk, index) => addJson(`search/${encodeURIComponent(type)}/${index}.json`, chunk));
     const featured = type === "post" ? sortFeaturedPosts(ordered.map(({ entry }) => entry)).map((entry) => homeEntry(type, entry, imageCatalog)) : [];
     chunkValues(featured, HOME_FEATURED_CHUNK_SIZE).forEach((chunk, index) => addJson(`featured/${encodeURIComponent(type)}/${index}.json`, chunk));
-    const latest = ordered.slice(0, HOME_LATEST_LIMIT).map(({ entry }) => homeEntry(type, entry, imageCatalog));
+    const latestEntries = type === "music"
+      ? sortMusicLibrary(ordered.map(({ entry }) => entry))
+      : ordered.map(({ entry }) => entry);
+    const latest = latestEntries.slice(0, HOME_LATEST_LIMIT).map((entry) => homeEntry(type, entry, imageCatalog));
     descriptors[type] = {
       count: ordered.length,
       pageChunkSize: CONTENT_PAGE_CHUNK_SIZE,
@@ -335,6 +367,7 @@ export async function generateContentArtifacts({ check = false, projectRoot = ro
   for (const values of Object.values(targets)) values.sort();
   const audioAssetSizes = await readAudioAssetSizes(join(projectRoot, "public", "audio"));
   const metingSongTargets = collectMetingSongTargets(collections);
+  const metingLibraryTargets = collectMetingLibraryTargets(collections);
   const imageCatalog = await readFile(responsiveImageBuildPath, "utf8").then(JSON.parse).catch(() => ({}));
   const { manifest, files } = buildContentDistribution(collections, imageCatalog);
   const renderedTargets = `// Generated by scripts/generate-content-targets.mjs. Do not edit by hand.\n`
@@ -346,6 +379,9 @@ export async function generateContentArtifacts({ check = false, projectRoot = ro
     + `/** @type {readonly string[]} */\n`
     + `const metingSongTargets = Object.freeze(${JSON.stringify(metingSongTargets, null, 2)});\n`
     + `const metingSongTargetSet = new Set(metingSongTargets);\n\n`
+    + `/** @type {readonly string[]} */\n`
+    + `const metingLibraryTargets = Object.freeze(${JSON.stringify(metingLibraryTargets, null, 2)});\n`
+    + `const metingLibraryTargetSet = new Set(metingLibraryTargets);\n\n`
     + `/** @param {string} type @param {string} slug */\n`
     + `export function isStaticContentTarget(type, slug) {\n`
     + `  return targetSets[type]?.has(slug) || false;\n`
@@ -354,7 +390,11 @@ export async function generateContentArtifacts({ check = false, projectRoot = ro
     + `export function isMetingSongTarget(source, id) {\n`
     + `  return metingSongTargetSet.has(\`\${source}:\${id}\`);\n`
     + `}\n\n`
-    + `export { audioAssetSizes, metingSongTargets, targets as staticContentTargets };\n`;
+    + `/** @param {string} source @param {string} type @param {string} id */\n`
+    + `export function isMetingLibraryTarget(source, type, id) {\n`
+    + `  return metingLibraryTargetSet.has(\`\${source}:\${type}:\${id}\`);\n`
+    + `}\n\n`
+    + `export { audioAssetSizes, metingLibraryTargets, metingSongTargets, targets as staticContentTargets };\n`;
   const renderedMetadata = `// Generated by scripts/generate-content-targets.mjs. Do not edit by hand.\n`
     + `const contentManifest = Object.freeze(${JSON.stringify(manifest, null, 2)});\n\n`
     + `export { contentManifest };\n`;

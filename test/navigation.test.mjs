@@ -66,7 +66,7 @@ test("optional section availability drives every collection entry point", () => 
   assert.deepEqual(getSectionAvailability({ showPoems: true, showMusic: false }), { poems: true, music: false });
   assert.deepEqual(getEnabledCollectionTypes({ showPoems: true, showMusic: true }), ["post", "poem", "music"]);
   assert.equal(isSiteRouteEnabled("/poem/quiet", { showPoems: false }), false);
-  assert.equal(isSiteRouteEnabled("/music?section=artists", { showMusic: true }), true);
+  assert.equal(isSiteRouteEnabled("/music?section=albums", { showMusic: true }), true);
   assert.equal(normalizeRouteLocation("#/posts?tag=reading"), "/posts?tag=reading");
   assert.equal(legacyHashRoute("#/posts?tag=reading"), "/posts?tag=reading");
   assert.equal(legacyHashRoute("#comments"), null);
@@ -86,7 +86,8 @@ test("music content keys preserve nested slug path segments", () => {
 test("detail fallbacks and titles are derived from the route kind", () => {
   assert.equal(getDetailFallbackRoute("/post/a-note"), "/posts");
   assert.equal(getDetailFallbackRoute("/poem/a-poem"), "/poems");
-  assert.equal(getDetailFallbackRoute("/music/artists/a-name"), "/music?section=artists");
+  assert.equal(getDetailFallbackRoute("/music/albums/a-name"), "/music?section=albums");
+  assert.equal(getDetailFallbackRoute("/music/playlists/a-list"), "/music?section=playlists");
   assert.equal(getDetailFallbackRoute("/music/songs/a-song"), "/music");
   assert.equal(getRouteDocumentTitle("/", "风栖"), "风栖");
   assert.equal(getRouteDocumentTitle("/friends", "风栖"), "友链 · 风栖");
