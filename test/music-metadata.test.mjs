@@ -49,6 +49,7 @@ test("URL and date infer all collection categories while note titles remain opti
   }
   const qq = parseMusicReview("qq.md", "---\nurl: https://y.qq.com/n/ryqq/playlist/1234567\ndate: 2026-10-03\n---\n");
   assert.equal(qq.section, "playlists");
+  assert.throws(() => parseMusicReview("summary-only.md", "---\nurl: https://music.163.com/album?id=123\ndate: 2026-10-03\nexcerpt: 只有摘要\n---\n"), /summary-only\.md.*excerpt.*正文/u);
   assert.throws(() => parseMusicReview("external.md", "---\nurl: https://example.test/music\ndate: 2026-10-03\ntitle: 手记标题\n---\n"), /填写 section.*sourceTitle/u);
   const manual = parseMusicReview("external.md", "---\nsourceTitle: 音乐名称\nsection: albums\ndate: 2026-10-03\n---\n正文。");
   assert.equal(manual.sourceTitle, "音乐名称");
@@ -58,20 +59,31 @@ test("URL and date infer all collection categories while note titles remain opti
 test("generated pages, home, search and detail share resolved music metadata without editing Markdown", async (context) => {
   const root = await workspace(context);
   const bare = "---\nurl: https://music.163.com/album?id=123\ndate: 2026-10-03\n---\n";
-  const inputs = { bare, body: `${bare}\n正文。`, titled: `${bare.replace("date:", "title: 手记标题\nexcerpt: 手记摘要\ndate:")}\n手记正文。` };
+  const longBody = "旋律🎵".repeat(80);
+  const inputs = { bare, body: `${bare}\n**正文。**`, titled: `${bare.replace("date:", "title: 手记标题\nexcerpt: 手记摘要\ndate:")}\n手记正文。`, summarized: `${bare.replace("date:", "excerpt: 手记摘要\ndate:")}\n有摘要的正文。`, long: `${bare}\n${longBody}`, blocks: `${bare}\n# ${longBody}\n\n> ${longBody}`, titledblocks: `${bare.replace("date:", "title: 手记标题\ndate:")}\n# ${longBody}\n\n> ${longBody}` };
   for (const [slug, raw] of Object.entries(inputs)) await writeFile(join(root, `src/content/music/${slug}.md`), raw);
   let calls = 0;
   await generateContentArtifacts({ projectRoot: root, resolveMetadata: async () => { calls += 1; return metadata; } });
   assert.equal(calls, 1, "entries sharing one URL resolve it once");
   const read = (path) => readFile(join(root, "public/fonscape/content", path), "utf8");
   const pages = JSON.parse(await read("pages/music/0.json"));
-  assert.equal(pages.length, 3);
+  assert.equal(pages.length, 7);
   assert.ok(pages.every((entry) => entry.sourceTitle === metadata.sourceTitle && entry.sourceMeta === metadata.sourceMeta && entry.image === metadata.image && !Object.hasOwn(entry, "kind")));
   const search = buildSearchItems(JSON.parse(await read("search/music/0.json")));
   assert.equal(search.find((entry) => entry.slug === "albums/bare").title, metadata.sourceTitle);
-  assert.equal(search.find((entry) => entry.slug === "albums/titled").title, "手记标题");
-  assert.equal(search.find((entry) => entry.slug === "albums/titled").sourceTitle, metadata.sourceTitle);
-  assert.equal(filterSearchItems(search, "music", metadata.sourceTitle).length, 3);
+  assert.equal(search.find((entry) => entry.slug === "albums/titled").title, metadata.sourceTitle);
+  assert.equal(search.find((entry) => entry.slug === "albums/titled").note, "手记标题");
+  assert.equal(search.find((entry) => entry.slug === "albums/body").note, "正文。");
+  assert.equal(search.find((entry) => entry.slug === "albums/summarized").note, "手记摘要");
+  assert.equal(search.find((entry) => entry.slug === "albums/bare").note, undefined);
+  assert.equal(search.find((entry) => entry.slug === "albums/long").note, "旋律🎵".repeat(53) + "旋…");
+  assert.equal(search.find((entry) => entry.slug === "albums/blocks").note, "旋律🎵".repeat(53) + "旋…");
+  assert.equal(search.find((entry) => entry.slug === "albums/titledblocks").note, "手记标题");
+  for (const slug of ["blocks", "titledblocks"]) {
+    assert.equal(pages.find((entry) => entry.slug === slug).firstParagraph, "");
+    assert.equal((await read(`entries/music/albums/${slug}.json`)).includes(longBody), false, "listing metadata excludes the complete note body");
+  }
+  assert.equal(filterSearchItems(search, "music", metadata.sourceTitle).length, 7);
   assert.ok(search.every((entry) => entry.meta === "专辑"));
   const facets = JSON.parse(await read("facets/music/0.json"));
   assert.ok(facets.every((entry) => entry.title === metadata.sourceTitle));
@@ -82,8 +94,8 @@ test("generated pages, home, search and detail share resolved music metadata wit
     assert.equal(await readFile(join(root, `src/content/music/${slug}.md`), "utf8"), raw);
     const detail = parseMusicReview(`${slug}.md`, await read(`bodies/music/${slug}.md`));
     assert.equal(detail.sourceTitle, metadata.sourceTitle);
-    assert.equal(detail.title, slug === "titled" ? "手记标题" : "");
-    assert.equal(detail.content, slug === "titled" ? "手记正文。" : slug === "body" ? "正文。" : "");
+    assert.equal(detail.title, ["titled", "titledblocks"].includes(slug) ? "手记标题" : "");
+    assert.equal(detail.content, parseMusicReview(`${slug}.md`, raw).content);
   }
   await generateContentArtifacts({ projectRoot: root, check: true, resolveMetadata: async () => { throw new Error("cache should be used"); } });
 });

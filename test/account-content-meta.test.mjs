@@ -12,3 +12,9 @@ test("music account messages resolve nested slugs and derive their type from col
     assert.deepEqual(contentMeta(item, new Map()), { title: "classical/example", section: "音乐 · 内容" });
   }
 });
+
+test("music messages use the music title independently of the note and stored message title", () => {
+  const item = { contentType: "music", contentSlug: "albums/example", contentTitle: "旧听后感标题" };
+  const lookup = new Map([["music:albums/example", { title: "听后感标题", sourceTitle: "专辑名称", section: "albums" }]]);
+  assert.equal(contentMeta(item, lookup).title, "专辑名称");
+});

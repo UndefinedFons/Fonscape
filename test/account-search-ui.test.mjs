@@ -43,12 +43,12 @@ test("account message previews remain clamped to two lines", async () => {
 });
 
 
-test("music notes retain their title and expose searchable song or album names", () => {
+test("music search emphasizes music names and keeps notes searchable as secondary text", () => {
   const items = buildSearchItems([
-    { type: "music", key: "albums/example-album", title: "雨夜听后感", sourceTitle: "Example Album", section: "albums", date: "2026-05-01" },
+    { type: "music", key: "albums/example-album", title: "Example Album", sourceTitle: "Example Album", noteTitle: "雨夜听后感", section: "albums", date: "2026-05-01" },
     { type: "music", key: "songs/colors", title: "Colors", sourceTitle: "Colors", section: "songs", date: "2026-10-02" },
   ]);
-  assert.equal(filterSearchItems(items, "music", "example album")[0].title, "雨夜听后感");
-  assert.equal(filterSearchItems(items, "music", "example album")[0].sourceTitle, "Example Album");
-  assert.equal(items.find((item) => item.title === "Colors").sourceTitle, undefined);
+  assert.equal(filterSearchItems(items, "music", "example album")[0].title, "Example Album");
+  assert.equal(filterSearchItems(items, "music", "雨夜听后感")[0].note, "雨夜听后感");
+  assert.equal(items.find((item) => item.title === "Colors").note, undefined);
 });

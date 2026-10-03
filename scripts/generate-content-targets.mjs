@@ -13,6 +13,7 @@ import {
 } from "../src/content/frontmatter.ts";
 import { sortFeaturedPosts } from "../src/pages/homeContent.ts";
 import { sortMusicLibrary } from "../src/pages/musicContent.ts";
+import { markdownToPlainText } from "../src/content/markdown.ts";
 import { extractLocalRasterSources, isLocalRasterSource } from "./generate-responsive-images.mjs";
 import { parseMetingLibraryUrl, parseMetingSongUrl } from "../src/musicSources.ts";
 import { createMusicMetadataResolver, resolveMusicMetadata } from "./music-metadata.ts";
@@ -258,14 +259,21 @@ export function contentFacet(type, entry, page) {
   };
 }
 
-export function contentSearchEntry(type, entry) {
+export function contentSearchEntry(type, entry, raw = "") {
+  const notePreview = type === "music" && !entry.title
+    ? markdownToPlainText(entry.excerpt || entry.firstParagraph || (raw ? parseMarkdownSource(entry.slug, raw).content : "")) : "";
   return {
     type,
     key: contentKey(type, entry),
-    title: String(entry.title || (type === "music" ? entry.sourceTitle : "") || ""),
+    title: String((type === "music" ? entry.sourceTitle : entry.title) || ""),
     date: String(entry.date || ""),
     ...(type === "post" ? { category: String(entry.category || "") } : {}),
-    ...(type === "music" ? { section: String(entry.section || "songs"), ...(entry.sourceTitle ? { sourceTitle: String(entry.sourceTitle) } : {}) } : {}),
+    ...(type === "music" ? {
+      section: String(entry.section || "songs"),
+      ...(entry.sourceTitle ? { sourceTitle: String(entry.sourceTitle) } : {}),
+      ...(entry.title ? { noteTitle: String(entry.title) } : {}),
+      ...(notePreview ? { notePreview: Array.from(notePreview).slice(0, 160).join("") + (Array.from(notePreview).length > 160 ? "…" : "") } : {}),
+    } : {}),
   };
 }
 
@@ -305,7 +313,7 @@ export function buildContentDistribution(collections, imageCatalog = {}) {
       files.set(`bodies/${encodeURIComponent(type)}/${record.name.replaceAll("\\", "/")}`, record.raw);
     });
     const facets = ordered.map((record) => contentFacet(type, record.entry, pageNumberByKey.get(contentKey(type, record.entry)) ?? 0));
-    const search = ordered.map((record) => contentSearchEntry(type, record.entry));
+    const search = ordered.map((record) => contentSearchEntry(type, record.entry, record.raw));
     chunkValues(facets, CONTENT_INDEX_CHUNK_SIZE).forEach((chunk, index) => addJson(`facets/${encodeURIComponent(type)}/${index}.json`, chunk));
     chunkValues(search, CONTENT_INDEX_CHUNK_SIZE).forEach((chunk, index) => addJson(`search/${encodeURIComponent(type)}/${index}.json`, chunk));
     const featured = type === "post" ? sortFeaturedPosts(ordered.map(({ entry }) => entry)).map((entry) => homeEntry(type, entry, imageCatalog)) : [];
