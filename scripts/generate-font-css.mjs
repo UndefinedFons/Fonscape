@@ -44,7 +44,7 @@ async function criticalContentSources(files) {
     else if (sourcePath.startsWith("src/content/poems/")) poems.push(parsePoemMetadata(sourcePath, source));
     else if (sourcePath.startsWith("src/content/music/")) music.push(parseMusicReviewMetadata(sourcePath, source));
   }
-  const musicReviews = Object.fromEntries(["songs", "artists", "albums"].map((section) => [
+  const musicReviews = Object.fromEntries(["songs", "albums", "playlists"].map((section) => [
     section,
     music.filter((entry) => entry.section === section),
   ]));

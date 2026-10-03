@@ -72,6 +72,7 @@ test("metadata parsers keep listing data while omitting Markdown bodies", () => 
   assert.equal(Object.hasOwn(music, "reading"), false);
   assert.equal(music.firstParagraph, "听见一首歌。");
   assert.equal(music.wordCount, 5);
+  assert.equal(music.featured, false);
 });
 
 test("post parsers preserve custom categories outside the default list", () => {
@@ -125,6 +126,17 @@ test("optional content fields reject values that cannot be rendered or used as t
   assert.equal(valid.music.autoplay, false);
 });
 
+test("music pins require a boolean flag and positive order only when pinned", () => {
+  const music = (fields = "") => `---\ntitle: Music\nkind: 歌曲\ndate: 2026-07-30\n${fields}\n---\nBody`;
+  assert.throws(() => parseMusicReview("music.md", music('featured: "true"')), /featured 必须是布尔值/u);
+  assert.throws(() => parseMusicReview("music.md", music("featured: false\nfeaturedOrder: 1")), /未置顶，不能配置 featuredOrder/u);
+  assert.throws(() => parseMusicReview("music.md", music("featured: true\nfeaturedOrder: 0")), /featuredOrder 必须是正整数/u);
+  assert.throws(() => parseMusicReview("music.md", music("featured: true\nfeaturedOrder: 1.5")), /featuredOrder 必须是正整数/u);
+  const pinned = parseMusicReviewMetadata("music.md", music("featured: true\nfeaturedOrder: 3"));
+  assert.equal(pinned.featured, true);
+  assert.equal(pinned.featuredOrder, 3);
+});
+
 test("article outlines ignore headings inside fenced code blocks", () => {
   const outline = getArticleOutline("引言\n\n~~~md\n## 假标题\n~~~\n\n## 第一节\n\n## 第二节");
   assert.deepEqual(outline.map((item) => item.title), ["序章", "第一节", "第二节"]);
@@ -135,6 +147,15 @@ test("posts accept Meting URLs while preserving local music sources", () => {
   assert.equal(meting.music.url, "https://music.163.com/song?id=27557102");
   const local = parsePost("local.md", '---\ntitle: A\ndate: 2026-07-30\ncategory: 开发\nmusic: {"src":"/audio/a.mp3","title":"A","artist":"B"}\n---\nBody');
   assert.equal(local.music.src, "/audio/a.mp3");
+});
+
+test("music content accepts the three collection categories and rejects removed categories", () => {
+  for (const [section, kind] of [["songs", "歌曲"], ["albums", "专辑"], ["playlists", "歌单"]]) {
+    const source = `---\ntitle: 音乐\nsection: ${section}\nkind: ${kind}\ndate: 2026-01-01\n---\n`;
+    assert.equal(parseMusicReview(`${section}.md`, source).section, section);
+    assert.equal(parseMusicReviewMetadata(`${section}.md`, source).section, section);
+  }
+  assert.throws(() => parseMusicReview("artist.md", "---\ntitle: 音乐人\nsection: artists\nkind: 音乐人\ndate: 2026-01-01\n---\n"), /section 必须是 songs、albums 或 playlists/u);
 });
 
 test("mixed content can be ordered by time without grouping by type", () => {
@@ -149,6 +170,7 @@ test("mixed content can be ordered by time without grouping by type", () => {
   const music = [
     { slug: "hello", section: "songs", date: "2026-01-01" },
     { slug: "hello", section: "albums", date: "2026-01-01" },
+    { slug: "hello", section: "playlists", date: "2026-01-01" },
   ];
   assert.doesNotThrow(() => assertUniqueEntries(music, "音乐", (entry) => `${entry.section}/${entry.slug}`));
 });

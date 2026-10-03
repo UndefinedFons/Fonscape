@@ -41,12 +41,12 @@ test("sitemap generation uses real pathname routes and published sections", () =
   const sitemap = buildSitemap({
     post: [{ slug: "hello/world", date: "2026-01-02T03:04", title: "Hello" }],
     poem: [{ slug: "quiet", date: "2026-01-01", title: "Quiet" }],
-    music: [{ section: "artists", slug: "fons", date: "2025-12-31", title: "Fons" }],
+    music: [{ section: "albums", slug: "fons", date: "2025-12-31", title: "Fons" }],
   }, "https://blog.example/", { showPoems: true, showMusic: true });
 
   assert.match(sitemap, /<loc>https:\/\/blog\.example\/post\/hello\/world<\/loc>/u);
   assert.match(sitemap, /<loc>https:\/\/blog\.example\/poem\/quiet<\/loc>/u);
-  assert.match(sitemap, /<loc>https:\/\/blog\.example\/music\/artists\/fons<\/loc>/u);
+  assert.match(sitemap, /<loc>https:\/\/blog\.example\/music\/albums\/fons<\/loc>/u);
   assert.match(sitemap, /<loc>https:\/\/blog\.example\/posts<\/loc>/u);
   assert.doesNotMatch(sitemap, /#\//u);
   assert.doesNotMatch(buildSitemap({ post: [] }, "", {}), /<url>/u);

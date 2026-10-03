@@ -78,7 +78,7 @@ export interface DatedEntry {
   responsiveImages?: Record<string, ResponsiveImageMetadata | undefined>;
 }
 
-export type MusicSection = "songs" | "artists" | "albums";
+export type MusicSection = "songs" | "albums" | "playlists";
 
 export interface LocalMusicTrack {
   src: string;
@@ -144,6 +144,8 @@ export interface MusicReview extends DatedEntry {
   title: string;
   kind: string;
   section: MusicSection;
+  featured: boolean;
+  featuredOrder?: number;
   content: string;
   firstParagraph: string;
   wordCount: number;
@@ -218,9 +220,15 @@ export interface HomePoem extends DatedEntry {
 }
 
 export interface HomeMusic extends DatedEntry {
+  url?: string;
+  image?: string;
+  sourceTitle?: string;
+  sourceMeta?: string;
   title: string;
   section: MusicSection;
   kind: string;
+  featured: boolean;
+  featuredOrder?: number;
   responsiveImages?: Record<string, ResponsiveImageMetadata | undefined>;
 }
 
@@ -274,6 +282,7 @@ export interface PoemSearchEntry {
 }
 
 export interface MusicSearchEntry {
+  sourceTitle?: string;
   type: "music";
   key: string;
   title: string;
@@ -285,6 +294,7 @@ export interface MusicSearchEntry {
 export type ContentSearchEntry = PostSearchEntry | PoemSearchEntry | MusicSearchEntry;
 
 export interface SearchItem {
+  sourceTitle?: string;
   id: string;
   slug: string;
   kind: ContentType;

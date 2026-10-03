@@ -122,7 +122,7 @@ export function DetailPageFrame({ kind, onReturn, children, afterContent }: Deta
     <LoadingSurface as="article">{children}</LoadingSurface>
     <Suspense fallback={null}>{afterContent}</Suspense>
   </main>;
-  const className = `article-page${kind === "music" ? " music-detail-page" : ""} material-panel page-width${siteConfig.showCommunity ? "" : " article-page--without-comments"}`;
+  const className = `article-page${kind === "music" ? " music-detail-page music-room-detail" : ""} ${kind === "music" ? "" : "material-panel "}page-width${siteConfig.showCommunity ? "" : " article-page--without-comments"}`;
   return <LoadingSurface as="main" className={className} before={back}>{children}</LoadingSurface>;
 }
 

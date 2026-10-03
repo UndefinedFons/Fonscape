@@ -28,7 +28,7 @@ import {
 } from "../_lib/handlers/_comments.ts";
 import { contentStats, recordContentView, siteRuntime } from "../_lib/handlers/_stats.ts";
 import { routeParts } from "../_lib/handlers/_shared.ts";
-import { musicAudio, musicMetadata } from "../_lib/music.ts";
+import { musicAudio, musicLibrary, musicLibraryAudio, musicLibraryLyrics, musicMetadata } from "../_lib/music.ts";
 
 import type { RequestContext } from "../types.ts";
 
@@ -58,6 +58,9 @@ async function handle(context: RequestContext): Promise<Response> {
   if (method === "GET" && parts[0] === "content" && parts[1] === "stats" && parts.length === 2) return contentStats(context, url);
   if (method === "POST" && parts[0] === "content" && parts[1] === "view" && parts.length === 2) return recordContentView(context);
   if (method === "GET" && parts[0] === "site" && parts[1] === "runtime" && parts.length === 2) return siteRuntime(context);
+  if (method === "GET" && parts[0] === "music" && parts[1] === "library" && parts.length === 2) return musicLibrary(context, url);
+  if ((method === "GET" || method === "HEAD") && parts[0] === "music" && parts[1] === "library" && parts[2] === "audio" && parts.length === 3) return musicLibraryAudio(context, url);
+  if (method === "GET" && parts[0] === "music" && parts[1] === "library" && parts[2] === "lyrics" && parts.length === 3) return musicLibraryLyrics(context, url);
   if (method === "GET" && parts[0] === "music" && parts[1] === "resolve" && parts.length === 2) return musicMetadata(context, url);
   if ((method === "GET" || method === "HEAD") && parts[0] === "music" && parts[1] === "audio" && parts.length === 2) return musicAudio(context, url);
   if (method === "GET" && parts[0] === "comments" && parts.length === 1) return listComments(context, url);
