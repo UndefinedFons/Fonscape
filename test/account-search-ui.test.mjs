@@ -7,7 +7,7 @@ test("the combined search feed applies newest-first ordering with stable ties", 
   const items = buildSearchItems([
     { type: "poem", key: "z-poem", title: "小诗", date: "2026-08-29" },
     { type: "post", key: "b-post", title: "文章 B", category: "评谈", date: "2026-08-29" },
-    { type: "music", key: "songs/a-song", title: "音乐", kind: "歌曲", date: "2026-08-27" },
+    { type: "music", key: "songs/a-song", title: "音乐", section: "songs", date: "2026-08-27" },
     { type: "post", key: "a-post", title: "文章 A", category: "记录", date: "2026-08-29" },
   ]);
   assert.deepEqual(items.map((item) => item.id), ["post-a-post", "post-b-post", "poem-z-poem", "music-songs/a-song"]);
@@ -22,7 +22,7 @@ test("search scopes, filtering and indicator geometry follow optional sections",
   const items = buildSearchItems([
     { type: "post", key: "wind", title: "风中的文章", category: "评谈", date: "2026-08-29" },
     { type: "poem", key: "rain", title: "雨", date: "2026-08-28" },
-    { type: "music", key: "songs/wind", title: "风之歌", kind: "歌曲", date: "2026-08-27" },
+    { type: "music", key: "songs/wind", title: "风之歌", section: "songs", date: "2026-08-27" },
   ]);
   assert.deepEqual(filterSearchItems(items, "all", "风").map((item) => item.kind), ["post", "music"]);
   assert.deepEqual(filterSearchItems(items, "music", "").map((item) => item.title), ["风之歌"]);
@@ -45,10 +45,10 @@ test("account message previews remain clamped to two lines", async () => {
 
 test("music notes retain their title and expose searchable song or album names", () => {
   const items = buildSearchItems([
-    { type: "music", key: "albums/carnelian", title: "梦里，好的故事，好的音乐", sourceTitle: "Touhou Colours: Carnelian", kind: "专辑", date: "2026-05-01" },
-    { type: "music", key: "songs/colors", title: "Colors", sourceTitle: "Colors", kind: "歌曲", date: "2026-10-02" },
+    { type: "music", key: "albums/example-album", title: "雨夜听后感", sourceTitle: "Example Album", section: "albums", date: "2026-05-01" },
+    { type: "music", key: "songs/colors", title: "Colors", sourceTitle: "Colors", section: "songs", date: "2026-10-02" },
   ]);
-  assert.equal(filterSearchItems(items, "music", "carnelian")[0].title, "梦里，好的故事，好的音乐");
-  assert.equal(filterSearchItems(items, "music", "carnelian")[0].sourceTitle, "Touhou Colours: Carnelian");
+  assert.equal(filterSearchItems(items, "music", "example album")[0].title, "雨夜听后感");
+  assert.equal(filterSearchItems(items, "music", "example album")[0].sourceTitle, "Example Album");
   assert.equal(items.find((item) => item.title === "Colors").sourceTitle, undefined);
 });

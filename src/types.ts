@@ -142,7 +142,6 @@ export type PoemMetadata = Omit<Poem, "lines">;
 
 export interface MusicReview extends DatedEntry {
   title: string;
-  kind: string;
   section: MusicSection;
   featured: boolean;
   featuredOrder?: number;
@@ -152,7 +151,7 @@ export interface MusicReview extends DatedEntry {
   image?: string;
   excerpt?: string;
   url?: string;
-  sourceTitle?: string;
+  sourceTitle: string;
   sourceMeta?: string;
   action?: string;
 }
@@ -222,11 +221,10 @@ export interface HomePoem extends DatedEntry {
 export interface HomeMusic extends DatedEntry {
   url?: string;
   image?: string;
-  sourceTitle?: string;
+  sourceTitle: string;
   sourceMeta?: string;
   title: string;
   section: MusicSection;
-  kind: string;
   featured: boolean;
   featuredOrder?: number;
   responsiveImages?: Record<string, ResponsiveImageMetadata | undefined>;
@@ -256,7 +254,6 @@ export interface MusicFacet {
   title: string;
   date: string;
   section: MusicSection;
-  kind: string;
 }
 
 export type ContentFacet = PostFacet | PoemFacet | MusicFacet;
@@ -288,7 +285,6 @@ export interface MusicSearchEntry {
   title: string;
   date: string;
   section: MusicSection;
-  kind: string;
 }
 
 export type ContentSearchEntry = PostSearchEntry | PoemSearchEntry | MusicSearchEntry;

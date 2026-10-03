@@ -44,9 +44,13 @@ async function criticalContentSources(files) {
     else if (sourcePath.startsWith("src/content/poems/")) poems.push(parsePoemMetadata(sourcePath, source));
     else if (sourcePath.startsWith("src/content/music/")) music.push(parseMusicReviewMetadata(sourcePath, source));
   }
+  const resolvedMusic = await readFile(join(root, "public/fonscape/content/pages/music/0.json"), "utf8").then(JSON.parse).catch((error) => {
+    if (error.code === "ENOENT") return music;
+    throw error;
+  });
   const musicReviews = Object.fromEntries(["songs", "albums", "playlists"].map((section) => [
     section,
-    music.filter((entry) => entry.section === section),
+    resolvedMusic.filter((entry) => entry.section === section),
   ]));
   const { featuredPosts, recentPosts, latestPoems, latestMusic } = getHomeContent(posts, poems, musicReviews);
   const homePosts = [...new Set([...featuredPosts, ...recentPosts])];
@@ -54,12 +58,12 @@ async function criticalContentSources(files) {
     noto: JSON.stringify({
       posts: homePosts.map(({ title, category, excerpt, firstParagraph }) => ({ title, category, excerpt, firstParagraph })),
       poems: latestPoems.map(({ title, previewLines }) => ({ title, previewLines })),
-      music: latestMusic.map(({ title, kind }) => ({ title, kind })),
+      music: latestMusic.map(({ sourceTitle, sourceMeta }) => ({ sourceTitle, sourceMeta })),
     }),
     zen: JSON.stringify({
       posts: homePosts.map(({ title }) => title),
       poems: latestPoems.map(({ title }) => title),
-      music: latestMusic.map(({ title }) => title),
+      music: latestMusic.map(({ sourceTitle }) => sourceTitle),
     }),
   };
 }

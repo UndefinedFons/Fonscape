@@ -44,10 +44,10 @@ function HomeMusicCard({ entry }: { entry: HomeMusic }) {
   };
   return <div className="home-music-card">
     <a href={contentRoute("music", entry)}>
-      <div className="home-music-cover">{image.src ? <img {...image} alt={`${entry.sourceTitle || entry.title}的封面`} loading="lazy" decoding="async" /> : <Disc size={28} weight="duotone" />}</div>
-      <span><strong>{entry.sourceTitle || entry.title}</strong>{entry.sourceMeta && <small>{entry.sourceMeta}</small>}</span>
+      <div className="home-music-cover">{image.src ? <img {...image} alt={`${entry.sourceTitle}的封面`} loading="lazy" decoding="async" /> : <Disc size={28} weight="duotone" />}</div>
+      <span><strong>{entry.sourceTitle}</strong>{entry.sourceMeta && <small>{entry.sourceMeta}</small>}</span>
     </a>
-    {parseMetingLibraryUrl(entry.url) && <button className="home-music-play" aria-label={`${playing ? "暂停" : "播放"} ${entry.sourceTitle || entry.title}`} aria-pressed={playing || loading} aria-busy={loading} onClick={toggle}><span className={loading ? "is-loading" : ""} key={loading ? "loading" : String(playing)}>{loading ? <SpinnerGap size={17} /> : playing ? <Pause size={17} weight="fill" /> : <Play size={17} weight="fill" />}</span></button>}
+    {parseMetingLibraryUrl(entry.url) && <button className="home-music-play" aria-label={`${playing ? "暂停" : "播放"} ${entry.sourceTitle}`} aria-pressed={playing || loading} aria-busy={loading} onClick={toggle}><span className={loading ? "is-loading" : ""} key={loading ? "loading" : String(playing)}>{loading ? <SpinnerGap size={17} /> : playing ? <Pause size={17} weight="fill" /> : <Play size={17} weight="fill" />}</span></button>}
   </div>;
 }
 

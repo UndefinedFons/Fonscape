@@ -39,7 +39,7 @@ function themeDistribution() {
     const path = "src/content/posts/" + name;
     return { name, source: path, raw, entry: parsePost(path, raw) };
   });
-  const musicRaw = ['---', 'title: "album"', 'kind: "专辑"', 'section: "albums"', 'date: "2026-09-29"', '---', '音乐笔记。'].join("\n");
+  const musicRaw = ['---', 'title: "album note"', 'sourceTitle: "album"', 'section: "albums"', 'date: "2026-09-29"', '---', '音乐笔记。'].join("\n");
   return buildContentDistribution([
     ["post", posts], ["poem", []], ["music", [{ name: "album.md", source: "src/content/music/album.md", raw: musicRaw, entry: parseMusicReview("src/content/music/album.md", musicRaw) }]],
   ]);
@@ -101,7 +101,7 @@ function makeResponse(payload, status = 200) {
 function installDom(path = "/admin/setup", { includeFullFontStylesheet = true } = {}) {
   const jsdom = new JSDOM(
     "<!doctype html><html><head></head><body><div id=\"root\"></div></body></html>",
-    { url: `https://fonstage.test${path}`, pretendToBeVisual: true },
+    { url: `https://fonscape.test${path}`, pretendToBeVisual: true },
   );
   const originalGlobals = new Map();
   const replaceCalls = [];
@@ -201,7 +201,7 @@ function installFetch({ setup = { initialized: false }, session = { user: null }
   const requests = [];
   let searchAttempts = 0;
   globalThis.fetch = async (input, options = {}) => {
-    const requestUrl = new URL(typeof input === "string" ? input : input.url, "https://fonstage.test");
+    const requestUrl = new URL(typeof input === "string" ? input : input.url, "https://fonscape.test");
     requests.push(requestUrl.pathname);
     if (requestUrl.pathname === "/api/auth/session") return makeResponse(session);
     if (requestUrl.pathname === "/api/admin/setup") {
@@ -327,7 +327,7 @@ async function mountFixture({ handleApi = () => undefined, distinctHeroes = fals
   const { contentManifest } = await fixtureServer.ssrLoadModule("/functions/_generated/content-metadata.js");
   Object.assign(contentManifest.collections, distribution.manifest.collections);
   globalThis.fetch = async (input, options = {}) => {
-    const url = new URL(String(input), "https://fonstage.test");
+    const url = new URL(String(input), "https://fonscape.test");
     const handled = handleApi(url, options);
     if (handled !== undefined) return handled;
     if (url.pathname === "/api/auth/session") return Response.json({ user: member });
@@ -494,7 +494,7 @@ test("music shelf opens a detail and returns to the complete shelf", async () =>
     assert.match(animations.at(-1).frames[0].transform, /scale\(1\.4,1\.2\)/u);
 
     await act(async () => document.querySelector('a[aria-label="聆听 album"]').click());
-    await waitFor(() => assert.equal(document.querySelector(".article-intro-copy h1")?.textContent, "album"));
+    await waitFor(() => assert.equal(document.querySelector(".article-intro-copy h1")?.textContent, "album note"));
     await act(async () => button("返回").click());
     await waitFor(() => assert.ok(document.querySelector('a[aria-label="聆听 album"]')));
     assert.equal(location.pathname, "/music");
@@ -751,7 +751,7 @@ test("global music mini player seeks and pauses without discarding its queue", a
   try {
     mountedRoot = createRoot(document.getElementById("root"));
     await act(async () => mountedRoot.render(createElement("div", { className: "main-nav-music" }, createElement("a", { href: "/music" }, "音乐"), createElement(MusicMiniPlayer))));
-    const entry = { title: "Album note", sourceTitle: "Album", sourceMeta: "Artist", kind: "专辑", section: "albums", slug: "test-album", date: "2026-10-02", wordCount: 0, firstParagraph: "", image: "https://fonstage.test/cover.jpg", url: "https://music.163.com/album?id=123" };
+    const entry = { title: "Album note", sourceTitle: "Album", sourceMeta: "Artist", kind: "专辑", section: "albums", slug: "test-album", date: "2026-10-02", wordCount: 0, firstParagraph: "", image: "https://fonscape.test/cover.jpg", url: "https://music.163.com/album?id=123" };
     await act(async () => musicSession.load(entry));
     const audio = audios.at(-1);
     await act(async () => audio.emit("loadedmetadata"));

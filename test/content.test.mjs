@@ -67,7 +67,7 @@ test("metadata parsers keep listing data while omitting Markdown bodies", () => 
   assert.deepEqual(poem.previewLines, ["一", "二", "三"]);
   assert.equal(poem.lineCount, 4);
 
-  const music = parseMusicReviewMetadata("music.md", `---\ntitle: "音乐"\nkind: "歌曲"\ndate: "2026-01-01"\n---\n听见一首歌。`);
+  const music = parseMusicReviewMetadata("music.md", `---\ntitle: "音乐"\nurl: "https://music.163.com/song?id=123"\ndate: "2026-01-01"\n---\n听见一首歌。`);
   assert.equal(Object.hasOwn(music, "content"), false);
   assert.equal(Object.hasOwn(music, "reading"), false);
   assert.equal(music.firstParagraph, "听见一首歌。");
@@ -107,7 +107,7 @@ test("required content labels must be non-empty strings", () => {
 
 test("optional content fields reject values that cannot be rendered or used as their declared types", () => {
   const post = (field) => `---\ntitle: Post\ndate: 2026-07-30\ncategory: 记录\n${field}\n---\nBody`;
-  const music = (field) => `---\ntitle: Music\ndate: 2026-07-30\nkind: 歌曲\n${field}\n---\nBody`;
+  const music = (field) => `---\ndate: 2026-07-30\nkind: 歌曲\n${field}\n---\nBody`;
   for (const field of ["excerpt", "image", "cardPosition", "slug"]) {
     assert.throws(() => parsePost("post.md", post(`${field}: {"text":"invalid"}`)), new RegExp(`${field} 必须是字符串`, "u"));
   }
@@ -116,7 +116,7 @@ test("optional content fields reject values that cannot be rendered or used as t
   assert.throws(() => parsePost("post.md", post('music: {"src":"/audio/a.mp3","title":{},"artist":"B"}')), /title 必须是字符串/u);
   assert.throws(() => parsePost("post.md", post('musicBlocks: [{"url":"https://music.163.com/song?id=1","autoplay":"false"}]')), /autoplay 必须是布尔值/u);
   assert.throws(() => parsePoem("poem.md", "---\ntitle: Poem\ndate: 2026-07-30\nnote: []\n---\nLine"), /note 必须是字符串/u);
-  for (const field of ["slug", "section", "excerpt", "image", "url", "sourceTitle", "sourceMeta", "action"]) {
+  for (const field of ["title", "slug", "section", "excerpt", "image", "url", "sourceTitle", "sourceMeta", "action"]) {
     assert.throws(() => parseMusicReview("music.md", music(`${field}: []`)), new RegExp(`${field} 必须是字符串`, "u"));
   }
   const valid = parsePost("post.md", post('excerpt: ""\nfeatured: false\nseries: null\nmusicPlacement: "inline"\nmusic: {"src":"/audio/a.mp3","title":"A","artist":"B","autoplay":false}'));
@@ -127,7 +127,7 @@ test("optional content fields reject values that cannot be rendered or used as t
 });
 
 test("music pins require a boolean flag and positive order only when pinned", () => {
-  const music = (fields = "") => `---\ntitle: Music\nkind: 歌曲\ndate: 2026-07-30\n${fields}\n---\nBody`;
+  const music = (fields = "") => `---\ntitle: Music\nurl: "https://music.163.com/song?id=123"\ndate: 2026-07-30\n${fields}\n---\nBody`;
   assert.throws(() => parseMusicReview("music.md", music('featured: "true"')), /featured 必须是布尔值/u);
   assert.throws(() => parseMusicReview("music.md", music("featured: false\nfeaturedOrder: 1")), /未置顶，不能配置 featuredOrder/u);
   assert.throws(() => parseMusicReview("music.md", music("featured: true\nfeaturedOrder: 0")), /featuredOrder 必须是正整数/u);
@@ -151,7 +151,7 @@ test("posts accept Meting URLs while preserving local music sources", () => {
 
 test("music content accepts the three collection categories and rejects removed categories", () => {
   for (const [section, kind] of [["songs", "歌曲"], ["albums", "专辑"], ["playlists", "歌单"]]) {
-    const source = `---\ntitle: 音乐\nsection: ${section}\nkind: ${kind}\ndate: 2026-01-01\n---\n`;
+    const source = `---\ntitle: 音乐\nsection: ${section}\nsourceTitle: ${kind}\ndate: 2026-01-01\n---\n`;
     assert.equal(parseMusicReview(`${section}.md`, source).section, section);
     assert.equal(parseMusicReviewMetadata(`${section}.md`, source).section, section);
   }

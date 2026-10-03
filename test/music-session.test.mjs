@@ -291,13 +291,14 @@ test("abandoned library requests cannot replace a newer selection; failed lyrics
 });
 
 
-test("a pure listening entry publishes without a note body", () => {
-  const raw = ['---', 'title: "A song"', 'kind: "歌曲"', 'date: "2026-10-02"', 'url: "https://music.163.com/song?id=123"', '---', ''].join("\n");
+test("a pure listening entry needs only a music URL and date", () => {
+  const raw = ['---', 'date: "2026-10-02"', 'url: "https://music.163.com/song?id=123"', '---', ''].join("\n");
   const entry = parseMusicReview("src/content/music/a-song.md", raw);
   assert.equal(entry.content, "");
   assert.equal(entry.wordCount, 0);
-  assert.equal(parseMusicReviewMetadata("src/content/music/a-song.md", raw).title, "A song");
-  assert.throws(() => parseMusicReview("invalid.md", raw.replace('title: "A song"', '')), /title/u);
+  assert.equal(entry.section, "songs");
+  assert.equal(parseMusicReviewMetadata("src/content/music/a-song.md", raw).title, "");
+  assert.throws(() => parseMusicReview("invalid.md", raw.replace('date: "2026-10-02"', '')), /date/u);
 });
 
 

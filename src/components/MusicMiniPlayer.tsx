@@ -38,8 +38,8 @@ export function MusicMiniPlayer() {
   }, [state.entry]);
   if (!state.entry) return null;
 
-  const title = track?.title || state.entry.title;
-  const detail = state.error || track?.artist || state.entry.sourceTitle || (state.status === "loading" ? "正在加载曲目" : "");
+  const title = track?.title || state.entry.sourceTitle;
+  const detail = state.error || track?.artist || state.entry.sourceMeta || (state.status === "loading" ? "正在加载曲目" : "");
   const hasTracks = state.tracks.length > 0;
   const canChangeTrack = state.tracks.length > 1;
   const playbackMode = state.repeat ? "repeat" : state.shuffle ? "shuffle" : "sequence";
@@ -61,7 +61,7 @@ export function MusicMiniPlayer() {
     <section className="music-mini-player__desktop" aria-label="全局音乐播放器" aria-hidden={dismissed || undefined} inert={dismissed}>
       <div className="music-mini-player__card material-panel">
         <div className="music-mini-player__desktop-track">
-          {image.src && <a className="music-mini-player__art-link" href={contentRoute("music", state.entry)} aria-label="查看正在播放的音乐详情" onClick={() => { setDismissed(true); setShowVolume(false); }}><img className="music-mini-player__art" {...image} alt={`${track?.title || state.entry.sourceTitle || state.entry.title}的封面`} decoding="async" /></a>}
+          {image.src && <a className="music-mini-player__art-link" href={contentRoute("music", state.entry)} aria-label="查看正在播放的音乐详情" onClick={() => { setDismissed(true); setShowVolume(false); }}><img className="music-mini-player__art" {...image} alt={`${track?.title || state.entry.sourceTitle}的封面`} decoding="async" /></a>}
           <span className="music-mini-player__copy" aria-live="polite">
             <strong title={title}>{title}</strong>
             {detail && <small title={detail}>{detail}</small>}

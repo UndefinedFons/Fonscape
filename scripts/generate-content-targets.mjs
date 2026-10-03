@@ -5,6 +5,7 @@ import { contentRepositoryConfig } from "../content-repository.config.mjs";
 import {
   assertUniqueEntries,
   parseGenericContentMetadata,
+  parseMarkdownSource,
   parseMusicReviewMetadata,
   parsePoemMetadata,
   parsePostMetadata,
@@ -14,6 +15,7 @@ import { sortFeaturedPosts } from "../src/pages/homeContent.ts";
 import { sortMusicLibrary } from "../src/pages/musicContent.ts";
 import { extractLocalRasterSources, isLocalRasterSource } from "./generate-responsive-images.mjs";
 import { parseMetingLibraryUrl, parseMetingSongUrl } from "../src/musicSources.ts";
+import { createMusicMetadataResolver, resolveMusicMetadata } from "./music-metadata.ts";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -106,6 +108,27 @@ async function readCollection(definition, projectRoot) {
   }));
 }
 
+async function resolveMusicRecords(records, resolveMetadata) {
+  for (const record of records) {
+    const target = parseMetingLibraryUrl(record.entry.url);
+    if (!target) continue;
+    const { data } = parseMarkdownSource(record.source, record.raw);
+    const fields = ["sourceTitle", "sourceMeta", "image"].filter((key) => !Object.hasOwn(data, key) || (key === "sourceTitle" && !data[key].trim()));
+    if (!fields.length) continue;
+    let metadata;
+    try { metadata = await resolveMetadata(target); }
+    catch (error) {
+      throw new Error(`${record.source} 无法读取 ${record.entry.url} 的音乐信息：${error.message}。请重试，或手动填写 sourceTitle、sourceMeta 和 image。`, { cause: error });
+    }
+    const additions = fields.filter((key) => !Object.hasOwn(data, key)).map((key) => `${key}: ${JSON.stringify(metadata[key] || "")}`);
+    const header = record.raw.match(/^---\s*\r?\n([\s\S]*?)\r?\n---\s*(?:\r?\n|$)/u);
+    const lines = header[1].split(/\r?\n/u).map((line) => Object.hasOwn(data, "sourceTitle") && !data.sourceTitle.trim() && /^\s*sourceTitle:/u.test(line)
+      ? `sourceTitle: ${JSON.stringify(metadata.sourceTitle)}` : line);
+    record.raw = `---\n${[...lines, ...additions].join("\n")}\n---\n${record.raw.slice(header[0].length)}`;
+    record.entry = parseMusicReviewMetadata(record.source, record.raw);
+  }
+}
+
 async function readAudioAssetSizes(directory = join(root, "public", "audio"), prefix = "") {
   const entries = await readdir(directory, { withFileTypes: true }).catch((error) => {
     if (error.code === "ENOENT") return [];
@@ -184,7 +207,7 @@ function responsiveImagesFor(entry, raw, imageCatalog) {
 }
 
 function homeEntry(type, entry, imageCatalog = {}) {
-  const common = { slug: String(entry.slug), title: String(entry.title || ""), date: String(entry.date || "") };
+  const common = { slug: String(entry.slug), title: String((type === "music" ? entry.sourceTitle : entry.title) || ""), date: String(entry.date || "") };
   const responsiveImages = responsiveImagesFor(entry, "", imageCatalog);
   const withImages = Object.keys(responsiveImages).length ? { responsiveImages } : {};
   if (type === "post") return {
@@ -210,7 +233,6 @@ function homeEntry(type, entry, imageCatalog = {}) {
     ...(entry.url ? { url: String(entry.url) } : {}),
     ...withImages,
     section: String(entry.section || "songs"),
-    kind: String(entry.kind || ""),
     ...(entry.image ? { image: String(entry.image) } : {}),
     ...(entry.sourceTitle ? { sourceTitle: String(entry.sourceTitle) } : {}),
     ...(entry.sourceMeta ? { sourceMeta: String(entry.sourceMeta) } : {}),
@@ -224,7 +246,7 @@ export function contentFacet(type, entry, page) {
   return {
     key: contentKey(type, entry),
     page,
-    title: String(entry.title || ""),
+    title: String((type === "music" ? entry.sourceTitle : entry.title) || ""),
     date: String(entry.date || ""),
     ...(type === "post" ? {
       category: String(entry.category || ""),
@@ -232,7 +254,7 @@ export function contentFacet(type, entry, page) {
       series: entry.series ? String(entry.series) : null,
       seriesOrder: Number(entry.seriesOrder) || 0,
     } : {}),
-    ...(type === "music" ? { section: String(entry.section || "songs"), kind: String(entry.kind || "") } : {}),
+    ...(type === "music" ? { section: String(entry.section || "songs") } : {}),
   };
 }
 
@@ -240,10 +262,10 @@ export function contentSearchEntry(type, entry) {
   return {
     type,
     key: contentKey(type, entry),
-    title: String(entry.title || ""),
+    title: String(entry.title || (type === "music" ? entry.sourceTitle : "") || ""),
     date: String(entry.date || ""),
     ...(type === "post" ? { category: String(entry.category || "") } : {}),
-    ...(type === "music" ? { section: String(entry.section || "songs"), kind: String(entry.kind || ""), ...(entry.sourceTitle ? { sourceTitle: String(entry.sourceTitle) } : {}) } : {}),
+    ...(type === "music" ? { section: String(entry.section || "songs"), ...(entry.sourceTitle ? { sourceTitle: String(entry.sourceTitle) } : {}) } : {}),
   };
 }
 
@@ -349,12 +371,14 @@ async function writePreparedGeneratedContentFiles(outputs, directory) {
   }));
 }
 
-export async function generateContentArtifacts({ check = false, projectRoot = root } = {}) {
+export async function generateContentArtifacts({ check = false, projectRoot = root, resolveMetadata = resolveMusicMetadata } = {}) {
   const outputPath = join(projectRoot, "functions", "_generated", "content-targets.js");
   const metadataOutputPath = join(projectRoot, "functions", "_generated", "content-metadata.js");
   const generatedContentRoot = join(projectRoot, "public", "fonscape", "content");
   const responsiveImageBuildPath = join(projectRoot, "functions", "_generated", "responsive-images-build.json");
   const collections = await Promise.all(definitions.map(async (definition) => [definition.type, await readCollection(definition, projectRoot)]));
+  const musicRecords = collections.find(([type]) => type === "music")?.[1] || [];
+  await resolveMusicRecords(musicRecords, createMusicMetadataResolver(projectRoot, resolveMetadata));
   collections.forEach(([type, entries]) => {
     assertUniqueEntries(
       entries.map(({ entry }) => entry),

@@ -3,7 +3,7 @@ import type { DatedEntry, GenericContentMetadata, MusicReview, MusicReviewMetada
 type ParserOptions = { includeContent?: boolean };
 
 import { countWords, getArticleOutline, getFirstParagraph, getPoemLines } from "./markdown.ts";
-import { parseMetingSongUrl } from "../musicSources.ts";
+import { parseMetingLibraryUrl, parseMetingSongUrl } from "../musicSources.ts";
 import { parseContentDate } from "./date.ts";
 
 export { parseContentDate, sortNewestFirst } from "./date.ts";
@@ -177,8 +177,8 @@ export function parseMusicReview(path: string, source: string, options?: { inclu
 export function parseMusicReview(path: string, source: string, options: ParserOptions): MusicReview | MusicReviewMetadata;
 export function parseMusicReview(path: string, source: string, options: ParserOptions = {}): MusicReview | MusicReviewMetadata {
   const { data, filename, content } = parseMarkdownSource(path, source);
-  const { content: _frontmatterContent, reading: _reading, ...frontmatter } = data;
-  validateOptionalStrings(data, ["slug", "section", "excerpt", "image", "url", "sourceTitle", "sourceMeta", "action"], path);
+  const { content: _frontmatterContent, reading: _reading, kind: _kind, ...frontmatter } = data;
+  validateOptionalStrings(data, ["title", "slug", "section", "excerpt", "image", "url", "sourceTitle", "sourceMeta", "action"], path);
   if (Object.hasOwn(data, "featured") && typeof data.featured !== "boolean") {
     throw new Error(`${path} 的 Frontmatter featured 必须是布尔值。`);
   }
@@ -186,19 +186,26 @@ export function parseMusicReview(path: string, source: string, options: ParserOp
   if (Object.hasOwn(data, "featuredOrder") && (!Number.isInteger(data.featuredOrder) || (data.featuredOrder as number) < 1)) {
     throw new Error(`${path} 的 featuredOrder 必须是正整数。`);
   }
+  if (data.section && !["songs", "albums", "playlists"].includes(data.section as string)) {
+    throw new Error(`${path} 的 section 必须是 songs、albums 或 playlists。`);
+  }
+  const target = parseMetingLibraryUrl(data.url);
+  const section = target ? { song: "songs", album: "albums", playlist: "playlists" }[target.type] : data.section;
+  if (!target && (!section || typeof data.sourceTitle !== "string" || !data.sourceTitle.trim())) {
+    throw new Error(`${path} 的音乐链接无法自动识别，请填写 section（songs、albums 或 playlists）和 sourceTitle（音乐名称）。`);
+  }
   const review = {
     ...frontmatter,
+    title: content && typeof data.title === "string" ? data.title.trim() : "",
+    sourceTitle: typeof data.sourceTitle === "string" ? data.sourceTitle.trim() : "",
     slug: data.slug || filename,
-    section: data.section || "songs",
+    section,
     featured: Boolean(data.featured),
     firstParagraph: getFirstParagraph(content),
     wordCount: countWords(content),
     ...(options.includeContent === false ? {} : { content }),
   };
-  requireFields(review, ["title", "kind", "date"], path);
-  if (!["songs", "albums", "playlists"].includes(review.section as string)) {
-    throw new Error(`${path} 的 section 必须是 songs、albums 或 playlists。`);
-  }
+  requireFields(review, ["date"], path);
   return validateCommonEntry((review) as MusicReview | MusicReviewMetadata, path);
 }
 
