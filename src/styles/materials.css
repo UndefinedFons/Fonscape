@@ -130,7 +130,7 @@
   content:"";
   position:absolute;
   z-index:-1;
-  inset:14px 0 30px;
+  inset:0 0 30px;
   border:0;
   border-radius:24px;
   background:var(--glass-surface);
@@ -407,7 +407,7 @@
     0 18px 44px color-mix(in srgb,var(--shadow-color) 48%,transparent);
 }
 @media (max-width:760px) {
-  :root[data-glass="on"] .article-index--archive::before { inset:9px 0 22px; border-radius:20px; }
+  :root[data-glass="on"] .article-index--archive::before { inset:0 0 22px; border-radius:20px; }
 }
 :root[data-theme="dark"][data-glass="on"] .home-refresh-list>a:hover,
 :root[data-theme="dark"][data-glass="on"] .home-refresh-list>a:focus-visible {

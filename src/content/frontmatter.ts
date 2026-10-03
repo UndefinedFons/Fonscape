@@ -2,7 +2,7 @@ import type { DatedEntry, GenericContentMetadata, MusicReview, MusicReviewMetada
 
 type ParserOptions = { includeContent?: boolean };
 
-import { countWords, getArticleOutline, getFirstParagraph, getPoemLines } from "./markdown.ts";
+import { countWords, getArticleOutline, getFirstParagraph, getPoemLines, markdownToPlainText } from "./markdown.ts";
 import { parseMetingLibraryUrl, parseMetingSongUrl } from "../musicSources.ts";
 import { parseContentDate } from "./date.ts";
 
@@ -179,6 +179,9 @@ export function parseMusicReview(path: string, source: string, options: ParserOp
   const { data, filename, content } = parseMarkdownSource(path, source);
   const { content: _frontmatterContent, reading: _reading, kind: _kind, ...frontmatter } = data;
   validateOptionalStrings(data, ["title", "slug", "section", "excerpt", "image", "url", "sourceTitle", "sourceMeta", "action"], path);
+  if (!content && typeof data.excerpt === "string" && data.excerpt.trim()) {
+    throw new Error(`${path} 的 excerpt（手记摘要）需要 Markdown 正文。请补充正文，或删除 excerpt。`);
+  }
   if (Object.hasOwn(data, "featured") && typeof data.featured !== "boolean") {
     throw new Error(`${path} 的 Frontmatter featured 必须是布尔值。`);
   }
@@ -201,7 +204,7 @@ export function parseMusicReview(path: string, source: string, options: ParserOp
     slug: data.slug || filename,
     section,
     featured: Boolean(data.featured),
-    firstParagraph: getFirstParagraph(content),
+    firstParagraph: getFirstParagraph(content) || markdownToPlainText(content),
     wordCount: countWords(content),
     ...(options.includeContent === false ? {} : { content }),
   };

@@ -24,9 +24,9 @@
 .music-stage-quiet>svg { color:var(--accent); opacity:.6; }
 .music-stage-quiet>p { margin:24px 0 16px; color:var(--muted); font-size:14px; line-height:1.85; }
 .music-stage-quiet>small { color:var(--muted); font-size:12px; line-height:1.8; }
-.music-lyrics { position:relative; height:420px; margin-top:24px; overflow:auto; scrollbar-width:none; overscroll-behavior:contain; padding-block:145px; mask-image:linear-gradient(transparent,#000 12%,#000 88%,transparent); }
+.music-lyrics { position:relative; height:420px; margin-top:24px; overflow-x:hidden; overflow-y:auto; scrollbar-width:none; overscroll-behavior:contain; padding-block:145px; mask-image:linear-gradient(transparent,#000 12%,#000 88%,transparent); }
 .music-lyrics::-webkit-scrollbar { display:none; }
-.music-lyrics>button { display:block; width:100%; min-height:62px; margin-block:10px; padding:12px 8px; border:0; border-radius:8px; color:var(--muted); background:transparent; text-align:left; font:600 clamp(22px,2.7vw,32px)/1.6 "Zen Maru Gothic",sans-serif; opacity:.46; transition:color .34s ease,opacity .34s ease,transform .46s cubic-bezier(.22,1,.36,1); }
+.music-lyrics>button { display:block; width:calc(100% - 8px); white-space:normal; overflow-wrap:anywhere; min-height:62px; margin-block:10px; padding:12px 8px; border:0; border-radius:8px; color:var(--muted); background:transparent; text-align:left; font:600 clamp(22px,2.7vw,32px)/1.6 "Zen Maru Gothic",sans-serif; opacity:.46; transition:color .34s ease,opacity .34s ease,transform .46s cubic-bezier(.22,1,.36,1); }
 .music-lyrics>button:hover { opacity:.8; }
 .music-lyrics>button.is-current { color:var(--text); opacity:1; transform:translateX(8px); }
 .music-lyrics small { display:block; margin-top:4px; font:400 13px/1.7 "Noto Sans SC",sans-serif; }
@@ -74,9 +74,9 @@
 .music-stage-volume { position:relative; display:flex; align-items:center; }
 .music-stage-volume>div { display:flex; align-items:center; }
 .music-stage-volume input { max-width:68px; }
-.music-queue-backdrop { place-items:center; padding:30px 20px; }
-.music-queue-dialog { width:min(600px,100%); max-height:calc(100dvh - 60px); padding:24px; }
-.music-queue-dialog>header { display:flex; align-items:center; justify-content:space-between; gap:16px; margin-bottom:20px; }
+.dialog-backdrop.music-queue-backdrop { place-items:center; padding:30px 20px; overflow:hidden; overscroll-behavior:none; }
+.music-queue-dialog { display:flex; flex-direction:column; width:min(600px,100%); max-height:calc(100dvh - 60px); padding:24px; }
+.music-queue-dialog>header { display:flex; flex:none; align-items:center; justify-content:space-between; gap:16px; margin-bottom:20px; }
 .music-queue-dialog .eyebrow { color:var(--muted); font-size:10px; }
 .music-queue-dialog h2 { margin:8px 0 0; font:600 25px/1.4 "Zen Maru Gothic",sans-serif; }
 .music-stage-transport button { transition:transform .28s cubic-bezier(.22,1,.36,1),background-color .25s ease; }
@@ -101,10 +101,10 @@
 .music-queue-dialog :is(button,input):focus-visible { outline:2px solid var(--accent); outline-offset:3px; }
 .music-stage :is(button,a,input):focus-visible,.music-record :is(button,a):focus-visible { outline:2px solid var(--accent); outline-offset:4px; }
 .music-room-detail { padding:98px 0 60px; background:transparent; border:0; box-shadow:none; }
-.music-room-detail>.music-stage { margin:16px 0 42px; }
+.music-room-detail>.music-stage { margin:16px 0 var(--route-content-gap); }
 .music-room-detail>.music-listening-note,.music-room-detail>.music-comments-panel { max-width:790px; padding:36px; border-radius:var(--radius); background:var(--surface); }
 :root[data-glass="on"] .music-listening-note { background:var(--glass-surface); }
-.music-room-detail>.music-comments-panel { margin:42px auto 0; }
+.music-room-detail>.music-comments-panel { margin:var(--route-content-gap) auto 0; }
 .music-room-detail .music-listening-note h1 { font-size:clamp(27px,4vw,42px); }
 @media (max-width:1040px) {
   .music-stage-content { grid-template-columns:minmax(220px,300px) minmax(0,1fr); gap:32px; }
@@ -132,14 +132,17 @@
   .music-lyrics { height:250px; margin-top:0; padding-block:90px; }
   .music-lyrics>button { text-align:center; font-size:23px; }
   .music-lyrics>button.is-current { transform:translateY(-2px); }
-  .music-stage-controls { --music-volume-width:calc(100% - 148px); grid-template-columns:96px minmax(0,1fr) 96px; gap:16px 8px; margin-top:24px; }
+  .music-stage-controls { --music-volume-width:calc(100% - 100px); grid-template-columns:64px minmax(0,1fr) 64px; gap:16px 4px; margin-top:24px; }
   .music-stage-timeline { grid-column:1/-1; grid-row:1; }
-  .music-stage-options { grid-column:1; grid-row:2; }
+  .music-stage-controls .music-stage-options { grid-column:1; grid-row:2; gap:0; }
+  .music-stage-options button,.music-stage-volume>button { width:32px; height:44px; }
+  .music-stage-options button svg,.music-stage-volume>button svg { width:18px; height:18px; }
+  .music-stage-controls:has(.music-stage-options:empty) { --music-volume-width:calc(100% - 36px); }
   .music-stage-transport { grid-column:2; grid-row:2; justify-self:center; gap:2px; }
   .music-stage-volume { grid-column:3; grid-row:2; justify-self:end; position:static; }
   .music-stage-volume>button { position:relative; }
-  .music-stage-transport button:not(.music-play-primary) { width:32px; }
-  .music-stage-volume>div { position:absolute; right:52px; bottom:0; height:44px; width:0; opacity:0; overflow:hidden; pointer-events:none; transition:width .32s cubic-bezier(.64,0,.78,0),opacity 0s linear .32s; }
+  .music-stage-transport button:not(.music-play-primary) { width:28px; }
+  .music-stage-volume>div { position:absolute; right:36px; bottom:0; height:44px; width:0; opacity:0; overflow:hidden; pointer-events:none; transition:width .32s cubic-bezier(.64,0,.78,0),opacity 0s linear .32s; }
   .music-stage-volume.is-open>div { width:var(--music-volume-width); opacity:1; pointer-events:auto; transition:width .32s cubic-bezier(.22,1,.36,1),opacity .25s ease; }
   .music-stage-transport { transition:opacity .2s ease .32s,transform .3s cubic-bezier(.22,1,.36,1) .32s; }
   .volume-open .music-stage-transport { opacity:0; pointer-events:none; transform:scale(.9); transition-delay:0s; }
@@ -158,18 +161,6 @@
   .music-record-kind { top:12px; left:12px; font-size:9px; }
   .music-room-detail>.music-listening-note,.music-room-detail>.music-comments-panel { padding:24px; }
   .music-queue-dialog { padding:20px; }
-}
-@media (max-width:420px) {
-  .music-stage-controls { grid-template-columns:1fr 1fr; gap:12px; }
-  .music-stage-transport { grid-column:1/-1; grid-row:2; gap:10px; }
-  .music-stage-transport button:not(.music-play-primary) { width:44px; }
-  .music-stage-options { grid-column:1; grid-row:3; }
-  .music-stage-volume { grid-column:2; grid-row:3; }
-  .music-stage-controls:has(.music-stage-options:empty) .music-stage-volume { grid-row:2; }
-  .music-stage-options { transition:opacity .2s ease .32s; }
-  .volume-open .music-stage-options { opacity:0; pointer-events:none; transition-delay:0s; }
-  .volume-open .music-stage-transport { opacity:1; pointer-events:auto; transform:none; }
-  .music-stage-volume.is-open>div { width:calc(100% - 52px); }
 }
 @media (max-width:375px) {
   .music-stage { padding:18px; }

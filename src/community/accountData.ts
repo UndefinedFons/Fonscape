@@ -48,7 +48,7 @@ export function contentMeta(item: Pick<AccountComment, "contentType" | "contentS
   const contentSlug = String(item.contentSlug || "");
   const slug = contentSlug.split("/").slice(1).join("/");
   const review = contentLookup.get(`music:${contentSlug}`);
-  return { title: item.contentTitle || review?.title || slug || contentSlug, section: `音乐 · ${review?.section ? getMusicSectionLabel(review.section) : "内容"}` };
+  return { title: review?.sourceTitle || review?.title || item.contentTitle || slug || contentSlug, section: `音乐 · ${review?.section ? getMusicSectionLabel(review.section) : "内容"}` };
 }
 
 export function loadMyReplies(viewerId: string, refresh = false): Promise<AccountCommentFeed<AccountReply>> {

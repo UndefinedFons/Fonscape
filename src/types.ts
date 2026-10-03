@@ -173,7 +173,7 @@ export interface ContentMetadataByType {
   music: MusicReviewMetadata;
 }
 
-export type ContentLookup = ReadonlyMap<string, { title: string; category?: string; section?: MusicSection }>;
+export type ContentLookup = ReadonlyMap<string, { title: string; sourceTitle?: string; category?: string; section?: MusicSection }>;
 export interface StatsTarget {
   type: ContentType;
   slug: string;
@@ -280,6 +280,8 @@ export interface PoemSearchEntry {
 
 export interface MusicSearchEntry {
   sourceTitle?: string;
+  noteTitle?: string;
+  notePreview?: string;
   type: "music";
   key: string;
   title: string;
@@ -290,7 +292,8 @@ export interface MusicSearchEntry {
 export type ContentSearchEntry = PostSearchEntry | PoemSearchEntry | MusicSearchEntry;
 
 export interface SearchItem {
-  sourceTitle?: string;
+  note?: string;
+  section?: MusicSection;
   id: string;
   slug: string;
   kind: ContentType;
