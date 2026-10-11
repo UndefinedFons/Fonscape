@@ -23,7 +23,9 @@ export function sanitizeMermaidSvg(svg: unknown): string {
     root.style.height = "auto";
   }
   return createDOMPurify(window).sanitize(root, {
-    USE_PROFILES: { svg: true, svgFilters: true },
-    FORBID_TAGS: ["foreignObject"],
+    USE_PROFILES: { svg: true, svgFilters: true, mathMl: true },
+    // Mermaid math uses HTML text wrappers inside SVG; permit only those wrappers.
+    ADD_TAGS: ["foreignObject", "div", "span"],
+    HTML_INTEGRATION_POINTS: { foreignobject: true },
   });
 }
