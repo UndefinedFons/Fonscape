@@ -9,7 +9,8 @@
 <p align="center">
   <a href="https://fonstage.space/">在线示例</a> ·
   <a href="#开始使用">开始使用</a> ·
-  <a href="./GUIDE.md">使用指南</a>
+  <a href="./GUIDE.md">使用指南</a> ·
+  <a href="./AGENTS.md">Agent 指南</a>
 </p>
 
 ## 示例界面
