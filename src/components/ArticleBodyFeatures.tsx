@@ -158,17 +158,47 @@ function useDocumentTheme(): "dark" | "light" {
   return theme;
 }
 
+async function loadMermaidMathStyles(source: string): Promise<void> {
+  await import("katex/dist/katex.min.css");
+  if (!document.fonts) return;
+  const { default: katex } = await import("katex");
+  const flowchart = /^\s*(?:flowchart|graph)\b/mu.test(source);
+  const probe = document.createElement("div");
+  probe.id = "katex-temp";
+  probe.style.cssText = "position:fixed;inset:0;visibility:hidden;pointer-events:none;overflow:hidden;";
+  probe.innerHTML = [...source.matchAll(/\$\$([\s\S]+?)\$\$/gu)].map((match) => katex.renderToString(
+    flowchart ? match[1].replace(/\\\\/gu, "\\") : match[1],
+    { displayMode: true, output: "html", throwOnError: false, trust: false },
+  )).join("");
+  document.body.appendChild(probe);
+  try {
+    // Trigger only the fonts used by these formulas before Mermaid measures them.
+    probe.getBoundingClientRect();
+    await document.fonts.ready;
+  } finally {
+    probe.remove();
+  }
+}
+
 function renderMermaid(mermaid: Mermaid, id: string, source: string, themeVariables: ReturnType<typeof getMermaidThemeVariables>): Promise<RenderResult> {
   const task = mermaidRenderQueue.then(async () => {
+    const mathLabels = /\$\$[\s\S]+?\$\$/u.test(source);
+    const horizontalFlowchart = /^\s*(?:flowchart|graph)\s+(?:LR|RL)\b/mu.test(source);
+    if (mathLabels) await loadMermaidMathStyles(source);
     mermaid.initialize({
       startOnLoad: false,
       securityLevel: "strict",
       suppressErrorRendering: true,
       maxTextSize: MAX_MERMAID_SOURCE_LENGTH,
       maxEdges: 1000,
-      htmlLabels: false,
+      htmlLabels: mathLabels,
+      forceLegacyMathML: mathLabels,
       theme: "base",
       themeVariables,
+      themeCSS: !mathLabels ? undefined : horizontalFlowchart ? `
+        .edgeLabel:has(.katex) .label { transform-box: fill-box; translate: 0 calc(-50% - 4px); }
+        .edgeLabel:has(.katex), .edgeLabel:has(.katex) .labelBkg { background: transparent; }
+      ` : `.edgeLabel .labelBkg { background-color: ${themeVariables.edgeLabelBackground}; }`,
       flowchart: { useMaxWidth: true },
       sequence: { useMaxWidth: true },
     });

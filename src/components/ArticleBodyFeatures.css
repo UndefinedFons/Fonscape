@@ -35,7 +35,7 @@
 .mermaid-diagram--ready::-webkit-scrollbar-track { background:transparent; }
 .mermaid-diagram--ready::-webkit-scrollbar-thumb { border-radius:999px; background:color-mix(in srgb,var(--accent) 48%,var(--line)); }
 .mermaid-diagram--ready::-webkit-scrollbar-thumb:hover { background:var(--accent); }
-.mermaid-diagram--ready svg { display:block; min-width:0; max-width:none; height:auto; margin:0 auto; }
+.mermaid-diagram--ready>svg { display:block; min-width:0; max-width:none; height:auto; margin:0 auto; }
 .mermaid-diagram--ready:focus-visible { outline:2px solid var(--accent); outline-offset:4px; border-radius:8px; }
 .mermaid-diagram--loading,.mermaid-diagram--error { display:grid; gap:8px; }
 .mermaid-diagram--loading figcaption,.mermaid-diagram--error figcaption { color:var(--muted); font-size:11px; text-align:center; }
@@ -45,6 +45,9 @@
 .rich-article .katex { font-size:1.04em; }
 .rich-article .katex-display { max-width:100%; margin:2em 0; overflow-x:auto; overflow-y:hidden; padding:4px 0 8px; overscroll-behavior-inline:contain; scrollbar-width:thin; }
 .rich-article .katex-display>.katex { min-width:max-content; }
+/* Mermaid measures labels in temporary SVGs and #katex-temp outside the article. */
+svg[id^="fonscape-mermaid-"] .katex,#katex-temp .katex { font-size:16px; }
+svg[id^="fonscape-mermaid-"] .katex-display,#katex-temp .katex-display { max-width:none; margin:0; overflow:visible; padding:0; }
 
 @media (max-width:760px) {
   .rich-article blockquote.article-callout { margin-block:1.25em; padding:10px 13px 11px 14px; }
