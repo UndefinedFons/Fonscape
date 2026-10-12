@@ -582,7 +582,6 @@
   .music-detail-page .article-intro-copy h1 {
     width:min(100%,310px);
     margin-inline:auto;
-    font-size:clamp(28px,8vw,32px);
     line-height:1.42;
     letter-spacing:-.02em;
     text-indent:0;
