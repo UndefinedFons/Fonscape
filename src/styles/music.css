@@ -105,7 +105,6 @@
 .music-room-detail>.music-listening-note,.music-room-detail>.music-comments-panel { max-width:790px; padding:36px; border-radius:var(--radius); background:var(--surface); }
 :root[data-glass="on"] .music-listening-note { background:var(--glass-surface); }
 .music-room-detail>.music-comments-panel { margin:var(--route-content-gap) auto 0; }
-.music-room-detail .music-listening-note h1 { font-size:clamp(27px,4vw,42px); }
 @media (max-width:1040px) {
   .music-stage-content { grid-template-columns:minmax(220px,300px) minmax(0,1fr); gap:32px; }
   .music-record-grid { grid-template-columns:repeat(3,minmax(0,1fr)); }
