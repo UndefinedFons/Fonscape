@@ -9,7 +9,8 @@ function roundMermaidRectangles(root: ParentNode): void {
 
 export function sanitizeMermaidSvg(svg: unknown): string {
   if (typeof window === "undefined" || typeof svg !== "string") return "";
-  const parsed = new window.DOMParser().parseFromString(svg, "image/svg+xml");
+  // Mermaid serializes HTML line breaks as void tags; XML requires a closing slash.
+  const parsed = new window.DOMParser().parseFromString(svg.replace(/<br\s*\/?>/giu, "<br/>"), "image/svg+xml");
   if (parsed.querySelector("parsererror") || parsed.documentElement.localName !== "svg"
     || parsed.documentElement.namespaceURI !== "http://www.w3.org/2000/svg") return "";
   roundMermaidRectangles(parsed);
@@ -24,8 +25,8 @@ export function sanitizeMermaidSvg(svg: unknown): string {
   }
   return createDOMPurify(window).sanitize(root, {
     USE_PROFILES: { svg: true, svgFilters: true, mathMl: true },
-    // Mermaid math uses HTML text wrappers inside SVG; permit only those wrappers.
-    ADD_TAGS: ["foreignObject", "div", "span"],
+    // Math enables HTML labels for the whole diagram, including ordinary Markdown text.
+    ADD_TAGS: ["foreignObject", "div", "span", "p", "br", "strong", "em"],
     HTML_INTEGRATION_POINTS: { foreignobject: true },
   });
 }

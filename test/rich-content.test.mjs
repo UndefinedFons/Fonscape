@@ -13,7 +13,7 @@ test("rich content uses the Markdown content field as its only source", () => {
   assert.equal(getPostMarkdown({}), "");
 });
 
-test("Mermaid flowchart and sequence labels render formulas through the SVG sanitizer", async () => {
+test("Mermaid labels retain formulas and mixed multiline text through the SVG sanitizer", async () => {
   const { JSDOM } = await import("jsdom");
   const dom = new JSDOM('<!doctype html><div id="root"></div>', { pretendToBeVisual: true });
   const originals = new Map();
@@ -42,6 +42,7 @@ test("Mermaid flowchart and sequence labels render formulas through the SVG sani
       String.raw`flowchart LR
 A["$$E=mc^2$$"] -->|"$$\sqrt{x}$$"| B["$$\begin{bmatrix}1 & 2 \\\\ 3 & 4\end{bmatrix}$$"]`,
       'sequenceDiagram\nparticipant A as $$\\alpha$$\nA->>A: $$E=mc^2$$',
+      'flowchart LR\nA["$$E=mc^2$$"] --> B["第一行<br/>第二行"]\nB --> C["`**粗体**\n*斜体*`"]',
     ]) {
       await act(async () => root.render(createElement(MermaidDiagram, { key: source, source })));
       const deadline = Date.now() + 15000;
@@ -53,6 +54,16 @@ A["$$E=mc^2$$"] -->|"$$\sqrt{x}$$"| B["$$\begin{bmatrix}1 & 2 \\\\ 3 & 4\end{bma
       assert.ok(diagram.querySelector(".katex-html"), "formulas retain their typeset output");
       assert.equal(diagram.querySelector("math msup")?.textContent, "c2", "the exponent remains accessible MathML");
       assert.doesNotMatch(diagram.textContent, /\$\$/u, "formula delimiters are not visible labels");
+      if (source.includes("第一行")) {
+        const labels = [...diagram.querySelectorAll("foreignObject")];
+        const multiline = labels.find((label) => label.textContent.includes("第一行"));
+        assert.ok(multiline?.querySelector("p br"), "ordinary text retains its line break beside a formula");
+        assert.equal(multiline.textContent, "第一行第二行");
+        const markdown = labels.find((label) => label.textContent.includes("粗体"));
+        assert.equal(markdown?.querySelector("p strong")?.textContent, "粗体", "Markdown retains bold emphasis");
+        assert.equal(markdown?.querySelector("p em")?.textContent, "斜体", "Markdown retains italic emphasis");
+        assert.ok(markdown.querySelector("br"), "Markdown retains its explicit line break");
+      }
     }
   } finally {
     if (root) await act(async () => root.unmount());
@@ -75,6 +86,7 @@ test("Mermaid SVG strips executable markup and disguised link protocols", async 
     const svg = sanitizeMermaidSvg(`<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
       <script>alert(1)</script><foreignObject><div xmlns="http://www.w3.org/1999/xhtml">
         <span ONCLICK="alert(1)">label</span><img src="x" ONERROR="alert(1)"/>
+        <p ONCLICK="alert(1)"><strong ONMOUSEOVER="alert(1)">bold</strong><br ONCLICK="alert(1)"/><em ONCLICK="alert(1)">italic</em></p>
         <iframe src="javascript:alert(1)"></iframe><input autofocus=""/>
       </div></foreignObject>
       <rect ONLOAD="alert(1)"/><a href="java&#x9;script:alert(1)"><text>one</text></a>
@@ -84,7 +96,7 @@ test("Mermaid SVG strips executable markup and disguised link protocols", async 
     </svg>`);
     const container = dom.window.document.createElement("div");
     container.innerHTML = svg;
-    assert.equal(container.querySelector("script, iframe, img, input, [onclick], [onerror]"), null);
+    assert.equal(container.querySelector("script, iframe, img, input, [onclick], [onerror], [onmouseover]"), null);
     assert.equal(container.querySelector("rect").hasAttribute("onload"), false);
     const links = [...container.querySelectorAll("a")];
     assert.deepEqual(links.map((link) => link.getAttribute("href")), [null, null, null, "#node"]);
