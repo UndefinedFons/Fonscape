@@ -40,11 +40,26 @@ export function countWords(markdown: string): number {
   return chineseCharacters + latinWords;
 }
 
-export function getArticleOutline(markdown: string): ArticleOutlineItem[] {
+export function getArticleOutline(markdown: string, numbered = false): ArticleOutlineItem[] {
   const lines = markdown.split(/\r?\n/u);
-  const headings: Array<{ line: number; title: string }> = [];
+  type Heading = {
+    line: number;
+    title: string;
+    level: number;
+    depth: number;
+    id: string;
+    number: string;
+    numberPath: string[];
+    parentId?: string;
+    childCount: number;
+  };
+  const headings: Heading[] = [];
   const prefaceLines: string[] = [];
+  const stack: Heading[] = [];
   let fence: { character: string; length: number } | null = null;
+  let h2Count = 0;
+  let rootCount = 0;
+  let orphanCount = 0;
 
   lines.forEach((line, index) => {
     if (fence) {
@@ -61,24 +76,65 @@ export function getArticleOutline(markdown: string): ArticleOutlineItem[] {
       return;
     }
 
-    const heading = line.match(/^##\s+(.+)$/u);
-    if (heading) {
-      headings.push({ line: index + 1, title: heading[1] });
+    if (/^(?: {4,}|\t)/u.test(line)) return;
+
+    const heading = line.match(/^ {0,3}(#{2,6})(?:[ \t]+(.*?))?[ \t]*$/u);
+    const headingTitle = heading?.[2]?.replace(/[ \t]+#+[ \t]*$/u, "").trim() || "";
+    if (heading && headingTitle) {
+      const level = heading[1].length;
+      while (stack.length && stack[stack.length - 1].level >= level) stack.pop();
+      const parent = stack[stack.length - 1];
+      const depth = parent ? parent.depth + 1 : 0;
+      const childIndex = parent ? ++parent.childCount : 0;
+      let id: string;
+      let numberPath: string[];
+      if (parent) {
+        id = `${parent.id}-${childIndex}`;
+        numberPath = [...parent.numberPath, String(childIndex)];
+      } else {
+        rootCount += 1;
+        if (level === 2) {
+          h2Count += 1;
+          id = `article-section-${h2Count}`;
+        } else {
+          orphanCount += 1;
+          id = `article-section-orphan-${level}-${orphanCount}`;
+        }
+        numberPath = [String(rootCount)];
+      }
+      const item: Heading = {
+        line: index + 1,
+        title: headingTitle,
+        level,
+        depth,
+        id,
+        number: numbered
+          ? (parent ? numberPath.join(".") : String(rootCount).padStart(2, "0"))
+          : "",
+        numberPath,
+        ...(parent ? { parentId: parent.id } : {}),
+        childCount: 0,
+      };
+      headings.push(item);
+      stack.push(item);
     } else if (headings.length === 0) {
       prefaceLines.push(line);
     }
   });
 
-  if (headings.length < 2) return [];
-  const outline: ArticleOutlineItem[] = headings.map((heading, index) => ({
-    id: `article-section-${index + 1}`,
-    number: String(index + 1).padStart(2, "0"),
+  if (headings.length === 0) return [];
+  const outline: ArticleOutlineItem[] = headings.map((heading) => ({
+    id: heading.id,
+    number: heading.number,
     line: heading.line,
     title: heading.title.replace(/[*_`~]/g, "").trim(),
+    level: heading.level,
+    depth: heading.depth,
+    ...(heading.parentId ? { parentId: heading.parentId } : {}),
   }));
   const preface = prefaceLines.join("\n").replace(/\[\[article-music\]\]/g, "");
   if (markdownToPlainText(preface)) {
-    outline.unshift({ id: "article-prologue", number: "00", title: "序章", prologue: true });
+    outline.unshift({ id: "article-prologue", number: numbered ? "00" : "", title: "序章", level: 2, depth: 0, prologue: true });
   }
   return outline;
 }

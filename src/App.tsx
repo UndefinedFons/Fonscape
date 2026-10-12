@@ -289,7 +289,7 @@ export function App() {
   const isRetiredAdmin = isRetiredAdminRoute(route);
   const routeEnabled = isSiteRouteEnabled(route, siteConfig);
   const isDetailRoute = route.startsWith("/post/") || route.startsWith("/poem/") || route.startsWith("/music/");
-  const hasArticleOutline = activePostOutline.length > 1;
+  const hasArticleOutline = activePostOutline.filter((item) => !item.prologue).length > 1;
   useEffect(() => {
     setArticleOutlineOpen(false);
     setActiveOutlineId("");

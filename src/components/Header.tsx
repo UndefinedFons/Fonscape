@@ -13,7 +13,7 @@ import { UserCircle } from "@phosphor-icons/react/UserCircle";
 import { UserCircleCheck } from "@phosphor-icons/react/UserCircleCheck";
 import { X } from "@phosphor-icons/react/X";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import type { CSSProperties } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import { navItems } from "../content/index.ts";
 import { getDetailReadingTarget } from "../detailReading.ts";
 import { routeHref } from "../routes.ts";
@@ -96,8 +96,26 @@ export function ArticleOutlinePopover({ items, open, activeId, onSelect }: {
   onClose?: () => void;
   onSelect: (item: ArticleOutlineItem) => void;
 }) {
-  const activeItem = items.find((item) => item.id === activeId) || items[0];
-  return <aside className={`article-outline${open ? " is-open" : ""}`} aria-hidden={!open}><header><List size={18} weight="duotone" /><span>文章导览</span><small>{activeItem?.number || "00"} / {String(items.length - (items[0]?.prologue ? 1 : 0)).padStart(2, "0")}</small></header><nav aria-label="文章章节导览">{items.map((item) => <button type="button" key={item.id} className={item.id === activeId ? "active" : ""} aria-current={item.id === activeId ? "location" : undefined} tabIndex={open ? 0 : -1} onClick={() => onSelect(item)}><span>{item.number}</span><b>{item.title}</b></button>)}</nav></aside>;
+  const roots = items.filter((item) => !item.parentId);
+  const chapters = roots.filter((item) => !item.prologue);
+  const byId = new Map(items.map((item) => [item.id, item]));
+  const children = new Map<string, ArticleOutlineItem[]>();
+  for (const item of items) {
+    if (item.parentId) children.set(item.parentId, [...(children.get(item.parentId) || []), item]);
+  }
+  let activeChapter = byId.get(activeId);
+  while (activeChapter?.parentId) activeChapter = byId.get(activeChapter.parentId);
+  const chapterPosition = activeChapter && !activeChapter.prologue ? chapters.indexOf(activeChapter) + 1 : 0;
+  const renderItems = (entries: ArticleOutlineItem[]): ReactNode => <ol>{entries.map((item) => <li key={item.id}>
+    <button type="button" className={`${item.id === activeId ? "active" : ""}${item.number ? "" : " is-unnumbered"}`} aria-current={item.id === activeId ? "location" : undefined} tabIndex={open ? 0 : -1} onClick={() => onSelect(item)} title={item.title}>
+      {item.number && <span>{item.number}</span>}<b>{item.title}</b>
+    </button>
+    {children.has(item.id) && renderItems(children.get(item.id)!)}
+  </li>)}</ol>;
+  return <aside className={`article-outline${open ? " is-open" : ""}`} aria-hidden={!open}>
+    <header><List size={18} weight="duotone" /><span>文章导览</span><small>{String(chapterPosition).padStart(2, "0")} / {String(chapters.length).padStart(2, "0")}</small></header>
+    <nav aria-label="文章章节导览">{renderItems(roots)}</nav>
+  </aside>;
 }
 
 export function Header({ route, theme, menuOpen, onMenu, onTheme, onSearch, onSearchIntent, onSettings, onSettingsIntent, viewer, onAccount, onAccountIntent, hasArticleOutline, articleOutlineOpen, onArticleOutline, onCloseArticleOutline }: {

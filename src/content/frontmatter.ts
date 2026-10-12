@@ -111,6 +111,9 @@ export function parsePost(path: string, source: string, options: ParserOptions =
   if (Object.hasOwn(data, "featured") && typeof data.featured !== "boolean") {
     throw new Error(`${path} 的 Frontmatter featured 必须是布尔值。`);
   }
+  if (Object.hasOwn(data, "outlineNumbering") && typeof data.outlineNumbering !== "boolean") {
+    throw new Error(`${path} 的 Frontmatter outlineNumbering 必须是布尔值。`);
+  }
   if (Object.hasOwn(data, "musicPlacement") && data.musicPlacement !== "inline") {
     throw new Error(`${path} 的 Frontmatter musicPlacement 必须是 inline。`);
   }
@@ -145,7 +148,7 @@ export function parsePost(path: string, source: string, options: ParserOptions =
     featured: Boolean(data.featured),
     firstParagraph: getFirstParagraph(content),
     wordCount: countWords(content),
-    outline: getArticleOutline(content),
+    outline: getArticleOutline(content, data.outlineNumbering === true),
     ...(options.includeContent === false ? {} : { content }),
   };
   requireFields(post, ["title", "category", "date"], path);

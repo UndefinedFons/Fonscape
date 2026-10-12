@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { act, createElement } from "react";
 import { createRoot } from "react-dom/client";
+import { renderToStaticMarkup } from "react-dom/server";
+import { parsePost } from "../src/content/frontmatter.ts";
 import { createServer } from "vite";
 import { getPostMarkdown } from "../src/richContent.ts";
 
@@ -128,5 +130,54 @@ test("Mermaid SVG retains diagram styling, geometry and safe references", async 
     if (previous === undefined) delete globalThis.window;
     else globalThis.window = previous;
     dom.window.close();
+  }
+});
+
+
+test("nested article navigation targets body headings with optional automatic numbers", async () => {
+  const { JSDOM } = await import("jsdom");
+  const server = await createServer({
+    configFile: false, appType: "custom", optimizeDeps: { noDiscovery: true },
+    esbuild: { jsx: "automatic" }, server: { middlewareMode: true, ws: false, watch: null },
+  });
+  try {
+    const { RichArticleContent } = await server.ssrLoadModule("/src/RichArticleContent.tsx");
+    const { ArticleOutlinePopover } = await server.ssrLoadModule("/src/components/Header.tsx");
+    for (const numbered of [undefined, false, true]) {
+      const post = parsePost("outline.md", `---
+title: "目录示例"
+category: "笔记"
+date: "2026-10-11"
+${numbered === undefined ? "" : `outlineNumbering: ${numbered}\n`}---
+引言。
+
+## 第一章
+### 子节
+#### 细节
+## 第二章
+### 子节
+`);
+      const activeItem = post.outline.find((item) => item.number === "1.1" || item.title === "子节");
+      const dom = new JSDOM(renderToStaticMarkup(createElement("div", null,
+        createElement(ArticleOutlinePopover, { items: post.outline, open: true, activeId: activeItem.id, onSelect() {} }),
+        createElement(RichArticleContent, { post }),
+      )));
+      try {
+        const document = dom.window.document;
+        const headings = [...document.querySelectorAll(".article-prose :is(h2,h3,h4)")];
+        assert.deepEqual(headings.map((heading) => heading.id), post.outline.filter((item) => !item.prologue).map((item) => item.id), "every nested heading has its navigation target");
+        assert.equal(new Set(headings.map((heading) => heading.id)).size, headings.length, "repeated titles retain unique targets");
+        assert.equal(document.querySelector('nav[aria-label="文章章节导览"] ol ol ol button b').textContent, "细节", "the navigation exposes nested lists");
+        assert.equal(document.querySelector('button[aria-current="location"] b').textContent, "子节");
+        assert.match(document.querySelector(".article-outline header small").textContent, /01 \/ 02/u, "the counter tracks chapters rather than nested rows");
+        assert.equal(document.querySelectorAll(".article-section-number").length, numbered ? 5 : 0);
+        const navNumbers = [...document.querySelectorAll(".article-outline nav button>span")].map((node) => node.textContent);
+        assert.deepEqual(navNumbers, numbered ? ["00", "01", "1.1", "1.1.1", "02", "2.1"] : []);
+      } finally {
+        dom.window.close();
+      }
+    }
+  } finally {
+    await server.close();
   }
 });
