@@ -176,20 +176,27 @@ export function RichArticleContent({ post, inlineMusicPlayer = null, inlineMusic
     });
     return () => { active = false; };
   }, [mathInMarkdown]);
-  const articleComponents = useMemo<Components>(() => ({
-    ...components,
-    h2: ({ children, node }: ComponentProps<"h2"> & ExtraProps) => {
-      const heading = headings.find((item) => item.line === node?.position?.start?.line) || headings[0] || { id: "article-section-1", number: "01" };
-      return <h2 id={heading.id}><span className="article-section-number">{heading.number}</span><span>{children}</span></h2>;
-    },
-    p: ({ children }: ComponentProps<"p">) => {
-      const marker = Array.isArray(children) ? children.join("") : children;
-      if (typeof marker === "string" && marker.trim() === "[[article-music]]") return inlineMusicPlayer;
-      const musicMarker = typeof marker === "string" ? /^\[\[article-music:([a-zA-Z0-9-]+)\]\]$/u.exec(marker.trim()) : null;
-      if (musicMarker) return inlineMusicPlayers[musicMarker[1]] || null;
-      return <p>{children}</p>;
-    },
-  }), [headings, inlineMusicPlayer, inlineMusicPlayers]);
+  const articleComponents = useMemo<Components>(() => {
+    const renderHeading = (Tag: "h2" | "h3" | "h4" | "h5" | "h6") => ({ children, node }: ComponentProps<"h2"> & ExtraProps) => {
+      const heading = headings.find((item) => item.line === node?.position?.start?.line);
+      return <Tag id={heading?.id}>{heading?.number && <span className="article-section-number">{heading.number}</span>}<span>{children}</span></Tag>;
+    };
+    return {
+      ...components,
+      h2: renderHeading("h2"),
+      h3: renderHeading("h3"),
+      h4: renderHeading("h4"),
+      h5: renderHeading("h5"),
+      h6: renderHeading("h6"),
+      p: ({ children }: ComponentProps<"p">) => {
+        const marker = Array.isArray(children) ? children.join("") : children;
+        if (typeof marker === "string" && marker.trim() === "[[article-music]]") return inlineMusicPlayer;
+        const musicMarker = typeof marker === "string" ? /^\[\[article-music:([a-zA-Z0-9-]+)\]\]$/u.exec(marker.trim()) : null;
+        if (musicMarker) return inlineMusicPlayers[musicMarker[1]] || null;
+        return <p>{children}</p>;
+      },
+    };
+  }, [headings, inlineMusicPlayer, inlineMusicPlayers]);
   const remarkPlugins = useMemo(() => mathInMarkdown && mathPlugins ? [remarkGfm, mathPlugins.remarkMath] : [remarkGfm], [mathInMarkdown, mathPlugins]);
   const rehypePlugins = useMemo(() => mathInMarkdown && mathPlugins ? [mathPlugins.rehypeKatex] : undefined, [mathInMarkdown, mathPlugins]);
   const renderedMarkdown = mathInMarkdown && mathPlugins ? protectCurrencySyntax(markdown) : markdown;

@@ -15,6 +15,7 @@ import {
   sortNewestFirst,
 } from "../src/content/frontmatter.ts";
 import { getArticleOutline } from "../src/content/markdown.ts";
+import { getPostOutline } from "../src/richContent.ts";
 
 const definitions = [
   ["post", "posts", parsePost, (entry) => entry.slug],
@@ -61,6 +62,7 @@ test("metadata parsers keep listing data while omitting Markdown bodies", () => 
   assert.equal(post.firstParagraph, "首段摘要。");
   assert.equal(post.wordCount, 16);
   assert.deepEqual(post.outline.map((item) => item.title), ["序章", "第一节", "第二节"]);
+  assert.deepEqual(post.outline.map((item) => item.number), ["", "", ""]);
 
   const poem = parsePoemMetadata("poem.md", `---\ntitle: "小诗"\ndate: "2026-01-01"\n---\n一\n二\n三\n四`);
   assert.equal(Object.hasOwn(poem, "lines"), false);
@@ -91,6 +93,7 @@ test("invalid or duplicate frontmatter is rejected during the build", () => {
   assert.throws(() => parsePost("broken.md", "---\ntitle: A\ndate: 2026-07-30\ncategory: 开发\ncoverMode: side\n---\nBody"), /coverMode 必须是 wide 或 none/u);
   assert.throws(() => parsePost("broken.md", "---\ntitle: A\ndate: 2026-07-30\ncategory: 开发\ncoverSide: left\n---\nBody"), /不支持 coverSide/u);
   assert.throws(() => parsePost("broken.md", "---\ntitle: A\ndate: 2026-07-30\ncategory: 开发\nfeatured: false\nfeaturedOrder: 2\n---\nBody"), /未置顶，不能配置 featuredOrder/u);
+  assert.throws(() => parsePost("broken.md", '---\ntitle: A\ndate: 2026-07-30\ncategory: 开发\noutlineNumbering: "false"\n---\nBody'), /outlineNumbering 必须是布尔值/u);
   assert.throws(() => parsePost("broken.md", "---\ntitle: A\ndate: 2026-07-30\ncategory: 开发\nfeatured: true\nfeaturedOrder: 1.5\n---\nBody"), /featuredOrder 必须是正整数/u);
   assert.throws(() => parsePost("broken.md", "---\ntitle: A\ndate: 2026-07-30\ncategory: 开发\nseries: 系列\nseriesOrder: -1\n---\nBody"), /seriesOrder 必须是正整数/u);
   assert.throws(() => parsePost("broken.md", '---\ntitle: A\ndate: 2026-07-30\ncategory: 开发\nmusic: {"url":"https://music.163.com/song?id=1","src":"/audio/a.mp3"}\n---\nBody'), /必须且只能配置 url 或 src/u);
@@ -137,9 +140,72 @@ test("music pins require a boolean flag and positive order only when pinned", ()
   assert.equal(pinned.featuredOrder, 3);
 });
 
-test("article outlines ignore headings inside fenced code blocks", () => {
-  const outline = getArticleOutline("引言\n\n~~~md\n## 假标题\n~~~\n\n## 第一节\n\n## 第二节");
-  assert.deepEqual(outline.map((item) => item.title), ["序章", "第一节", "第二节"]);
+test("article outlines preserve heading hierarchy, stable h2 anchors, and lone heading metadata", () => {
+  const outline = getArticleOutline([
+    "## 第一章 ##",
+    "### 子章 ###",
+    "##### 越级子项 ###",
+    "###### 最深层标题",
+    "#### 同级子项",
+    "## 第二章",
+    "### 第二章子项",
+  ].join("\n"), true);
+  assert.deepEqual(outline.map(({ id, number, title, level, depth, parentId }) => ({ id, number, title, level, depth, parentId })), [
+    { id: "article-section-1", number: "01", title: "第一章", level: 2, depth: 0, parentId: undefined },
+    { id: "article-section-1-1", number: "1.1", title: "子章", level: 3, depth: 1, parentId: "article-section-1" },
+    { id: "article-section-1-1-1", number: "1.1.1", title: "越级子项", level: 5, depth: 2, parentId: "article-section-1-1" },
+    { id: "article-section-1-1-1-1", number: "1.1.1.1", title: "最深层标题", level: 6, depth: 3, parentId: "article-section-1-1-1" },
+    { id: "article-section-1-1-2", number: "1.1.2", title: "同级子项", level: 4, depth: 2, parentId: "article-section-1-1" },
+    { id: "article-section-2", number: "02", title: "第二章", level: 2, depth: 0, parentId: undefined },
+    { id: "article-section-2-1", number: "2.1", title: "第二章子项", level: 3, depth: 1, parentId: "article-section-2" },
+  ]);
+  assert.deepEqual(getArticleOutline("## 唯一标题").map(({ id, number, level, depth }) => ({ id, number, level, depth })), [
+    { id: "article-section-1", number: "", level: 2, depth: 0 },
+  ]);
+  const orphan = getArticleOutline("### 孤立三级标题\n## 第一章");
+  assert.equal(orphan[0].id, "article-section-orphan-3-1");
+  assert.equal(orphan[0].depth, 0);
+  assert.equal(orphan[0].parentId, undefined);
+  assert.equal(orphan[1].id, "article-section-1");
+});
+
+test("article outlines ignore fenced and indented code and keep a nested pair", () => {
+  const outline = getArticleOutline([
+    "~~~md",
+    "## 围栏中的假标题",
+    "~~~",
+    "    ## 缩进代码中的假标题",
+    "   ## 第一节 ##",
+    "    ### 缩进代码中的假子标题",
+    "      ### 超过三级缩进的假标题",
+    "   ### 子节",
+  ].join("\n"), true);
+  assert.deepEqual(outline.map((item) => item.title), ["第一节", "子节"]);
+  assert.deepEqual(outline.map(({ id, number, parentId }) => ({ id, number, parentId })), [
+    { id: "article-section-1", number: "01", parentId: undefined },
+    { id: "article-section-1-1", number: "1.1", parentId: "article-section-1" },
+  ]);
+});
+
+test("article numbering is opt-in and preserves outline hierarchy", () => {
+  const markdown = "引言\n\n## 第一节\n\n### 子节";
+  for (const numbered of [undefined, false, true]) {
+    const numbers = numbered ? ["00", "01", "1.1"] : ["", "", ""];
+    const outline = getArticleOutline(markdown, numbered);
+    assert.deepEqual(outline.map(({ number, depth, parentId }) => ({ number, depth, parentId })), [
+      { number: numbers[0], depth: 0, parentId: undefined },
+      { number: numbers[1], depth: 0, parentId: undefined },
+      { number: numbers[2], depth: 1, parentId: "article-section-1" },
+    ]);
+
+    const field = numbered === undefined ? "" : `outlineNumbering: ${numbered}\n`;
+    const source = `---\ntitle: Post\ndate: 2026-07-30\ncategory: 记录\n${field}---\n${markdown}`;
+    const post = parsePost("post.md", source);
+    assert.equal(post.outlineNumbering, numbered);
+    assert.deepEqual(post.outline.map((item) => item.number), numbers);
+    assert.deepEqual(parsePostMetadata("post.md", source).outline.map((item) => item.number), numbers);
+    assert.deepEqual(getPostOutline({ outlineNumbering: numbered, content: markdown }).map((item) => item.number), numbers);
+  }
 });
 
 test("posts accept Meting URLs while preserving local music sources", () => {

@@ -9,7 +9,7 @@ export function getPostMarkdown(post: Partial<Post>): string {
 export function getPostOutline(post: Partial<Post>): ArticleOutlineItem[] {
   if (Array.isArray(post.outline)) return post.outline;
   const markdown = getPostMarkdown(post);
-  return getArticleOutline(markdown);
+  return getArticleOutline(markdown, post.outlineNumbering === true);
 }
 
 export { markdownToPlainText } from "./content/markdown.ts";

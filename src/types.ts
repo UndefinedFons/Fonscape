@@ -104,6 +104,9 @@ export interface ArticleOutlineItem {
   number: string;
   title: string;
   line?: number;
+  level?: number;
+  depth?: number;
+  parentId?: string;
   prologue?: boolean;
 }
 
@@ -116,6 +119,7 @@ export interface Post extends DatedEntry {
   seriesOrder?: number;
   featured: boolean;
   featuredOrder?: number;
+  outlineNumbering?: boolean;
   excerpt?: string;
   firstParagraph: string;
   wordCount: number;
