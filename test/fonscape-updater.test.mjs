@@ -9,7 +9,7 @@ import {
   latestStableVersion,
   main,
   normalizeVersion,
-} from "../scripts/fonscape-update.mjs";
+} from "../scripts/fonscape-update.ts";
 
 const ownership = {
   user: [
@@ -60,7 +60,7 @@ async function fixture() {
     name: "fonscape",
     version: "1.1.0",
     private: true,
-    scripts: { check: "pnpm generate && node --test", fonscape: "node scripts/fonscape-update.mjs" },
+    scripts: { check: "pnpm generate && node --test", fonscape: "node scripts/fonscape-update.ts" },
   };
   const projectPackage = {
     ...sourcePackage,
@@ -272,7 +272,7 @@ test("apply preserves user content, merges site package metadata, renames theme 
   const mergedPackage = JSON.parse(await readFile(join(data.project, "package.json"), "utf8"));
   assert.equal(mergedPackage.version, "0.1.0");
   assert.equal(mergedPackage.scripts.custom, "node custom.mjs");
-  assert.equal(mergedPackage.scripts.fonscape, "node scripts/fonscape-update.mjs");
+  assert.equal(mergedPackage.scripts.fonscape, "node scripts/fonscape-update.ts");
   assert.equal(await readFile(join(data.project, ".fonscape-version"), "utf8"), "1.1.0\n");
 
   assert.equal(await readFile(join(data.project, "fonscape.config.js"), "utf8"), "export default { title: 'My site' };\n");

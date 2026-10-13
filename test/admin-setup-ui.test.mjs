@@ -5,7 +5,7 @@ import { JSDOM } from "jsdom";
 import { act, createElement } from "react";
 import { createServer } from "vite";
 import { getEnabledCollectionTypes } from "../src/sectionAvailability.ts";
-import { buildContentDistribution } from "../scripts/generate-content-targets.mjs";
+import { buildContentDistribution } from "../scripts/generate-content-targets.ts";
 import { parseMusicReview, parsePost } from "../src/content/frontmatter.ts";
 
 const sourceRoot = new URL("../", import.meta.url);

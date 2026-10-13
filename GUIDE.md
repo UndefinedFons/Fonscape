@@ -408,9 +408,9 @@ flowchart LR
 - `src/content/poems/*.md`
 - `src/content/music/*.md`
 
-安装、开发、构建、测试与检查命令会先由 `scripts/generate-content-targets.mjs` 生成前端与 API 共用的内容目标清单。Frontmatter 缺少必填字段、日期无效或 slug 重复时，命令会直接报错，避免错误内容进入线上。
+安装、开发、构建、测试与检查命令会先由 `scripts/generate-content-targets.ts` 生成前端与 API 共用的内容目标清单。Frontmatter 缺少必填字段、日期无效或 slug 重复时，命令会直接报错，避免错误内容进入线上。
 
-生成器只把首页需要的少量摘要和各板块计数放进主题入口；列表、筛选与搜索索引按固定大小分块，详情正文按单条内容独立加载。各内容分块只携带自身图片的 small/large 描述和可选内联 LQIP，浏览器无需先下载全站图片清单即可请求真实图片。性能预算约束入口主题包和每个分块，不约束全站内容总数；内容增加时增长的是分块数量，不会在达到某个总条目数后阻止继续发布。分块规则以 `scripts/generate-content-targets.mjs` 中的 `CONTENT_PAGE_CHUNK_SIZE` 和 `CONTENT_INDEX_CHUNK_SIZE` 为准。
+生成器只把首页需要的少量摘要和各板块计数放进主题入口；列表、筛选与搜索索引按固定大小分块，详情正文按单条内容独立加载。各内容分块只携带自身图片的 small/large 描述和可选内联 LQIP，浏览器无需先下载全站图片清单即可请求真实图片。性能预算约束入口主题包和每个分块，不约束全站内容总数；内容增加时增长的是分块数量，不会在达到某个总条目数后阻止继续发布。分块规则以 `scripts/generate-content-targets.ts` 中的 `CONTENT_PAGE_CHUNK_SIZE` 和 `CONTENT_INDEX_CHUNK_SIZE` 为准。
 
 新增、删除或重命名内容后只需运行：
 
@@ -432,9 +432,9 @@ pnpm check
 
 ## 维护与功能扩展约束
 
-开发环境使用 Node.js 22.18 或更新版本和 `package.json` 声明的 pnpm。前端代码位于 `src/`，使用 `.ts` 和 `.tsx`；后端与部署适配器位于 `functions/`、`worker/`、`api/` 和 `server/`，使用 `.ts`。站点配置保存在 `fonscape.config.js`，内容使用 Markdown 和 JSON，构建生成的模块输出为 JavaScript。
+开发环境使用 Node.js 22.18 或更新版本和 `package.json` 声明的 pnpm。前端代码位于 `src/`，使用 `.ts` 和 `.tsx`；后端与部署适配器位于 `functions/`、`worker/`、`api/` 和 `server/`，使用 `.ts`。升级器、内容生成器和响应式图片生成器位于 `scripts/`，使用 `.ts`。站点配置保存在 `fonscape.config.js`，内容使用 Markdown 和 JSON，构建生成的模块输出为 JavaScript。
 
-主体源码启用严格类型检查。跨模块数据使用准确的共享类型，外部输入同时保留运行时校验；类型导入使用 `import type`，相对源码导入写明 `.ts` 或 `.tsx` 扩展名。Node.js 直接执行的模块只使用可擦除的类型语法。`pnpm typecheck` 检查整个主体源码，`pnpm lint` 检查 TypeScript、JavaScript 和 React Hooks。
+主体源码启用严格类型检查。跨模块数据使用准确的共享类型，外部输入同时保留运行时校验；类型导入使用 `import type`，相对源码导入写明 `.ts` 或 `.tsx` 扩展名。Node.js 直接执行的模块只使用可擦除的类型语法。`pnpm typecheck` 检查主体源码与 TypeScript 构建脚本，`pnpm lint` 检查 TypeScript、JavaScript 和 React Hooks。
 
 新增前端板块、设置项或内容类型时，应继续沿用 Fonscape 已有的数据、组件和性能边界，不另建一套平行实现：
 

@@ -38,8 +38,8 @@ test("Checks and deployment share a resilient responsive image cache contract", 
     assert.match(step, /fail-on-cache-miss:\s*false/u);
     assert.match(step, /path:\s*\|\n\s+public\/fonscape\/generated-images\/\n\s+\.fonscape-cache\/responsive-images\//u);
     const invalidationInputs = [
-      "scripts/generate-responsive-images.mjs",
-      "scripts/generate-content-targets.mjs",
+      "scripts/generate-responsive-images.ts",
+      "scripts/generate-content-targets.ts",
       "scripts/generate-font-css.mjs",
       "src/content/frontmatter.ts",
       "src/content/markdown.ts",

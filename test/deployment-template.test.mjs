@@ -72,9 +72,9 @@ test("one-click deployment asks for only an empty administrator bootstrap token"
 test("generated artifacts precede supported project commands", async () => {
   const { scripts } = await readJson("../package.json");
   assert.deepEqual(new Set(scripts.generate.split(" && ")), new Set([
-    "node scripts/generate-content-targets.mjs",
+    "node scripts/generate-content-targets.ts",
     "node scripts/generate-font-css.mjs",
-    "node scripts/generate-responsive-images.mjs",
+    "node scripts/generate-responsive-images.ts",
     "node scripts/generate-rss.mjs",
     "node scripts/generate-sitemap.mjs",
   ]));

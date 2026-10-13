@@ -1,5 +1,5 @@
 import { join } from "node:path";
-import { VERSION_FILE } from "./constants.mjs";
+import { VERSION_FILE } from "./constants.ts";
 import {
   action,
   assertNoManagedSymlink,
@@ -12,10 +12,29 @@ import {
   readOptional,
   walkFiles,
   walkInstalledHistory,
-} from "./paths.mjs";
-import { mergePackageJson, mergeText } from "./merge.mjs";
+} from "./paths.ts";
+import { mergePackageJson, mergeText } from "./merge.ts";
+import type { UpdateManifest, UpdatePlan } from "./types.ts";
 
-export async function createUpdatePlan({ project, source, target, manifest, fromVersion, targetVersion, temporaryDirectory, reconcileTheme = false }) {
+export async function createUpdatePlan({
+  project,
+  source,
+  target,
+  manifest,
+  fromVersion,
+  targetVersion,
+  temporaryDirectory,
+  reconcileTheme = false,
+}: {
+  project: string;
+  source: string;
+  target: string;
+  manifest: UpdateManifest;
+  fromVersion: string;
+  targetVersion: string;
+  temporaryDirectory: string;
+  reconcileTheme?: boolean;
+}): Promise<UpdatePlan> {
   const projectPaths = reconcileTheme ? await walkFiles(project) : [];
   const installedHistoryPaths = reconcileTheme
     ? projectPaths.filter((path) => classifyPath(path, manifest) === "history")
@@ -29,10 +48,11 @@ export async function createUpdatePlan({ project, source, target, manifest, from
   const conflicts = [];
   const warnings = [];
   const skippedUserFiles = [];
-  const installedHistoryByHash = new Map();
+  const installedHistoryByHash = new Map<string, string>();
   for (const path of installedHistoryPaths) {
     const content = await readOptional(join(project, path));
-    if (content !== null && !installedHistoryByHash.has(hash(content))) installedHistoryByHash.set(hash(content), path);
+    const contentHash = hash(content);
+    if (contentHash !== null && !installedHistoryByHash.has(contentHash)) installedHistoryByHash.set(contentHash, path);
   }
 
   for (const path of [...allPaths].sort()) {
@@ -63,7 +83,8 @@ export async function createUpdatePlan({ project, source, target, manifest, from
     ]);
     if (ownership === "history") {
       if (local === null && incoming !== null) {
-        const equivalentPath = installedHistoryByHash.get(hash(incoming));
+          const incomingHash = hash(incoming);
+          const equivalentPath = incomingHash === null ? undefined : installedHistoryByHash.get(incomingHash);
         if (equivalentPath) {
           warnings.push(`目标迁移 ${path} 与已有历史 ${equivalentPath} 内容相同，不重复添加。`);
         } else {

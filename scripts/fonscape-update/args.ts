@@ -1,7 +1,8 @@
-import { VERSION_FILE } from "./constants.mjs";
-import { safeRelativePath } from "./paths.mjs";
+import { VERSION_FILE } from "./constants.ts";
+import { safeRelativePath } from "./paths.ts";
+import type { UpdateOptions } from "./types.ts";
 
-export function usage() {
+export function usage(): string {
   return `Fonscape 安全升级器
 
 用法：
@@ -18,9 +19,9 @@ export function usage() {
 并继续三方合并 merge 文件；应用前请先检查预演清单。`;
 }
 
-export function parseArgs(argv) {
+export function parseArgs(argv: string[]): UpdateOptions {
   const args = argv[0] === "update" ? argv.slice(1) : argv;
-  const parsed = { apply: false, project: process.cwd() };
+  const parsed: UpdateOptions = { apply: false, project: process.cwd() };
   for (let index = 0; index < args.length; index += 1) {
     const arg = args[index];
     if (arg === "--apply") parsed.apply = true;
@@ -31,7 +32,14 @@ export function parseArgs(argv) {
       if (!value || value.startsWith("--")) throw new Error(`${arg} 缺少参数。`);
       if (arg === "--keep") (parsed.keep ||= []).push(safeRelativePath(value));
       else if (arg === "--take-incoming") (parsed.take_incoming ||= []).push(safeRelativePath(value));
-      else parsed[arg.slice(2).replaceAll("-", "_")] = value;
+      else if (arg === "--from") parsed.from = value;
+      else if (arg === "--to") parsed.to = value;
+      else if (arg === "--project") parsed.project = value;
+      else if (arg === "--repository") parsed.repository = value;
+      else if (arg === "--source-dir") parsed.source_dir = value;
+      else if (arg === "--target-dir") parsed.target_dir = value;
+      else if (arg === "--resolutions") parsed.resolutions = value;
+      else if (arg === "--rollback") parsed.rollback = value;
       index += 1;
     } else {
       throw new Error(`无法识别的参数：${arg}`);

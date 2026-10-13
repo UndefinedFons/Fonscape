@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "version": "2.1.0",
+  "version": "2.1.1",
   "ownership": {
     "user": [
       ".env",
@@ -64,6 +64,7 @@
       "test/**",
       "tsconfig.json",
       "tsconfig.backend.json",
+      "tsconfig.scripts.json",
       "vite.config.mjs",
       "worker/**",
       "src/musicTypes.ts",
