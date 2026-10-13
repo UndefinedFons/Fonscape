@@ -10,7 +10,7 @@ import {
   collectMetingLibraryTargets,
   collectMetingSongTargets,
   resolveCollectionDefinitions,
-} from "../scripts/generate-content-targets.mjs";
+} from "../scripts/generate-content-targets.ts";
 import { sortMusicLibrary } from "../src/pages/musicContent.ts";
 
 const types = ["post", "poem", "music"];

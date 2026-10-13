@@ -2,6 +2,19 @@ import { mkdir, readFile, readdir, rm, stat, writeFile } from "node:fs/promises"
 import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { contentRepositoryConfig } from "../content-repository.config.mjs";
+import type {
+  ContentManifest,
+  DatedEntry,
+  GenericContentMetadata,
+  HomeMusic,
+  HomePoem,
+  HomePost,
+  MusicReview,
+  Poem,
+  Post,
+  ResponsiveImageMetadata,
+} from "../src/types.ts";
+import type { MusicMetadata } from "./music-metadata.ts";
 import {
   assertUniqueEntries,
   parseGenericContentMetadata,
@@ -14,9 +27,52 @@ import {
 import { sortFeaturedPosts } from "../src/pages/homeContent.ts";
 import { sortMusicLibrary } from "../src/pages/musicContent.ts";
 import { markdownToPlainText } from "../src/content/markdown.ts";
-import { extractLocalRasterSources, isLocalRasterSource } from "./generate-responsive-images.mjs";
+import { extractLocalRasterSources, isLocalRasterSource } from "./generate-responsive-images.ts";
 import { parseMetingLibraryUrl, parseMetingSongUrl } from "../src/musicSources.ts";
 import { createMusicMetadataResolver, resolveMusicMetadata } from "./music-metadata.ts";
+
+type GeneratedEntry = DatedEntry & GenericContentMetadata & Partial<Post & Poem & MusicReview>;
+type ContentParser = (path: string, source: string) => GeneratedEntry;
+type CollectionConfig = { directory: string; extension: string; parser?: string };
+type CollectionDefinition = Omit<CollectionConfig, "parser"> & { type: string; parser: ContentParser };
+type ContentRecord = { name: string; source: string; raw: string; entry: GeneratedEntry };
+type CollectionRecords = [type: string, records: ContentRecord[]];
+type GeneratedHomeEntry = HomePost | HomePoem | HomeMusic | GenericContentMetadata;
+type GeneratedContentEntry = GeneratedEntry & {
+  key: string;
+  source: string;
+  body: string;
+  responsiveImages: Record<string, ResponsiveImageMetadata | undefined>;
+};
+type GeneratedContentFacet = {
+  key: string;
+  page: number;
+  title: string;
+  date: string;
+  category?: string;
+  tags?: string[];
+  series?: string | null;
+  seriesOrder?: number;
+  section?: MusicReview["section"];
+};
+type GeneratedSearchEntry = {
+  type: string;
+  key: string;
+  title: string;
+  date: string;
+  category?: string;
+  section?: MusicReview["section"];
+  sourceTitle?: string;
+  noteTitle?: string;
+  notePreview?: string;
+};
+type ImageCatalog = Record<string, ResponsiveImageMetadata | undefined>;
+type PreparedGeneratedContentFile = { path: string; content: string; destination: string };
+type GenerateContentArtifactsOptions = {
+  check?: boolean;
+  projectRoot?: string;
+  resolveMetadata?: typeof resolveMusicMetadata;
+};
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -26,13 +82,13 @@ export const CONTENT_INDEX_CHUNK_SIZE = 200;
 export const HOME_LATEST_LIMIT = 5;
 export const HOME_FEATURED_CHUNK_SIZE = 8;
 
-const parserByType = {
+const parserByType: Record<string, ContentParser> = {
   post: parsePostMetadata,
   poem: parsePoemMetadata,
   music: parseMusicReviewMetadata,
 };
 
-export function resolveCollectionDefinitions(collections) {
+export function resolveCollectionDefinitions(collections: Readonly<Record<string, CollectionConfig>>): CollectionDefinition[] {
   return Object.entries(collections).map(([type, collection]) => {
     const parser = parserByType[collection.parser || type] || parseGenericContentMetadata;
     return { type, ...collection, parser };
@@ -41,7 +97,7 @@ export function resolveCollectionDefinitions(collections) {
 
 const definitions = resolveCollectionDefinitions(contentRepositoryConfig.collections);
 
-function assertSafeRelativePath(path, label) {
+function assertSafeRelativePath(path: string, label: string): string {
   if (typeof path !== "string"
     || !path
     || path.startsWith("/")
@@ -52,7 +108,7 @@ function assertSafeRelativePath(path, label) {
   return path;
 }
 
-function generatedContentDestination(directory, path) {
+function generatedContentDestination(directory: string, path: string): string {
   assertSafeRelativePath(path, "生成内容");
   const outputRoot = resolve(directory);
   const destination = resolve(outputRoot, ...path.split("/"));
@@ -66,7 +122,7 @@ function generatedContentDestination(directory, path) {
   return destination;
 }
 
-function prepareGeneratedContentFiles(files, directory) {
+function prepareGeneratedContentFiles(files: ReadonlyMap<string, string>, directory: string): PreparedGeneratedContentFile[] {
   const outputRoot = resolve(directory);
   return [...files].map(([path, content]) => ({
     path,
@@ -75,12 +131,20 @@ function prepareGeneratedContentFiles(files, directory) {
   }));
 }
 
-async function findMarkdownFiles(directory, extension, prefix = "") {
+function hasErrorCode(error: unknown, code: string): boolean {
+  return error !== null && typeof error === "object" && "code" in error && error.code === code;
+}
+
+function errorMessage(error: unknown): string {
+  return error !== null && typeof error === "object" && "message" in error ? `${error.message}` : "undefined";
+}
+
+async function findMarkdownFiles(directory: string, extension: string, prefix = ""): Promise<string[]> {
   const entries = await readdir(directory, { withFileTypes: true }).catch((error) => {
-    if (error.code === "ENOENT") return [];
+    if (hasErrorCode(error, "ENOENT")) return [];
     throw error;
   });
-  const files = [];
+  const files: string[] = [];
   for (const entry of entries.sort((left, right) => left.name.localeCompare(right.name))) {
     if (entry.name.startsWith(".")) continue;
     const name = prefix ? `${prefix}/${entry.name}` : entry.name;
@@ -93,7 +157,7 @@ async function findMarkdownFiles(directory, extension, prefix = "") {
   return files;
 }
 
-async function readCollection(definition, projectRoot) {
+async function readCollection(definition: CollectionDefinition, projectRoot: string): Promise<ContentRecord[]> {
   const sourceDirectory = join(projectRoot, definition.directory);
   const names = await findMarkdownFiles(sourceDirectory, definition.extension);
   return Promise.all(names.map(async (name) => {
@@ -109,33 +173,38 @@ async function readCollection(definition, projectRoot) {
   }));
 }
 
-async function resolveMusicRecords(records, resolveMetadata) {
+async function resolveMusicRecords(
+  records: ContentRecord[],
+  resolveMetadata: ReturnType<typeof createMusicMetadataResolver>,
+): Promise<void> {
   for (const record of records) {
     const target = parseMetingLibraryUrl(record.entry.url);
     if (!target) continue;
     const { data } = parseMarkdownSource(record.source, record.raw);
-    const fields = ["sourceTitle", "sourceMeta", "image"].filter((key) => !Object.hasOwn(data, key) || (key === "sourceTitle" && !data[key].trim()));
+    const fields = (["sourceTitle", "sourceMeta", "image"] as const).filter((key) => !Object.hasOwn(data, key)
+      || (key === "sourceTitle" && typeof data.sourceTitle === "string" && !data.sourceTitle.trim()));
     if (!fields.length) continue;
-    let metadata;
+    let metadata: MusicMetadata;
     try { metadata = await resolveMetadata(target); }
     catch (error) {
-      throw new Error(`${record.source} 无法读取 ${record.entry.url} 的音乐信息：${error.message}。请重试，或手动填写 sourceTitle、sourceMeta 和 image。`, { cause: error });
+      throw new Error(`${record.source} 无法读取 ${record.entry.url} 的音乐信息：${errorMessage(error)}。请重试，或手动填写 sourceTitle、sourceMeta 和 image。`, { cause: error });
     }
     const additions = fields.filter((key) => !Object.hasOwn(data, key)).map((key) => `${key}: ${JSON.stringify(metadata[key] || "")}`);
     const header = record.raw.match(/^---\s*\r?\n([\s\S]*?)\r?\n---\s*(?:\r?\n|$)/u);
-    const lines = header[1].split(/\r?\n/u).map((line) => Object.hasOwn(data, "sourceTitle") && !data.sourceTitle.trim() && /^\s*sourceTitle:/u.test(line)
+    if (!header) throw new Error(`${record.source} 缺少 Frontmatter。`);
+    const lines = header[1].split(/\r?\n/u).map((line) => typeof data.sourceTitle === "string" && !data.sourceTitle.trim() && /^\s*sourceTitle:/u.test(line)
       ? `sourceTitle: ${JSON.stringify(metadata.sourceTitle)}` : line);
     record.raw = `---\n${[...lines, ...additions].join("\n")}\n---\n${record.raw.slice(header[0].length)}`;
     record.entry = parseMusicReviewMetadata(record.source, record.raw);
   }
 }
 
-async function readAudioAssetSizes(directory = join(root, "public", "audio"), prefix = "") {
+async function readAudioAssetSizes(directory = join(root, "public", "audio"), prefix = ""): Promise<Record<string, number>> {
   const entries = await readdir(directory, { withFileTypes: true }).catch((error) => {
-    if (error.code === "ENOENT") return [];
+    if (hasErrorCode(error, "ENOENT")) return [];
     throw error;
   });
-  const sizes = {};
+  const sizes: Record<string, number> = {};
   for (const entry of entries.sort((left, right) => left.name.localeCompare(right.name))) {
     if (entry.name.startsWith(".")) continue;
     const relativePath = prefix ? `${prefix}/${entry.name}` : entry.name;
@@ -150,22 +219,22 @@ async function readAudioAssetSizes(directory = join(root, "public", "audio"), pr
   return sizes;
 }
 
-export function chunkValues(values, size) {
-  const chunks = [];
+export function chunkValues<T>(values: readonly T[], size: number): T[][] {
+  const chunks: T[][] = [];
   for (let index = 0; index < values.length; index += size) chunks.push(values.slice(index, index + size));
   return chunks;
 }
 
-function encodePath(value) {
+function encodePath(value: string): string {
   return String(value).split("/").map(encodeURIComponent).join("/");
 }
 
-export function contentKey(type, entry) {
+export function contentKey(type: string, entry: GeneratedEntry): string {
   return type === "music" ? `${String(entry.section)}/${String(entry.slug)}` : String(entry.slug);
 }
 
-export function collectMetingSongTargets(collections) {
-  const targets = new Set();
+export function collectMetingSongTargets(collections: readonly CollectionRecords[]): string[] {
+  const targets = new Set<string>();
   for (const [, records] of collections) {
     for (const { entry } of records) {
       const tracks = [entry.music, ...(Array.isArray(entry.musicBlocks) ? entry.musicBlocks : [])];
@@ -179,8 +248,8 @@ export function collectMetingSongTargets(collections) {
   return [...targets].sort();
 }
 
-export function collectMetingLibraryTargets(collections) {
-  const targets = new Set();
+export function collectMetingLibraryTargets(collections: readonly CollectionRecords[]): string[] {
+  const targets = new Set<string>();
   for (const [type, records] of collections) {
     if (type !== "music") continue;
     for (const { entry } of records) {
@@ -191,7 +260,7 @@ export function collectMetingLibraryTargets(collections) {
   return [...targets].sort();
 }
 
-function collectEntryImageSources(value, sources = new Set()) {
+function collectEntryImageSources(value: unknown, sources = new Set<string>()): Set<string> {
   if (typeof value === "string") {
     if (isLocalRasterSource(value)) sources.add(value);
     return sources;
@@ -201,13 +270,38 @@ function collectEntryImageSources(value, sources = new Set()) {
   return sources;
 }
 
-function responsiveImagesFor(entry, raw, imageCatalog) {
+function responsiveImagesFor(entry: GeneratedEntry, raw: string, imageCatalog: ImageCatalog): ImageCatalog {
   const sources = collectEntryImageSources(entry);
   for (const source of extractLocalRasterSources(raw || "")) sources.add(source);
   return Object.fromEntries([...sources].sort().flatMap((source) => imageCatalog[source] ? [[source, imageCatalog[source]]] : []));
 }
 
-function homeEntry(type, entry, imageCatalog = {}) {
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+
+function isResponsiveImageMetadata(value: unknown): value is ResponsiveImageMetadata {
+  if (!isRecord(value)
+    || typeof value.width !== "number"
+    || typeof value.height !== "number"
+    || !Array.isArray(value.candidates)
+    || (value.lqip !== undefined && typeof value.lqip !== "string")) return false;
+  return value.candidates.every((candidate: unknown) => isRecord(candidate)
+    && typeof candidate.src === "string"
+    && typeof candidate.width === "number");
+}
+
+function parseImageCatalog(value: unknown): ImageCatalog {
+  if (!isRecord(value)) throw new Error("响应式图片构建清单格式无效。");
+  const catalog: ImageCatalog = {};
+  for (const [source, metadata] of Object.entries(value)) {
+    if (!isResponsiveImageMetadata(metadata)) throw new Error(`响应式图片元数据格式无效：${source}`);
+    catalog[source] = metadata;
+  }
+  return catalog;
+}
+
+function homeEntry(type: string, entry: GeneratedEntry, imageCatalog: ImageCatalog = {}): GeneratedHomeEntry {
   const common = { slug: String(entry.slug), title: String((type === "music" ? entry.sourceTitle : entry.title) || ""), date: String(entry.date || "") };
   const responsiveImages = responsiveImagesFor(entry, "", imageCatalog);
   const withImages = Object.keys(responsiveImages).length ? { responsiveImages } : {};
@@ -243,7 +337,7 @@ function homeEntry(type, entry, imageCatalog = {}) {
   return common;
 }
 
-export function contentFacet(type, entry, page) {
+export function contentFacet(type: string, entry: GeneratedEntry, page: number): GeneratedContentFacet {
   return {
     key: contentKey(type, entry),
     page,
@@ -255,11 +349,11 @@ export function contentFacet(type, entry, page) {
       series: entry.series ? String(entry.series) : null,
       seriesOrder: Number(entry.seriesOrder) || 0,
     } : {}),
-    ...(type === "music" ? { section: String(entry.section || "songs") } : {}),
+    ...(type === "music" ? { section: entry.section || "songs" } : {}),
   };
 }
 
-export function contentSearchEntry(type, entry, raw = "") {
+export function contentSearchEntry(type: string, entry: GeneratedEntry, raw = ""): GeneratedSearchEntry {
   const notePreview = type === "music" && !entry.title
     ? markdownToPlainText(entry.excerpt || entry.firstParagraph || (raw ? parseMarkdownSource(entry.slug, raw).content : "")) : "";
   return {
@@ -269,7 +363,7 @@ export function contentSearchEntry(type, entry, raw = "") {
     date: String(entry.date || ""),
     ...(type === "post" ? { category: String(entry.category || "") } : {}),
     ...(type === "music" ? {
-      section: String(entry.section || "songs"),
+      section: entry.section || "songs",
       ...(entry.sourceTitle ? { sourceTitle: String(entry.sourceTitle) } : {}),
       ...(entry.title ? { noteTitle: String(entry.title) } : {}),
       ...(notePreview ? { notePreview: Array.from(notePreview).slice(0, 160).join("") + (Array.from(notePreview).length > 160 ? "…" : "") } : {}),
@@ -277,24 +371,33 @@ export function contentSearchEntry(type, entry, raw = "") {
   };
 }
 
-export function buildContentDistribution(collections, imageCatalog = {}) {
-  const files = new Map();
-  const descriptors = {};
-  const addJson = (path, value) => files.set(path, `${JSON.stringify(value)}\n`);
+function sortMusicRecords(records: readonly ContentRecord[]): ContentRecord[] {
+  return sortMusicLibrary(records.map((record) => ({
+    record,
+    date: record.entry.date,
+    featured: Boolean(record.entry.featured),
+    ...(record.entry.featuredOrder === undefined ? {} : { featuredOrder: record.entry.featuredOrder }),
+  }))).map(({ record }) => record);
+}
+
+export function buildContentDistribution(
+  collections: readonly CollectionRecords[],
+  imageCatalog: ImageCatalog = {},
+): { manifest: ContentManifest; files: Map<string, string> } {
+  const files = new Map<string, string>();
+  const descriptors: ContentManifest["collections"] = {};
+  const addJson = (path: string, value: unknown): void => { files.set(path, `${JSON.stringify(value)}\n`); };
   for (const [type, records] of collections) {
     records.forEach(({ name }) => assertSafeRelativePath(name, "内容文件"));
     const ordered = records.slice().sort((left, right) => sortNewestFirst(left.entry, right.entry));
     const pageOrdered = type === "music"
-      ? (() => {
-        const recordsByEntry = new Map(ordered.map((record) => [record.entry, record]));
-        return sortMusicLibrary(ordered.map(({ entry }) => entry)).map((entry) => recordsByEntry.get(entry));
-      })()
+      ? sortMusicRecords(ordered)
       : ordered;
     const pageNumberByKey = new Map(pageOrdered.map((record, index) => [
       contentKey(type, record.entry),
       Math.floor(index / CONTENT_PAGE_CHUNK_SIZE),
     ]));
-    const metadata = pageOrdered.map((record) => {
+    const metadata: GeneratedContentEntry[] = pageOrdered.map((record) => {
       const { content: _content, lines: _lines, outline: _outline, source: _source, ...lightweight } = record.entry;
       const key = contentKey(type, record.entry);
       return {
@@ -316,10 +419,13 @@ export function buildContentDistribution(collections, imageCatalog = {}) {
     const search = ordered.map((record) => contentSearchEntry(type, record.entry, record.raw));
     chunkValues(facets, CONTENT_INDEX_CHUNK_SIZE).forEach((chunk, index) => addJson(`facets/${encodeURIComponent(type)}/${index}.json`, chunk));
     chunkValues(search, CONTENT_INDEX_CHUNK_SIZE).forEach((chunk, index) => addJson(`search/${encodeURIComponent(type)}/${index}.json`, chunk));
-    const featured = type === "post" ? sortFeaturedPosts(ordered.map(({ entry }) => entry)).map((entry) => homeEntry(type, entry, imageCatalog)) : [];
+    const featured = type === "post"
+      ? sortFeaturedPosts(ordered.map(({ entry }) => ({ ...entry, featured: Boolean(entry.featured) })))
+        .map((entry) => homeEntry(type, entry, imageCatalog))
+      : [];
     chunkValues(featured, HOME_FEATURED_CHUNK_SIZE).forEach((chunk, index) => addJson(`featured/${encodeURIComponent(type)}/${index}.json`, chunk));
     const latestEntries = type === "music"
-      ? sortMusicLibrary(ordered.map(({ entry }) => entry))
+      ? sortMusicLibrary(ordered.map(({ entry }) => ({ ...entry, featured: Boolean(entry.featured) })))
       : ordered.map(({ entry }) => entry);
     const latest = latestEntries.slice(0, HOME_LATEST_LIMIT).map((entry) => homeEntry(type, entry, imageCatalog));
     descriptors[type] = {
@@ -349,12 +455,12 @@ export function buildContentDistribution(collections, imageCatalog = {}) {
   };
 }
 
-async function generatedFiles(directory = join(root, "public", "fonscape", "content"), prefix = "") {
+async function generatedFiles(directory = join(root, "public", "fonscape", "content"), prefix = ""): Promise<string[]> {
   const entries = await readdir(directory, { withFileTypes: true }).catch((error) => {
-    if (error.code === "ENOENT") return [];
+    if (hasErrorCode(error, "ENOENT")) return [];
     throw error;
   });
-  const files = [];
+  const files: string[] = [];
   for (const entry of entries) {
     const relativePath = prefix ? `${prefix}/${entry.name}` : entry.name;
     const path = join(directory, entry.name);
@@ -365,12 +471,15 @@ async function generatedFiles(directory = join(root, "public", "fonscape", "cont
   return files.sort();
 }
 
-export async function writeGeneratedContentFiles(files, directory) {
+export async function writeGeneratedContentFiles(files: ReadonlyMap<string, string>, directory: string): Promise<void> {
   const outputs = prepareGeneratedContentFiles(files, directory);
   await writePreparedGeneratedContentFiles(outputs, directory);
 }
 
-async function writePreparedGeneratedContentFiles(outputs, directory) {
+async function writePreparedGeneratedContentFiles(
+  outputs: readonly PreparedGeneratedContentFile[],
+  directory: string,
+): Promise<void> {
   const outputRoot = resolve(directory);
   await rm(outputRoot, { recursive: true, force: true });
   await Promise.all(outputs.map(async ({ destination, content }) => {
@@ -379,12 +488,18 @@ async function writePreparedGeneratedContentFiles(outputs, directory) {
   }));
 }
 
-export async function generateContentArtifacts({ check = false, projectRoot = root, resolveMetadata = resolveMusicMetadata } = {}) {
+export async function generateContentArtifacts({
+  check = false,
+  projectRoot = root,
+  resolveMetadata = resolveMusicMetadata,
+}: GenerateContentArtifactsOptions = {}): Promise<void> {
   const outputPath = join(projectRoot, "functions", "_generated", "content-targets.js");
   const metadataOutputPath = join(projectRoot, "functions", "_generated", "content-metadata.js");
   const generatedContentRoot = join(projectRoot, "public", "fonscape", "content");
   const responsiveImageBuildPath = join(projectRoot, "functions", "_generated", "responsive-images-build.json");
-  const collections = await Promise.all(definitions.map(async (definition) => [definition.type, await readCollection(definition, projectRoot)]));
+  const collections: CollectionRecords[] = await Promise.all(definitions.map(async (definition) => (
+    [definition.type, await readCollection(definition, projectRoot)]
+  )));
   const musicRecords = collections.find(([type]) => type === "music")?.[1] || [];
   await resolveMusicRecords(musicRecords, createMusicMetadataResolver(projectRoot, resolveMetadata));
   collections.forEach(([type, entries]) => {
@@ -394,15 +509,20 @@ export async function generateContentArtifacts({ check = false, projectRoot = ro
       type === "music" ? (entry) => contentKey(type, entry) : undefined,
     );
   });
-  const targets = Object.fromEntries(collections.map(([type, entries]) => [type, entries.map(({ entry }) => contentKey(type, entry))]));
+  const targets: Record<string, string[]> = Object.fromEntries(collections.map(([type, entries]) => [
+    type,
+    entries.map(({ entry }) => contentKey(type, entry)),
+  ]));
   if (targets.post) targets.post.push("site-about", "site-friends");
   for (const values of Object.values(targets)) values.sort();
   const audioAssetSizes = await readAudioAssetSizes(join(projectRoot, "public", "audio"));
   const metingSongTargets = collectMetingSongTargets(collections);
   const metingLibraryTargets = collectMetingLibraryTargets(collections);
-  const imageCatalog = await readFile(responsiveImageBuildPath, "utf8").then(JSON.parse).catch(() => ({}));
+  const imageCatalog = parseImageCatalog(await readFile(responsiveImageBuildPath, "utf8")
+    .then((content): unknown => JSON.parse(content))
+    .catch(() => ({})));
   const { manifest, files } = buildContentDistribution(collections, imageCatalog);
-  const renderedTargets = `// Generated by scripts/generate-content-targets.mjs. Do not edit by hand.\n`
+  const renderedTargets = `// Generated by scripts/generate-content-targets.ts. Do not edit by hand.\n`
     + `const targets = ${JSON.stringify(targets, null, 2)};\n\n`
     + `const targetSets = Object.fromEntries(\n`
     + `  Object.entries(targets).map(([type, slugs]) => [type, new Set(slugs)]),\n`
@@ -427,7 +547,7 @@ export async function generateContentArtifacts({ check = false, projectRoot = ro
     + `  return metingLibraryTargetSet.has(\`\${source}:\${type}:\${id}\`);\n`
     + `}\n\n`
     + `export { audioAssetSizes, metingLibraryTargets, metingSongTargets, targets as staticContentTargets };\n`;
-  const renderedMetadata = `// Generated by scripts/generate-content-targets.mjs. Do not edit by hand.\n`
+  const renderedMetadata = `// Generated by scripts/generate-content-targets.ts. Do not edit by hand.\n`
     + `const contentManifest = Object.freeze(${JSON.stringify(manifest, null, 2)});\n\n`
     + `export { contentManifest };\n`;
   const preparedContentFiles = prepareGeneratedContentFiles(files, generatedContentRoot);

@@ -1,20 +1,21 @@
 import { createHash } from "node:crypto";
+import { Buffer } from "node:buffer";
 import { writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { runGit } from "./versions.mjs";
+import { runGit } from "./versions.ts";
+import { errorCode, errorStdout, isRecord } from "./guards.ts";
 
-function jsonEqual(left, right) {
+function jsonEqual(left: unknown, right: unknown): boolean {
   return JSON.stringify(left) === JSON.stringify(right);
 }
 
 const ABSENT = Symbol("absent");
 
-function mergeJsonValue(base, local, target, path, warnings) {
+function mergeJsonValue(base: unknown, local: unknown, target: unknown, path: string, warnings: string[]): unknown {
   if (jsonEqual(local, base)) return target;
   if (jsonEqual(target, base) || jsonEqual(local, target)) return local;
-  const objects = [base, local, target].every((value) => value !== null && value !== ABSENT && typeof value === "object" && !Array.isArray(value));
-  if (objects) {
-    const result = {};
+  if (isRecord(base) && isRecord(local) && isRecord(target)) {
+    const result: Record<string, unknown> = {};
     const keys = new Set([...Object.keys(base), ...Object.keys(local), ...Object.keys(target)]);
     for (const key of keys) {
       const value = mergeJsonValue(
@@ -32,7 +33,7 @@ function mergeJsonValue(base, local, target, path, warnings) {
   return local;
 }
 
-export function mergePackageJson(base, local, target, warnings) {
+export function mergePackageJson(base: Buffer, local: Buffer, target: Buffer, warnings: string[]): Buffer | null {
   try {
     const merged = mergeJsonValue(
       JSON.parse(base.toString("utf8")),
@@ -41,13 +42,20 @@ export function mergePackageJson(base, local, target, warnings) {
       "",
       warnings,
     );
-    return Buffer.from(`${JSON.stringify(merged, null, 2)}\n`);
+    const serialized = JSON.stringify(merged, null, 2);
+    return Buffer.from(`${serialized}\n`);
   } catch {
     return null;
   }
 }
 
-export async function mergeText(base, local, target, temporaryDirectory, path) {
+export async function mergeText(
+  base: Buffer,
+  local: Buffer,
+  target: Buffer,
+  temporaryDirectory: string,
+  path: string,
+): Promise<{ content: Buffer; conflicted: boolean }> {
   const token = createHash("sha256").update(path).digest("hex").slice(0, 16);
   const currentPath = join(temporaryDirectory, `${token}.current`);
   const basePath = join(temporaryDirectory, `${token}.base`);
@@ -63,9 +71,11 @@ export async function mergeText(base, local, target, temporaryDirectory, path) {
   } catch (error) {
     // git-merge-file returns the number of conflicts (capped at 127), not a
     // single generic conflict code. Values above that range are usage/errors.
-    const conflictCount = Number(error.code);
+    const conflictCode = errorCode(error);
+    const conflictCount = Number(conflictCode);
     if (Number.isInteger(conflictCount) && conflictCount >= 1 && conflictCount <= 127) {
-      return { content: Buffer.from(error.stdout || ""), conflicted: true };
+      const stdout = errorStdout(error);
+      return { content: Buffer.from(stdout ?? ""), conflicted: true };
     }
     throw error;
   }

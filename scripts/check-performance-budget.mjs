@@ -4,7 +4,7 @@ import { relative, resolve } from "node:path";
 import { gzipSync } from "node:zlib";
 import { fileURLToPath } from "node:url";
 import { isMermaidEngineChunkName } from "./chunk-size-warning.mjs";
-import { MAX_RESPONSIVE_VARIANT_BYTES } from "./generate-responsive-images.mjs";
+import { MAX_RESPONSIVE_VARIANT_BYTES } from "./generate-responsive-images.ts";
 
 const DIST_ROOT = resolve(process.cwd(), "dist");
 const ENTRY_HTML = resolve(DIST_ROOT, "index.html");

@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 import { createMusicMetadataResolver, resolveMusicMetadata } from "../scripts/music-metadata.ts";
-import { generateContentArtifacts } from "../scripts/generate-content-targets.mjs";
+import { generateContentArtifacts } from "../scripts/generate-content-targets.ts";
 import { parseMusicReview } from "../src/content/frontmatter.ts";
 import { buildSearchItems, filterSearchItems } from "../src/components/searchModel.ts";
 

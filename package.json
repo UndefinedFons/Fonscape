@@ -1,6 +1,6 @@
 {
   "name": "fonscape",
-  "version": "2.1.0",
+  "version": "2.1.1",
   "description": "Fonscape（风栖），一款清新、响应式、注重阅读体验的 React 个人博客主题模板。",
   "private": true,
   "license": "MIT",
@@ -12,7 +12,7 @@
   "packageManager": "pnpm@11.16.0",
   "type": "module",
   "bin": {
-    "fonscape": "scripts/fonscape-update.mjs"
+    "fonscape": "scripts/fonscape-update.ts"
   },
   "cloudflare": {
     "bindings": {
@@ -25,15 +25,15 @@
     }
   },
   "scripts": {
-    "generate:content-targets": "node scripts/generate-content-targets.mjs",
+    "generate:content-targets": "node scripts/generate-content-targets.ts",
     "generate:font-css": "node scripts/generate-font-css.mjs",
     "generate:rss": "node scripts/generate-rss.mjs",
     "generate:sitemap": "node scripts/generate-sitemap.mjs",
-    "generate:responsive-images": "node scripts/generate-responsive-images.mjs",
-    "generate": "node scripts/generate-responsive-images.mjs && node scripts/generate-content-targets.mjs && node scripts/generate-font-css.mjs && node scripts/generate-rss.mjs && node scripts/generate-sitemap.mjs",
-    "check:content-targets": "node scripts/generate-content-targets.mjs --check",
+    "generate:responsive-images": "node scripts/generate-responsive-images.ts",
+    "generate": "node scripts/generate-responsive-images.ts && node scripts/generate-content-targets.ts && node scripts/generate-font-css.mjs && node scripts/generate-rss.mjs && node scripts/generate-sitemap.mjs",
+    "check:content-targets": "node scripts/generate-content-targets.ts --check",
     "check:font-css": "node scripts/generate-font-css.mjs --check",
-    "check:responsive-images": "node scripts/generate-responsive-images.mjs --check",
+    "check:responsive-images": "node scripts/generate-responsive-images.ts --check",
     "check:performance-budget": "node scripts/check-performance-budget.mjs",
     "dev": "pnpm generate && vite",
     "build": "pnpm generate && vite build",
@@ -43,11 +43,11 @@
     "test": "pnpm generate && pnpm test:offline",
     "test:e2e": "playwright test",
     "lint": "eslint . --max-warnings 0",
-    "typecheck": "tsc -p tsconfig.json && tsc -p tsconfig.backend.json",
+    "typecheck": "tsc -p tsconfig.json && tsc -p tsconfig.backend.json && tsc -p tsconfig.scripts.json",
     "db:migrate:cloudflare": "wrangler d1 migrations apply DB --remote",
     "deploy": "pnpm db:migrate:cloudflare && wrangler deploy",
     "migrate:turso": "node scripts/migrate-turso.mjs",
-    "fonscape": "node scripts/fonscape-update.mjs",
+    "fonscape": "node scripts/fonscape-update.ts",
     "check": "pnpm generate && pnpm test:offline && pnpm typecheck && pnpm lint && vite build && pnpm check:performance-budget"
   },
   "dependencies": {

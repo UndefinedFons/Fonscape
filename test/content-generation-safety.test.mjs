@@ -8,7 +8,7 @@ import {
   buildContentDistribution,
   generateContentArtifacts,
   writeGeneratedContentFiles,
-} from "../scripts/generate-content-targets.mjs";
+} from "../scripts/generate-content-targets.ts";
 import { createContentGenerationQueue } from "../vite.config.mjs";
 
 test("content source paths cannot escape the repository or clear prior generated output", { skip: sep === "\\" }, async (context) => {
@@ -104,8 +104,8 @@ test("a Markdown hot update uses resolved music metadata when regenerating fonts
     import { resolve } from "node:path";
     globalThis.generationFixture = { metadata: "旧音乐名称" };
     const modules = new Map([
-      ["generate-responsive-images.mjs", "export async function generateResponsiveImages() {}"],
-      ["generate-content-targets.mjs", 'export async function generateContentArtifacts() { await new Promise((finish) => { globalThis.generationFixture.finishMetadata = () => { globalThis.generationFixture.metadata = "新音乐名称"; finish(); }; }); }'],
+      ["generate-responsive-images.ts", "export async function generateResponsiveImages() {}"],
+      ["generate-content-targets.ts", 'export async function generateContentArtifacts() { await new Promise((finish) => { globalThis.generationFixture.finishMetadata = () => { globalThis.generationFixture.metadata = "新音乐名称"; finish(); }; }); }'],
       ["generate-font-css.mjs", "export async function generateFontStylesheets() { globalThis.generationFixture.fontInput = globalThis.generationFixture.metadata; }"],
       ["generate-rss.mjs", "export async function generateRssFeed() {}"],
       ["generate-sitemap.mjs", "export async function generateSitemap() {}"],

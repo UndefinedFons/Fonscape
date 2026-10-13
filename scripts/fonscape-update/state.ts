@@ -1,4 +1,5 @@
 import { randomBytes } from "node:crypto";
+import { Buffer } from "node:buffer";
 import {
   chmod,
   copyFile,
@@ -15,7 +16,7 @@ import {
   CONFLICT_MARKER,
   UPDATE_DIRECTORY,
   VERSION_FILE,
-} from "./constants.mjs";
+} from "./constants.ts";
 import {
   action,
   absoluteManagedPath,
@@ -29,10 +30,12 @@ import {
   readOptional,
   safeRelativePath,
   inside,
-} from "./paths.mjs";
-import { normalizeVersion } from "./versions.mjs";
+} from "./paths.ts";
+import { normalizeVersion } from "./versions.ts";
+import { errorCode, errorMessage, isRecord } from "./guards.ts";
+import type { BackupEntry, BackupMetadata, UpdatePlan } from "./types.ts";
 
-export async function atomicWrite(path, content, mode = 0o644) {
+export async function atomicWrite(path: string, content: Buffer, mode = 0o644): Promise<void> {
   await mkdir(dirname(path), { recursive: true });
   const temporaryPath = join(dirname(path), `.${basename(path)}.fonscape-${randomBytes(6).toString("hex")}`);
   await writeFile(temporaryPath, content, { mode });
@@ -40,7 +43,7 @@ export async function atomicWrite(path, content, mode = 0o644) {
   await rename(temporaryPath, path);
 }
 
-export async function copyOptional(source, destination) {
+export async function copyOptional(source: string, destination: string): Promise<boolean> {
   const value = await readOptional(source);
   if (value === null) return false;
   await mkdir(dirname(destination), { recursive: true });
@@ -48,7 +51,7 @@ export async function copyOptional(source, destination) {
   return true;
 }
 
-export async function atomicCopy(source, destination, mode = 0o644) {
+export async function atomicCopy(source: string, destination: string, mode = 0o644): Promise<void> {
   await mkdir(dirname(destination), { recursive: true });
   const temporaryPath = join(dirname(destination), `.${basename(destination)}.fonscape-restore-${randomBytes(6).toString("hex")}`);
   try {
@@ -61,24 +64,24 @@ export async function atomicCopy(source, destination, mode = 0o644) {
   }
 }
 
-async function ensureUpdateState(project) {
+async function ensureUpdateState(project: string): Promise<string> {
   await assertNoSymlink(project, "项目根目录");
   return ensureDirectory(join(project, UPDATE_DIRECTORY), "升级状态目录");
 }
 
-async function ensureStateSubdirectory(project, name) {
+async function ensureStateSubdirectory(project: string, name: string): Promise<string> {
   const state = await ensureUpdateState(project);
   return ensureDirectory(join(state, name), `升级状态目录/${name}`);
 }
 
-export async function withUpdateLock(project, operation) {
+export async function withUpdateLock<T>(project: string, operation: () => Promise<T>): Promise<T> {
   const state = await ensureUpdateState(project);
   const lockPath = join(state, "update.lock");
   let lock;
   try {
     lock = await open(lockPath, "wx");
   } catch (error) {
-    if (error.code === "EEXIST") throw new Error("另一个 Fonscape 升级进程正在运行；请勿同时升级同一站点。");
+    if (errorCode(error) === "EEXIST") throw new Error("另一个 Fonscape 升级进程正在运行；请勿同时升级同一站点。");
     throw error;
   }
   try {
@@ -92,35 +95,48 @@ export async function withUpdateLock(project, operation) {
   }
 }
 
-async function assertConflictMaterials(root, plan, allowSubset = false) {
+async function assertConflictMaterials(root: string, plan: UpdatePlan, allowSubset = false): Promise<void> {
   const staleMessage = `冲突材料已变化，旧目录已保留：${root}。请先备份或移走旧目录，再重新运行预检。`;
   const manifest = {
     fromVersion: plan.fromVersion,
     targetVersion: plan.targetVersion,
     conflicts: plan.conflicts.map(({ path, reason }) => ({ path, reason })),
   };
-  let existingManifest;
+  let existingManifest: unknown;
   try {
     existingManifest = JSON.parse((await readFile(join(root, "conflicts.json"))).toString("utf8"));
   } catch {
     throw new Error(staleMessage);
   }
+  const storedConflicts = isRecord(existingManifest) && Array.isArray(existingManifest.conflicts)
+    ? existingManifest.conflicts
+    : null;
   const sameManifest = allowSubset
-    ? existingManifest && Array.isArray(existingManifest.conflicts)
+    ? isRecord(existingManifest)
+      && storedConflicts !== null
       && existingManifest.fromVersion === manifest.fromVersion
       && existingManifest.targetVersion === manifest.targetVersion
-      && manifest.conflicts.every(({ path, reason }) => existingManifest.conflicts?.some((item) => item.path === path && item.reason === reason))
+      && manifest.conflicts.every(({ path, reason }) => storedConflicts.some((item: unknown) => (
+        isRecord(item) && item.path === path && item.reason === reason
+      )))
     : JSON.stringify(existingManifest) === JSON.stringify(manifest);
   if (!sameManifest) throw new Error(staleMessage);
   for (const conflict of plan.conflicts) {
-    for (const [name, value] of [["base", conflict.base], ["current", conflict.local], ["incoming", conflict.incoming]]) {
+    const materials: readonly (readonly ["base" | "current" | "incoming", Buffer | null])[] = [
+      ["base", conflict.base],
+      ["current", conflict.local],
+      ["incoming", conflict.incoming],
+    ];
+    for (const [name, value] of materials) {
       const existing = await readOptional(join(root, name, conflict.path));
-      if (value === null ? existing !== null : existing === null || !existing.equals(value)) throw new Error(staleMessage);
+      if (value === null ? existing !== null : existing === null || !existing.equals(value)) {
+        throw new Error(staleMessage);
+      }
     }
   }
 }
 
-export async function writeConflictBundle(project, plan) {
+export async function writeConflictBundle(project: string, plan: UpdatePlan): Promise<string> {
   const conflictsDirectory = await ensureStateSubdirectory(project, "conflicts");
   const root = join(conflictsDirectory, `${plan.fromVersion}-to-${plan.targetVersion}`);
   await assertNoManagedSymlink(project, `${UPDATE_DIRECTORY}/conflicts/${basename(root)}`);
@@ -142,7 +158,12 @@ export async function writeConflictBundle(project, plan) {
     conflicts: plan.conflicts.map(({ path, reason }) => ({ path, reason })),
   };
   for (const conflict of plan.conflicts) {
-    for (const [name, value] of [["base", conflict.base], ["current", conflict.local], ["incoming", conflict.incoming]]) {
+    const materials: readonly (readonly ["base" | "current" | "incoming", Buffer | null])[] = [
+      ["base", conflict.base],
+      ["current", conflict.local],
+      ["incoming", conflict.incoming],
+    ];
+    for (const [name, value] of materials) {
       if (value !== null) await atomicWrite(join(root, name, conflict.path), value);
     }
     if (conflict.merged !== null) await atomicWrite(join(root, "resolved", conflict.path), conflict.merged);
@@ -151,7 +172,11 @@ export async function writeConflictBundle(project, plan) {
   return root;
 }
 
-export async function resolveConflicts(plan, resolutionDirectory, alreadySelected = new Set()) {
+export async function resolveConflicts(
+  plan: UpdatePlan,
+  resolutionDirectory: string | null,
+  alreadySelected: ReadonlySet<string> = new Set<string>(),
+): Promise<void> {
   if (!resolutionDirectory) return;
   const bundleRoot = dirname(resolutionDirectory);
   if (await exists(join(bundleRoot, "conflicts.json"))) await assertConflictMaterials(bundleRoot, plan, true);
@@ -181,28 +206,31 @@ export async function resolveConflicts(plan, resolutionDirectory, alreadySelecte
   plan.conflicts = [];
 }
 
-export async function takeIncomingFiles(plan, paths = [], target) {
-  const selected = new Set();
+export async function takeIncomingFiles(plan: UpdatePlan, paths: readonly string[] = [], target: string): Promise<Set<string>> {
+  const selected = new Set<string>();
   for (const path of new Set(paths)) {
     const conflictIndex = plan.conflicts.findIndex((item) => item.path === path);
     if (conflictIndex < 0) throw new Error(`--take-incoming 指定的文件不是当前未解决冲突：${path}`);
     const [conflict] = plan.conflicts.splice(conflictIndex, 1);
-    const operation = conflict.incoming === null ? "delete" : "write";
-    plan.actions.push(action(
-      path,
-      operation,
-      conflict.incoming,
-      "take-incoming",
-      operation === "delete" ? null : await modeFor(target, path),
-      conflict.local,
-    ));
+    if (conflict.incoming === null) {
+      plan.actions.push(action(path, "delete", null, "take-incoming", null, conflict.local));
+    } else {
+      plan.actions.push(action(
+        path,
+        "write",
+        conflict.incoming,
+        "take-incoming",
+        await modeFor(target, path),
+        conflict.local,
+      ));
+    }
     plan.warnings.push(`已按 --take-incoming 采用目标版本：${path}`);
     selected.add(path);
   }
   return selected;
 }
 
-export function keepCurrentFiles(plan, paths = []) {
+export function keepCurrentFiles(plan: UpdatePlan, paths: readonly string[] = []): void {
   for (const path of new Set(paths)) {
     const actionIndex = plan.actions.findIndex((item) => item.path === path);
     const conflictIndex = plan.conflicts.findIndex((item) => item.path === path);
@@ -213,7 +241,7 @@ export function keepCurrentFiles(plan, paths = []) {
   }
 }
 
-export async function createBackup(project, plan) {
+export async function createBackup(project: string, plan: UpdatePlan): Promise<string> {
   const timestamp = new Date().toISOString().replaceAll(":", "-").replaceAll(".", "-");
   const backupsDirectory = await ensureStateSubdirectory(project, "backups");
   const root = join(backupsDirectory, `${timestamp}-${plan.fromVersion}-to-${plan.targetVersion}`);
@@ -222,7 +250,7 @@ export async function createBackup(project, plan) {
   await mkdir(root, { recursive: true });
   await assertNoManagedSymlink(project, VERSION_FILE);
   const previousVersion = await readOptional(join(project, VERSION_FILE));
-  const entries = [];
+  const entries: BackupEntry[] = [];
   for (const item of plan.actions) {
     await assertNoManagedSymlink(project, item.path);
     const source = absoluteManagedPath(project, item.path);
@@ -230,8 +258,8 @@ export async function createBackup(project, plan) {
     await assertNoManagedSymlink(filesRoot, item.path);
     const destination = absoluteManagedPath(filesRoot, item.path);
     const present = await copyOptional(source, destination);
-    const mode = present ? await modeFor(project, item.path) : null;
-    entries.push({ path: item.path, present, mode });
+    if (present) entries.push({ path: item.path, present: true, mode: await modeFor(project, item.path) });
+    else entries.push({ path: item.path, present: false, mode: null });
   }
   await writeFile(join(root, "backup.json"), `${JSON.stringify({
     schemaVersion: 1,
@@ -243,9 +271,9 @@ export async function createBackup(project, plan) {
   return root;
 }
 
-export async function applyPlan(project, plan) {
+export async function applyPlan(project: string, plan: UpdatePlan): Promise<string> {
   return withUpdateLock(project, async () => {
-    let backup;
+    let backup: string | undefined;
     try {
       await assertNoManagedSymlink(project, VERSION_FILE);
       for (const item of plan.actions) {
@@ -268,9 +296,9 @@ export async function applyPlan(project, plan) {
         try {
           await rollbackUnlocked(project, backup);
         } catch (rollbackError) {
-          throw new Error(`升级写入失败，自动回滚也失败：${rollbackError.message}`, { cause: error });
+          throw new Error(`升级写入失败，自动回滚也失败：${errorMessage(rollbackError)}`, { cause: error });
         }
-        throw new Error(`升级写入失败，已自动回滚：${error.message}`, { cause: error });
+        throw new Error(`升级写入失败，已自动回滚：${errorMessage(error)}`, { cause: error });
       }
       throw error;
     }
@@ -278,7 +306,13 @@ export async function applyPlan(project, plan) {
   });
 }
 
-async function readBackup(project, backupArgument) {
+interface ReadBackupResult {
+  backup: string;
+  metadata: BackupMetadata;
+  filesRoot: string;
+}
+
+async function readBackup(project: string, backupArgument: string): Promise<ReadBackupResult> {
   const backupsRoot = await ensureStateSubdirectory(project, "backups");
   const backup = isAbsolute(backupArgument) ? resolve(backupArgument) : resolve(project, backupArgument);
   if (!inside(backupsRoot, backup) || backup === backupsRoot) throw new Error("回滚目录必须位于 .fonscape-update/backups 内。");
@@ -289,57 +323,78 @@ async function readBackup(project, backupArgument) {
   const metadataPath = join(backup, "backup.json");
   const metadataInfo = await assertNoSymlink(metadataPath, "备份信息");
   if (!metadataInfo?.isFile()) throw new Error(`缺少有效的备份信息：${metadataPath}`);
-  let metadata;
+  let rawMetadata: unknown;
   try {
-    metadata = JSON.parse(await readFile(metadataPath, "utf8"));
+    rawMetadata = JSON.parse(await readFile(metadataPath, "utf8"));
   } catch (error) {
-    throw new Error(`备份信息无效：${error.message}`, { cause: error });
+    throw new Error(`备份信息无效：${errorMessage(error)}`, { cause: error });
   }
   if (
-    !metadata ||
-    metadata.schemaVersion !== 1 ||
-    !Array.isArray(metadata.entries) ||
-    typeof metadata.fromVersion !== "string" ||
-    typeof metadata.targetVersion !== "string" ||
-    !(metadata.previousVersion === null || typeof metadata.previousVersion === "string")
+    !isRecord(rawMetadata)
+    || rawMetadata.schemaVersion !== 1
+    || !Array.isArray(rawMetadata.entries)
+    || typeof rawMetadata.fromVersion !== "string"
+    || typeof rawMetadata.targetVersion !== "string"
+    || !(rawMetadata.previousVersion === null || typeof rawMetadata.previousVersion === "string")
   ) throw new Error("备份信息无效。");
+  const rawEntries: unknown[] = rawMetadata.entries;
+  const fromVersion = rawMetadata.fromVersion;
+  const targetVersion = rawMetadata.targetVersion;
+  const previousVersion = rawMetadata.previousVersion;
+  const metadata: BackupMetadata = {
+    schemaVersion: 1,
+    fromVersion,
+    targetVersion,
+    previousVersion,
+    entries: [],
+  };
   normalizeVersion(metadata.fromVersion, "备份来源版本");
   normalizeVersion(metadata.targetVersion, "备份目标版本");
   if (metadata.previousVersion !== null) normalizeVersion(metadata.previousVersion, "备份 previousVersion");
-  const paths = new Set();
+  const paths = new Set<string>();
+  const entries: BackupEntry[] = [];
   const filesRoot = join(backup, "files");
-  for (const entry of metadata.entries) {
-    if (!entry || typeof entry.path !== "string") throw new Error("备份条目路径无效。");
-    const safePath = safeRelativePath(entry.path);
+  for (const rawEntry of rawEntries) {
+    if (!isRecord(rawEntry) || typeof rawEntry.path !== "string") throw new Error("备份条目路径无效。");
+    const safePath = safeRelativePath(rawEntry.path);
     if (safePath === VERSION_FILE || safePath === UPDATE_DIRECTORY || safePath.startsWith(`${UPDATE_DIRECTORY}/`)) {
       throw new Error(`备份条目不能操作升级器状态：${safePath}`);
     }
     if (paths.has(safePath)) throw new Error(`备份条目重复：${safePath}`);
     paths.add(safePath);
-    if (typeof entry.present !== "boolean") throw new Error(`备份条目 present 无效：${safePath}`);
-    if (entry.present) {
-      if (!Number.isInteger(entry.mode) || entry.mode < 0 || entry.mode > 0o777) throw new Error(`备份条目 mode 无效：${safePath}`);
+    if (typeof rawEntry.present !== "boolean") throw new Error(`备份条目 present 无效：${safePath}`);
+    let mode: number | null = null;
+    if (rawEntry.present) {
+      if (typeof rawEntry.mode !== "number" || !Number.isInteger(rawEntry.mode) || rawEntry.mode < 0 || rawEntry.mode > 0o777) {
+        throw new Error(`备份条目 mode 无效：${safePath}`);
+      }
+      mode = rawEntry.mode;
       await assertNoManagedSymlink(filesRoot, safePath);
       const sourceInfo = await lstat(absoluteManagedPath(filesRoot, safePath)).catch((error) => {
-        if (error.code === "ENOENT") return null;
+        if (errorCode(error) === "ENOENT") return null;
         throw error;
       });
       if (!sourceInfo?.isFile()) throw new Error(`备份文件缺失或不是普通文件：${safePath}`);
-    } else if (entry.mode !== null) {
+    } else if (rawEntry.mode !== null) {
       throw new Error(`缺失文件的备份 mode 必须为 null：${safePath}`);
     }
     await assertNoManagedSymlink(project, safePath);
     const destinationInfo = await lstat(absoluteManagedPath(project, safePath)).catch((error) => {
-      if (error.code === "ENOENT") return null;
+      if (errorCode(error) === "ENOENT") return null;
       throw error;
     });
     if (destinationInfo?.isDirectory()) throw new Error(`回滚目标不能是目录：${safePath}`);
+    if (rawEntry.present) {
+      if (mode === null) throw new Error(`备份条目 mode 无效：${safePath}`);
+      entries.push({ path: safePath, present: true, mode });
+    } else entries.push({ path: safePath, present: false, mode: null });
   }
+  metadata.entries = entries;
   await assertNoManagedSymlink(project, VERSION_FILE);
   return { backup, metadata, filesRoot };
 }
 
-async function rollbackUnlocked(project, backupArgument) {
+async function rollbackUnlocked(project: string, backupArgument: string): Promise<void> {
   const { metadata, filesRoot } = await readBackup(project, backupArgument);
   for (const entry of metadata.entries.slice().reverse()) {
     const destination = absoluteManagedPath(project, entry.path);
@@ -352,6 +407,6 @@ async function rollbackUnlocked(project, backupArgument) {
   else await atomicWrite(join(project, VERSION_FILE), Buffer.from(metadata.previousVersion));
 }
 
-export async function rollback(project, backupArgument) {
+export async function rollback(project: string, backupArgument: string): Promise<void> {
   return withUpdateLock(project, () => rollbackUnlocked(project, backupArgument));
 }

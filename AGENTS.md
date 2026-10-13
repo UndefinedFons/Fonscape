@@ -31,14 +31,14 @@ Fonscape（风栖）是基于 React、TypeScript 与 Vite 的博客主题，采�
 | 详情页加载容器 | `src/components/RoutePageFrame.tsx` 的 `LoadingSurface` |
 | 站点配置与类型 | `fonscape.config.js`、`src/siteConfig.ts`、`src/types.ts` |
 | 内容集合与 Frontmatter 解析 | `content-repository.config.mjs` 的 `collections`、`src/content/frontmatter.ts`、`src/content/markdown.ts` |
-| 内容生成与运行时加载 | `scripts/generate-content-targets.mjs` 的 `generateContentArtifacts`、`src/content/index.ts` |
-| 响应式图片 | `scripts/generate-responsive-images.mjs`、`src/responsiveImages.ts`、`src/useResponsiveImage.ts` |
+| 内容生成与运行时加载 | `scripts/generate-content-targets.ts` 的 `generateContentArtifacts`、`src/content/index.ts` |
+| 响应式图片 | `scripts/generate-responsive-images.ts`、`src/responsiveImages.ts`、`src/useResponsiveImage.ts` |
 | 音乐元数据、播放状态与界面 | `scripts/music-metadata.ts`、`src/musicSources.ts`、`src/musicSession.ts`、`src/useMusicSession.ts`、`src/components/MusicStage.tsx` |
 | 账户、评论与消息界面 | `src/community/`；API 调用入口为 `src/community/api.ts` |
 | 共用 API、权限与防刷 | `functions/api/[[path]].ts` 的 `onRequest`、`functions/_lib/handlers/`、`functions/_lib/abuse.ts`、`functions/public-api.ts` |
 | Cloudflare 与 Vercel 适配 | `worker/index.ts`、`api/fonscape.ts`、`server/turso-d1.ts` |
 | 数据库迁移 | `migrations/`，按 SQL 文件名顺序执行 |
-| Updater 与文件归属 | `scripts/fonscape-update.mjs`、`scripts/fonscape-update/`、`fonscape.manifest.json` 的 `ownership` |
+| Updater 与文件归属 | `scripts/fonscape-update.ts`、`scripts/fonscape-update/`、`fonscape.manifest.json` 的 `ownership` |
 | 检查与构建预算 | `package.json` 的 `scripts`、`.github/workflows/check.yml`、`scripts/check-performance-budget.mjs` |
 
 文章、小诗、音乐的源目录由 `content-repository.config.mjs` 定义；正式友链保存在 `src/content/friends.json`，图片与音频分别放在 `public/assets/`、`public/audio/`。

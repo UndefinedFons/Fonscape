@@ -1,14 +1,14 @@
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, relative, resolve } from "node:path";
-import { parseArgs, usage } from "./args.mjs";
-import { CANONICAL_REPOSITORY, VERSION_FILE } from "./constants.mjs";
+import { parseArgs, usage } from "./args.ts";
+import { CANONICAL_REPOSITORY, VERSION_FILE } from "./constants.ts";
 import {
   assertNoManagedSymlink,
   assertNoSymlink,
   exists,
   readOptional,
-} from "./paths.mjs";
+} from "./paths.ts";
 import {
   cloneVersion,
   compareVersions,
@@ -17,8 +17,9 @@ import {
   readPackageVersion,
   validateManifest,
   validateSourceVersion,
-} from "./versions.mjs";
-import { createUpdatePlan } from "./plan.mjs";
+} from "./versions.ts";
+import { createUpdatePlan } from "./plan.ts";
+import type { UpdatePlan } from "./types.ts";
 import {
   applyPlan,
   keepCurrentFiles,
@@ -27,9 +28,9 @@ import {
   takeIncomingFiles,
   withUpdateLock,
   writeConflictBundle,
-} from "./state.mjs";
+} from "./state.ts";
 
-export function printPlan(plan) {
+export function printPlan(plan: UpdatePlan): void {
   console.log(`Fonscape ${plan.fromVersion} → ${plan.targetVersion}`);
   console.log(`计划更新 ${plan.actions.length} 个文件；保护 ${plan.skippedUserFiles.length} 个用户文件；冲突 ${plan.conflicts.length} 个。`);
   for (const item of plan.actions) console.log(`  ${item.operation === "delete" ? "删除" : "更新"} ${item.path} (${item.reason})`);
@@ -37,10 +38,10 @@ export function printPlan(plan) {
   for (const conflict of plan.conflicts) console.error(`  冲突：${conflict.path} (${conflict.reason})`);
 }
 
-export async function resolveInstalledVersion(project, provided) {
+export async function resolveInstalledVersion(project: string, provided: string | undefined): Promise<string> {
   await assertNoManagedSymlink(project, VERSION_FILE);
   const marker = await readOptional(join(project, VERSION_FILE));
-  if (marker) {
+  if (marker !== null) {
     const installed = normalizeVersion(marker.toString("utf8"), `${VERSION_FILE} 中的版本`);
     if (provided) {
       const requested = normalizeVersion(provided, "来源版本");
@@ -53,7 +54,7 @@ export async function resolveInstalledVersion(project, provided) {
   throw new Error(`未找到 ${VERSION_FILE}。升级器无法安全确定当前主题版本；请先为站点写入正确的 marker。`);
 }
 
-export async function main(argv = process.argv.slice(2)) {
+export async function main(argv: string[] = process.argv.slice(2)): Promise<void> {
   const options = parseArgs(argv);
   if (options.help) {
     console.log(usage());

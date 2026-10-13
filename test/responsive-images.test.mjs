@@ -21,7 +21,7 @@ import {
   selectResponsiveWidths,
   shouldKeepResponsiveVariant,
   sourceAssetPath,
-} from "../scripts/generate-responsive-images.mjs";
+} from "../scripts/generate-responsive-images.ts";
 import { registerResponsiveImages, responsiveImageProps, responsiveImageUrl } from "../src/responsiveImages.ts";
 
 test("Markdown image discovery includes rendered local rasters and ignores code or remote sources", () => {
