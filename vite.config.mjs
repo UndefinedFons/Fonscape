@@ -161,6 +161,8 @@ export default defineConfig({
   },
   plugins: [contentMetadataPlugin(), mermaidChunkWarningPlugin(), react(), heroPreloadPlugin()],
   build: {
+    // Keep the browser floor of Vite 6's former "modules" default.
+    target: ["es2020", "edge88", "firefox78", "chrome87", "safari14"],
     chunkSizeWarningLimit: MERMAID_CHUNK_WARNING_LIMIT_KB,
     manifest: true,
     rollupOptions: {
