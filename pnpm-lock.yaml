@@ -12,7 +12,7 @@ overrides:
   nanoid: 3.3.18
   postcss: 8.5.23
   source-map-js: 1.2.2
-  katex: 0.18.9
+  katex: 0.19.0
   brace-expansion: 5.0.12
   undici: 7.30.0
 
@@ -42,8 +42,8 @@ importers:
         specifier: 3.4.17
         version: 3.4.17
       katex:
-        specifier: 0.18.9
-        version: 0.18.9
+        specifier: 0.19.0
+        version: 0.19.0
       mermaid:
         specifier: ^11.17.2
         version: 11.17.2
@@ -1975,8 +1975,8 @@ packages:
     engines: {node: '>=6'}
     hasBin: true
 
-  katex@0.18.9:
-    resolution: {integrity: sha512-8ad9RyoKsb/g8/yLFE+KAlP+DhbCTRUNi/V9XGsxn0R+trJJltNwzcDNo0q/DEkOy5fQUQTAQyCXCYSE+OakTQ==}
+  katex@0.19.0:
+    resolution: {integrity: sha512-v6Tznz3zJ7u3niRCoDTsumM2+HA2XXcCu+WAacCeHD2z3p9A9Ks987o5FzfTGBN0e8A0vjEgIDvLbICrXpdw/Q==}
     hasBin: true
 
   keyv@5.6.0:
@@ -4457,7 +4457,7 @@ snapshots:
 
   json5@2.2.3: {}
 
-  katex@0.18.9:
+  katex@0.19.0:
     dependencies:
       commander: 15.0.0
 
@@ -4695,7 +4695,7 @@ snapshots:
       dompurify: 3.4.17
       es-toolkit: 1.52.0
       fastdom: 1.0.12
-      katex: 0.18.9
+      katex: 0.19.0
       khroma: 2.1.0
       marked: 16.4.2
       roughjs: 4.6.6
@@ -4784,7 +4784,7 @@ snapshots:
     dependencies:
       '@types/katex': 0.16.8
       devlop: 1.1.0
-      katex: 0.18.9
+      katex: 0.19.0
       micromark-factory-space: 2.0.1
       micromark-util-character: 2.1.1
       micromark-util-symbol: 2.0.1
@@ -5060,7 +5060,7 @@ snapshots:
       '@types/katex': 0.16.8
       hast-util-from-html-isomorphic: 2.0.0
       hast-util-to-text: 4.0.2
-      katex: 0.18.9
+      katex: 0.19.0
       unist-util-visit-parents: 6.0.2
       vfile: 6.0.3
 
