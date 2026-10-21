@@ -51,7 +51,7 @@
     "check": "pnpm generate && pnpm test:offline && pnpm typecheck && pnpm lint && vite build && pnpm check:performance-budget"
   },
   "dependencies": {
-    "@libsql/client": "0.17.4",
+    "@libsql/client": "0.18.0",
     "@meting/core": "1.6.1",
     "@phosphor-icons/react": "^2.1.10",
     "@vercel/functions": "3.10.1",
