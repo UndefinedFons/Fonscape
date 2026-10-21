@@ -78,7 +78,7 @@
     "eslint": "10.13.0",
     "eslint-plugin-react-hooks": "7.1.1",
     "globals": "17.13.0",
-    "jsdom": "26.1.0",
+    "jsdom": "29.1.1",
     "sharp": "0.35.5",
     "typescript": "^5.9.3",
     "typescript-eslint": "8.71.2",
