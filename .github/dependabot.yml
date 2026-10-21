@@ -38,6 +38,8 @@ updates:
       - dependency-name: jsdom
         update-types:
           - version-update:semver-major
+      # pnpm-workspace.yaml patches this exact version; port the patch before upgrading.
+      - dependency-name: "@meting/core"
 
   - package-ecosystem: github-actions
     directory: /
