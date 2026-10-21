@@ -6,7 +6,7 @@ import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import ts from "typescript";
-import { migrateTurso, readMigrations } from "../scripts/migrate-turso.mjs";
+import { migrateTurso, readMigrations } from "../scripts/migrate-turso.ts";
 
 async function compileVercelRuntime() {
   const root = fileURLToPath(new URL("../", import.meta.url));

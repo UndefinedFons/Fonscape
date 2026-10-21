@@ -40,7 +40,7 @@ test("Checks and deployment share a resilient responsive image cache contract", 
     const invalidationInputs = [
       "scripts/generate-responsive-images.ts",
       "scripts/generate-content-targets.ts",
-      "scripts/generate-font-css.mjs",
+      "scripts/generate-font-css.ts",
       "src/content/frontmatter.ts",
       "src/content/markdown.ts",
       "src/pages/homeContent.ts",

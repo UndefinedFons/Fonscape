@@ -73,10 +73,10 @@ test("generated artifacts precede supported project commands", async () => {
   const { scripts } = await readJson("../package.json");
   assert.deepEqual(new Set(scripts.generate.split(" && ")), new Set([
     "node scripts/generate-content-targets.ts",
-    "node scripts/generate-font-css.mjs",
+    "node scripts/generate-font-css.ts",
     "node scripts/generate-responsive-images.ts",
-    "node scripts/generate-rss.mjs",
-    "node scripts/generate-sitemap.mjs",
+    "node scripts/generate-rss.ts",
+    "node scripts/generate-sitemap.ts",
   ]));
   for (const command of ["dev", "build", "test", "check"]) {
     assert.ok(scripts[command].startsWith("pnpm generate && "), `${command} must generate artifacts before execution`);

@@ -3,6 +3,7 @@ import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import siteConfig from "../fonscape.config.js";
 import { contentRepositoryConfig } from "../content-repository.config.mjs";
+import type { DatedEntry, MusicSection } from "../src/types.ts";
 import {
   parseMusicReviewMetadata,
   parsePoemMetadata,
@@ -11,28 +12,27 @@ import {
 } from "../src/content/frontmatter.ts";
 import { musicRoute, poemRoute, postRoute, routeHref } from "../src/routes.ts";
 import { normalizeSiteUrl, siteUrlForPath } from "../src/siteUrl.ts";
-import { parseRssDate } from "./generate-rss.mjs";
+import { parseRssDate } from "./generate-rss.ts";
+
+type SitemapEntry = DatedEntry & { section?: MusicSection };
+type SitemapCollections = Record<string, SitemapEntry[]>;
+type SitemapConfig = { siteUrl?: unknown; showPoems?: boolean; showMusic?: boolean; showCommunity?: boolean };
+type CollectionConfig = { directory: string; extension: string; parser?: string };
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 
-const parserByType = {
+const parserByType: Record<string, ((path: string, source: string) => SitemapEntry) | undefined> = {
   post: parsePostMetadata,
   poem: parsePoemMetadata,
   music: parseMusicReviewMetadata,
 };
 
-/**
- * @param {string} directory
- * @param {string} extension
- * @param {string} [prefix]
- * @returns {Promise<string[]>}
- */
-async function findContentFiles(directory, extension, prefix = "") {
+async function findContentFiles(directory: string, extension: string, prefix = ""): Promise<string[]> {
   const entries = await readdir(directory, { withFileTypes: true }).catch((error) => {
     if (error.code === "ENOENT") return [];
     throw error;
   });
-  const files = [];
+  const files: string[] = [];
   for (const entry of entries.sort((left, right) => left.name.localeCompare(right.name))) {
     if (entry.name.startsWith(".")) continue;
     const relativeName = prefix ? `${prefix}/${entry.name}` : entry.name;
@@ -47,12 +47,11 @@ async function findContentFiles(directory, extension, prefix = "") {
 /**
  * Read all published content metadata for the sitemap. The same frontmatter
  * parsers and repository definitions as the content manifest are used here.
- * @param {string} [sourceRoot]
- * @returns {Promise<Record<string, Array<Record<string, any>>>>}
  */
-export async function readSitemapEntries(sourceRoot = root) {
-  const collections = {};
-  for (const [type, definition] of Object.entries(contentRepositoryConfig.collections)) {
+export async function readSitemapEntries(sourceRoot = root): Promise<SitemapCollections> {
+  const collections: SitemapCollections = {};
+  const definitions: Readonly<Record<string, CollectionConfig>> = contentRepositoryConfig.collections;
+  for (const [type, definition] of Object.entries(definitions)) {
     const parser = parserByType[definition.parser || type];
     if (!parser) continue;
     const sourceDirectory = join(sourceRoot, definition.directory);
@@ -66,22 +65,15 @@ export async function readSitemapEntries(sourceRoot = root) {
   return collections;
 }
 
-/** @param {unknown} value @returns {string} */
-function sitemapDate(value) {
+function sitemapDate(value: unknown): string {
   return parseRssDate(value).toISOString();
 }
 
-/**
- * @param {Record<string, Array<Record<string, any>>>} collections
- * @param {string} siteUrl
- * @param {{ showPoems?: boolean, showMusic?: boolean, showCommunity?: boolean }} [config]
- * @returns {string}
- */
-export function buildSitemap(collections, siteUrl, config = {}) {
+export function buildSitemap(collections: SitemapCollections, siteUrl: unknown, config: SitemapConfig = {}): string {
   const base = normalizeSiteUrl(siteUrl);
   if (!base) return "";
-  const records = new Map();
-  const add = (path, date) => {
+  const records = new Map<string, string>();
+  const add = (path: string, date: string) => {
     const location = siteUrlForPath(base, path);
     if (!location) return;
     const previous = records.get(location);
@@ -90,7 +82,7 @@ export function buildSitemap(collections, siteUrl, config = {}) {
   const posts = Array.isArray(collections.post) ? collections.post : [];
   const poems = config.showPoems === true && Array.isArray(collections.poem) ? collections.poem : [];
   const music = config.showMusic === true && Array.isArray(collections.music) ? collections.music : [];
-  const latest = (entries) => entries[0]?.date ? sitemapDate(entries[0].date) : "";
+  const latest = (entries: SitemapEntry[]) => entries[0]?.date ? sitemapDate(entries[0].date) : "";
 
   add(routeHref("/"), latest(posts));
   add(routeHref("/posts"), latest(posts));
@@ -117,8 +109,7 @@ export function buildSitemap(collections, siteUrl, config = {}) {
   ].join("\n");
 }
 
-/** @param {unknown} value @returns {string} */
-export function escapeXml(value) {
+export function escapeXml(value: unknown): string {
   return String(value ?? "")
     .replaceAll("&", "&amp;")
     .replaceAll("<", "&lt;")
@@ -130,9 +121,8 @@ export function escapeXml(value) {
 /**
  * Generate the repository-owned sitemap during dev/build. An empty siteUrl
  * removes any previous generated sitemap so no placeholder domain is served.
- * @param {{ root?: string, config?: Record<string, any> }} [options]
  */
-export async function generateSitemap({ root: sourceRoot = root, config = siteConfig } = {}) {
+export async function generateSitemap({ root: sourceRoot = root, config = siteConfig }: { root?: string; config?: SitemapConfig } = {}): Promise<string> {
   const base = normalizeSiteUrl(config.siteUrl);
   const destination = join(sourceRoot, "public", "sitemap.xml");
   if (!base) {

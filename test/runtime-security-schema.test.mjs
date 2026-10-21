@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { createClient } from "@libsql/client";
-import { migrateTurso, readMigrations } from "../scripts/migrate-turso.mjs";
+import { migrateTurso, readMigrations } from "../scripts/migrate-turso.ts";
 
 test("runtime security migration preserves legacy records and enforces avatar capacity", async () => {
   const client = createClient({ url: ":memory:" });

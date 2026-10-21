@@ -106,9 +106,9 @@ test("a Markdown hot update uses resolved music metadata when regenerating fonts
     const modules = new Map([
       ["generate-responsive-images.ts", "export async function generateResponsiveImages() {}"],
       ["generate-content-targets.ts", 'export async function generateContentArtifacts() { await new Promise((finish) => { globalThis.generationFixture.finishMetadata = () => { globalThis.generationFixture.metadata = "新音乐名称"; finish(); }; }); }'],
-      ["generate-font-css.mjs", "export async function generateFontStylesheets() { globalThis.generationFixture.fontInput = globalThis.generationFixture.metadata; }"],
-      ["generate-rss.mjs", "export async function generateRssFeed() {}"],
-      ["generate-sitemap.mjs", "export async function generateSitemap() {}"],
+      ["generate-font-css.ts", "export async function generateFontStylesheets() { globalThis.generationFixture.fontInput = globalThis.generationFixture.metadata; }"],
+      ["generate-rss.ts", "export async function generateRssFeed() {}"],
+      ["generate-sitemap.ts", "export async function generateSitemap() {}"],
     ]);
     registerHooks({ load(url, context, nextLoad) {
       const module = [...modules].find(([name]) => url.endsWith("/scripts/" + name));

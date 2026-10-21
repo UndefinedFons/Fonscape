@@ -432,7 +432,7 @@ pnpm check
 
 ## 维护与功能扩展约束
 
-开发环境使用 Node.js 22.18 或更新版本和 `package.json` 声明的 pnpm。前端代码位于 `src/`，使用 `.ts` 和 `.tsx`；后端与部署适配器位于 `functions/`、`worker/`、`api/` 和 `server/`，使用 `.ts`。升级器、内容生成器和响应式图片生成器位于 `scripts/`，使用 `.ts`。站点配置保存在 `fonscape.config.js`，内容使用 Markdown 和 JSON，构建生成的模块输出为 JavaScript。
+开发环境使用 Node.js 22.18 或更新版本和 `package.json` 声明的 pnpm。前端代码位于 `src/`，使用 `.ts` 和 `.tsx`；后端与部署适配器位于 `functions/`、`worker/`、`api/` 和 `server/`，使用 `.ts`。升级器、内容与资源生成器、构建检查和 Turso 迁移脚本位于 `scripts/`，使用 `.ts`。站点配置保存在 `fonscape.config.js`，内容使用 Markdown 和 JSON，构建生成的模块输出为 JavaScript。
 
 主体源码启用严格类型检查。跨模块数据使用准确的共享类型，外部输入同时保留运行时校验；类型导入使用 `import type`，相对源码导入写明 `.ts` 或 `.tsx` 扩展名。Node.js 直接执行的模块只使用可擦除的类型语法。`pnpm typecheck` 检查主体源码与 TypeScript 构建脚本，`pnpm lint` 检查 TypeScript、JavaScript 和 React Hooks。
 
