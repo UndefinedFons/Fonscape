@@ -40,6 +40,15 @@ updates:
           - version-update:semver-major
       # pnpm-workspace.yaml patches this exact version; port the patch before upgrading.
       - dependency-name: "@meting/core"
+      # React 19.3 adds about 8.4 KiB gzip to the entry bundle; the site stays on 19.2.
+      - dependency-name: react
+        versions: ["19.3.x"]
+      - dependency-name: react-dom
+        versions: ["19.3.x"]
+      - dependency-name: "@types/react"
+        versions: ["19.3.x"]
+      - dependency-name: "@types/react-dom"
+        versions: ["19.3.x"]
 
   - package-ecosystem: github-actions
     directory: /
