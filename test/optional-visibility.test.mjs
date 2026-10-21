@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { buildSitemap } from "../scripts/generate-sitemap.mjs";
+import { buildSitemap } from "../scripts/generate-sitemap.ts";
 import { getNavItems } from "../src/siteConfig.ts";
 import { isSiteRouteEnabled } from "../src/sectionAvailability.ts";
 

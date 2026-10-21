@@ -3,6 +3,7 @@ import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import siteConfig from "../fonscape.config.js";
 import { contentRepositoryConfig } from "../content-repository.config.mjs";
+import type { PostMetadata } from "../src/types.ts";
 import { parsePostMetadata, sortNewestFirst } from "../src/content/frontmatter.ts";
 import { parseContentDate } from "../src/content/date.ts";
 import { normalizeSiteUrl, siteUrlForPath } from "../src/siteUrl.ts";
@@ -10,13 +11,12 @@ import { postRoute } from "../src/routes.ts";
 
 export { normalizeSiteUrl };
 
+type FeedPost = Pick<PostMetadata, "slug" | "date" | "title" | "excerpt" | "firstParagraph" | "category">;
+type FeedConfig = { siteUrl?: unknown; title?: string; description?: string; language?: string };
+
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 
-/**
- * @param {string} value
- * @returns {string}
- */
-export function escapeXml(value) {
+export function escapeXml(value: unknown): string {
   return String(value ?? "")
     .replaceAll("&", "&amp;")
     .replaceAll("<", "&lt;")
@@ -28,22 +28,20 @@ export function escapeXml(value) {
 /**
  * Content dates without an explicit timezone are interpreted as UTC so the
  * generated feed is byte-for-byte stable across developer and CI timezones.
- * @param {unknown} value
- * @returns {Date}
  */
-export function parseRssDate(value) {
+export function parseRssDate(value: unknown): Date {
   const source = String(value ?? "").trim();
   const date = parseContentDate(source);
   if (!date) throw new Error(`RSS 日期无效：${source}`);
   return date;
 }
 
-async function findMarkdownFiles(directory, prefix = "") {
+async function findMarkdownFiles(directory: string, prefix = ""): Promise<string[]> {
   const entries = await readdir(directory, { withFileTypes: true }).catch((error) => {
     if (error.code === "ENOENT") return [];
     throw error;
   });
-  const files = [];
+  const files: string[] = [];
   for (const entry of entries.sort((left, right) => left.name.localeCompare(right.name))) {
     if (entry.name.startsWith(".")) continue;
     const name = prefix ? `${prefix}/${entry.name}` : entry.name;
@@ -55,12 +53,8 @@ async function findMarkdownFiles(directory, prefix = "") {
   return files;
 }
 
-/**
- * Read posts with the same parser and ordering used by the content manifest.
- * @param {string} [sourceRoot]
- * @returns {Promise<Array<Record<string, any>>>}
- */
-export async function readRssPosts(sourceRoot = root) {
+/** Read posts with the same parser and ordering used by the content manifest. */
+export async function readRssPosts(sourceRoot = root): Promise<PostMetadata[]> {
   const definition = contentRepositoryConfig.collections.post;
   const sourceDirectory = join(sourceRoot, definition.directory);
   const files = await findMarkdownFiles(sourceDirectory);
@@ -71,13 +65,7 @@ export async function readRssPosts(sourceRoot = root) {
   return entries.sort(sortNewestFirst);
 }
 
-/**
- * @param {Array<Record<string, any>>} posts
- * @param {string} siteUrl
- * @param {{ title?: string, description?: string, language?: string }} [config]
- * @returns {string}
- */
-export function buildRssFeed(posts, siteUrl, config = {}) {
+export function buildRssFeed(posts: readonly FeedPost[], siteUrl: unknown, config: FeedConfig = {}): string {
   const base = normalizeSiteUrl(siteUrl);
   if (!base) return "";
   const title = config.title || "博客文章";
@@ -119,9 +107,8 @@ export function buildRssFeed(posts, siteUrl, config = {}) {
  * Generate the repository-owned feed during dev/build. An empty siteUrl
  * intentionally removes any old generated feed so no placeholder domain is
  * ever published.
- * @param {{ root?: string, config?: Record<string, unknown> }} [options]
  */
-export async function generateRssFeed({ root: sourceRoot = root, config = siteConfig } = {}) {
+export async function generateRssFeed({ root: sourceRoot = root, config = siteConfig }: { root?: string; config?: FeedConfig } = {}): Promise<string> {
   const base = normalizeSiteUrl(config.siteUrl);
   const outputPath = join(sourceRoot, "public", "feed.xml");
   if (!base) {

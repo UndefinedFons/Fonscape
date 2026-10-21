@@ -1,6 +1,7 @@
 import { lstat, mkdir, readFile, readdir, writeFile } from "node:fs/promises";
 import { dirname, extname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import type { MusicReviewMetadata, MusicSection, PoemMetadata, PostMetadata } from "../src/types.ts";
 import {
   parseMusicReviewMetadata,
   parsePoemMetadata,
@@ -16,9 +17,9 @@ const criticalOutputPath = join(outputDirectory, "google-fonts.css");
 const fullOutputPath = join(outputDirectory, "google-fonts-full.css");
 const scannedExtensions = new Set([".html", ".js", ".jsx", ".ts", ".tsx", ".json", ".md"]);
 
-async function sourceFiles(directory) {
+async function sourceFiles(directory: string): Promise<string[]> {
   const entries = await readdir(directory, { withFileTypes: true });
-  const files = [];
+  const files: string[] = [];
   for (const entry of entries.sort((left, right) => left.name.localeCompare(right.name))) {
     if (entry.name.startsWith(".") || ["dist", "node_modules"].includes(entry.name)) continue;
     const path = join(directory, entry.name);
@@ -29,14 +30,14 @@ async function sourceFiles(directory) {
   return files;
 }
 
-function codePoints(value) {
+function codePoints(value: string): Set<number | undefined> {
   return new Set([...value].map((character) => character.codePointAt(0)));
 }
 
-async function criticalContentSources(files) {
-  const posts = [];
-  const poems = [];
-  const music = [];
+async function criticalContentSources(files: string[]): Promise<{ noto: string; zen: string }> {
+  const posts: PostMetadata[] = [];
+  const poems: PoemMetadata[] = [];
+  const music: MusicReviewMetadata[] = [];
   for (const path of files.filter((file) => extname(file) === ".md")) {
     const source = await readFile(path, "utf8");
     const sourcePath = relative(root, path).replaceAll("\\", "/");
@@ -44,11 +45,11 @@ async function criticalContentSources(files) {
     else if (sourcePath.startsWith("src/content/poems/")) poems.push(parsePoemMetadata(sourcePath, source));
     else if (sourcePath.startsWith("src/content/music/")) music.push(parseMusicReviewMetadata(sourcePath, source));
   }
-  const resolvedMusic = await readFile(join(root, "public/fonscape/content/pages/music/0.json"), "utf8").then(JSON.parse).catch((error) => {
+  const resolvedMusic: MusicReviewMetadata[] = await readFile(join(root, "public/fonscape/content/pages/music/0.json"), "utf8").then(JSON.parse).catch((error) => {
     if (error.code === "ENOENT") return music;
     throw error;
   });
-  const musicReviews = Object.fromEntries(["songs", "albums", "playlists"].map((section) => [
+  const musicReviews = Object.fromEntries((["songs", "albums", "playlists"] as const).map((section: MusicSection) => [
     section,
     resolvedMusic.filter((entry) => entry.section === section),
   ]));
@@ -68,10 +69,10 @@ async function criticalContentSources(files) {
   };
 }
 
-function rangeContainsCodePoint(range, points) {
+function rangeContainsCodePoint(range: string, points: Set<number | undefined>): boolean {
   const normalized = range.trim().replace(/^U\+/iu, "");
-  let lower;
-  let upper;
+  let lower: number;
+  let upper: number;
   if (normalized.includes("?")) {
     lower = Number.parseInt(normalized.replaceAll("?", "0"), 16);
     upper = Number.parseInt(normalized.replaceAll("?", "F"), 16);
@@ -81,17 +82,17 @@ function rangeContainsCodePoint(range, points) {
     upper = Number.parseInt(end, 16);
   }
   for (const point of points) {
-    if (point >= lower && point <= upper) return true;
+    if (point !== undefined && point >= lower && point <= upper) return true;
   }
   return false;
 }
 
-function blockMatches(block, points) {
+function blockMatches(block: string, points: Set<number | undefined>): boolean {
   const ranges = block.match(/unicode-range:\s*([^;]+);/iu)?.[1];
   return !ranges || ranges.split(",").some((range) => rangeContainsCodePoint(range, points));
 }
 
-async function renderFontStylesheets() {
+async function renderFontStylesheets(): Promise<{ critical: string; full: string }> {
   const [catalog, srcFiles, indexSource] = await Promise.all([
     readFile(catalogPath, "utf8"),
     sourceFiles(join(root, "src")),
@@ -131,7 +132,7 @@ async function renderFontStylesheets() {
   };
 }
 
-export async function generateFontStylesheets({ check = false } = {}) {
+export async function generateFontStylesheets({ check = false }: { check?: boolean } = {}): Promise<void> {
   const rendered = await renderFontStylesheets();
   if (check) {
     const [critical, full] = await Promise.all([

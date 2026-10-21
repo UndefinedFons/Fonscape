@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { createClient } from "@libsql/client";
-import { migrateTurso } from "../scripts/migrate-turso.mjs";
+import { migrateTurso } from "../scripts/migrate-turso.ts";
 
 async function schemaSnapshot(client) {
   const objects = await client.execute(`

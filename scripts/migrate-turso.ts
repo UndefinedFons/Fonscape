@@ -3,13 +3,17 @@ import { readdir, readFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createClient } from "@libsql/client";
+import type { Client, Value } from "@libsql/client";
+
+type MigrationClient = Pick<Client, "execute" | "batch">;
+type Migration = { name: string; source: string; checksum: string; statements: string[] };
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const migrationsDirectory = join(root, "migrations");
 const migrationTable = "fonscape_schema_migrations";
 const busyRetryLimit = 12;
 
-function isDatabaseBusy(error) {
+function isDatabaseBusy(error: unknown): boolean {
   const code = typeof error === "object" && error !== null && "code" in error
     ? String(error.code || "")
     : "";
@@ -17,13 +21,13 @@ function isDatabaseBusy(error) {
   return code === "SQLITE_BUSY" || /SQLITE_BUSY|database is locked/iu.test(message);
 }
 
-function retryDelay(attempt) {
+function retryDelay(attempt: number): Promise<void> {
   return new Promise((resolveDelay) => {
     setTimeout(resolveDelay, Math.min(50 * (2 ** attempt), 500));
   });
 }
 
-async function withBusyRetry(operation) {
+async function withBusyRetry<T>(operation: () => Promise<T>): Promise<T> {
   for (let attempt = 0; ; attempt += 1) {
     try {
       return await operation();
@@ -34,7 +38,7 @@ async function withBusyRetry(operation) {
   }
 }
 
-function hasSqlCode(value) {
+function hasSqlCode(value: string): boolean {
   let index = 0;
   while (index < value.length) {
     if (/\s/u.test(value[index])) {
@@ -53,7 +57,7 @@ function hasSqlCode(value) {
   return false;
 }
 
-function isTriggerStatement(value) {
+function isTriggerStatement(value: string): boolean {
   const withoutLeadingComments = value.replace(
     /^\s*(?:(?:--[^\n]*(?:\n|$))|(?:\/\*[\s\S]*?\*\/\s*))*/u,
     "",
@@ -61,7 +65,7 @@ function isTriggerStatement(value) {
   return /^CREATE\s+(?:TEMP(?:ORARY)?\s+)?TRIGGER\b/iu.test(withoutLeadingComments);
 }
 
-function triggerCompoundDepth(value) {
+function triggerCompoundDepth(value: string): number {
   let depth = 0;
   let state = "normal";
   let token = "";
@@ -151,8 +155,8 @@ function triggerCompoundDepth(value) {
   return depth;
 }
 
-export function splitSqlStatements(source) {
-  const statements = [];
+export function splitSqlStatements(source: string): string[] {
+  const statements: string[] = [];
   let start = 0;
   let state = "normal";
 
@@ -241,7 +245,7 @@ export function splitSqlStatements(source) {
   return statements;
 }
 
-export async function readMigrations(directory = migrationsDirectory) {
+export async function readMigrations(directory = migrationsDirectory): Promise<Migration[]> {
   const names = (await readdir(directory))
     .filter((name) => /^\d{4}_[a-z0-9_]+\.sql$/u.test(name))
     .sort();
@@ -259,7 +263,7 @@ export async function readMigrations(directory = migrationsDirectory) {
   }));
 }
 
-function migrationConfiguration(environment) {
+function migrationConfiguration(environment: Record<string, string | undefined>): { url: string; authToken: string } {
   const url = String(environment.TURSO_DATABASE_URL || "").trim();
   const authToken = String(environment.TURSO_AUTH_TOKEN || "").trim();
   if (!url) throw new Error("TURSO_DATABASE_URL is required");
@@ -269,7 +273,7 @@ function migrationConfiguration(environment) {
   return { url, authToken };
 }
 
-async function appliedMigrations(client, createTable) {
+async function appliedMigrations(client: MigrationClient, createTable: boolean): Promise<Map<Value, Value>> {
   if (createTable) {
     await withBusyRetry(() => client.execute(`CREATE TABLE IF NOT EXISTS ${migrationTable} (
       name TEXT PRIMARY KEY,
@@ -281,14 +285,14 @@ async function appliedMigrations(client, createTable) {
     const result = await withBusyRetry(
       () => client.execute(`SELECT name, checksum FROM ${migrationTable} ORDER BY name`),
     );
-    return new Map(result.rows.map((row) => [row.name, row.checksum]));
+    return new Map(result.rows.map((row): [Value, Value] => [row.name, row.checksum]));
   } catch (error) {
     if (!createTable && /no such table/iu.test(error instanceof Error ? error.message : String(error))) return new Map();
     throw error;
   }
 }
 
-async function applyMigration(client, migration) {
+async function applyMigration(client: MigrationClient, migration: Migration): Promise<boolean> {
   try {
     await withBusyRetry(() => client.batch([
       {
@@ -312,10 +316,14 @@ async function applyMigration(client, migration) {
   }
 }
 
-export async function migrateTurso({ client, apply = false, migrations } = {}) {
+export async function migrateTurso({ client, apply = false, migrations }: {
+  client: MigrationClient;
+  apply?: boolean;
+  migrations?: Migration[];
+}): Promise<{ applied: string[]; pending: string[] }> {
   const migrationList = migrations || await readMigrations();
   const existing = await appliedMigrations(client, apply);
-  const pending = [];
+  const pending: Migration[] = [];
   for (const migration of migrationList) {
     const appliedChecksum = existing.get(migration.name);
     if (appliedChecksum && appliedChecksum !== migration.checksum) {
@@ -325,14 +333,14 @@ export async function migrateTurso({ client, apply = false, migrations } = {}) {
   }
   if (!apply) return { applied: [], pending: pending.map((migration) => migration.name) };
 
-  const applied = [];
+  const applied: string[] = [];
   for (const migration of pending) {
     if (await applyMigration(client, migration)) applied.push(migration.name);
   }
   return { applied, pending: [] };
 }
 
-async function main() {
+async function main(): Promise<void> {
   const argumentsSet = new Set(process.argv.slice(2));
   const supported = new Set(["--apply"]);
   for (const argument of argumentsSet) {

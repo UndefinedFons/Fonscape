@@ -8,12 +8,12 @@ import {
   isKnownMermaidCircularChunkWarning,
   mermaidChunkWarningPlugin,
   ordinaryChunkSizeWarning,
-} from "../scripts/chunk-size-warning.mjs";
+} from "../scripts/chunk-size-warning.ts";
 import {
   dynamicJavaScriptLimit,
   MAX_DYNAMIC_JAVASCRIPT_GZIP_LIMIT,
   MERMAID_ENGINE_GZIP_LIMIT,
-} from "../scripts/check-performance-budget.mjs";
+} from "../scripts/check-performance-budget.ts";
 
 test("Mermaid's parser allowance is scoped while ordinary chunks keep the 500 kB warning", async () => {
   const viteConfig = await readFile("vite.config.mjs", "utf8");

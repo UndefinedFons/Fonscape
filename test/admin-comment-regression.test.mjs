@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { createClient } from "@libsql/client";
 import { insertCommentWithRateLimitsAtomically } from "../functions/_lib/abuse.ts";
-import { migrateTurso } from "../scripts/migrate-turso.mjs";
+import { migrateTurso } from "../scripts/migrate-turso.ts";
 import { createTursoD1Database } from "../server/turso-d1.ts";
 
 test("administrator comments work with an empty rate-limit policy set", async () => {

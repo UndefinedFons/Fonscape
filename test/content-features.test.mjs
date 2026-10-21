@@ -4,8 +4,8 @@ import { mkdtemp } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
-import { buildRssFeed, parseRssDate, readRssPosts } from "../scripts/generate-rss.mjs";
-import { buildSitemap } from "../scripts/generate-sitemap.mjs";
+import { buildRssFeed, parseRssDate, readRssPosts } from "../scripts/generate-rss.ts";
+import { buildSitemap } from "../scripts/generate-sitemap.ts";
 import { hasMathSyntax, parseAlertMarker, protectCurrencySyntax } from "../src/content/richFeatures.ts";
 import { normalizeSiteUrl } from "../src/siteUrl.ts";
 

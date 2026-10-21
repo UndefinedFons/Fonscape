@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { createClient } from "@libsql/client";
-import { migrateTurso, readMigrations } from "../scripts/migrate-turso.mjs";
+import { migrateTurso, readMigrations } from "../scripts/migrate-turso.ts";
 
 async function tableNames(client) {
   const result = await client.execute("SELECT name FROM sqlite_master WHERE type = 'table' ORDER BY name");

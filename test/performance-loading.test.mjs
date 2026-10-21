@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
 import { createServer } from "vite";
-import { summarizeJavaScriptAssets } from "../scripts/check-performance-budget.mjs";
+import { summarizeJavaScriptAssets } from "../scripts/check-performance-budget.ts";
 
 test("empty collection chunks reuse one settled request across interaction rerenders", async () => {
   const content = await import("../src/content/index.ts");

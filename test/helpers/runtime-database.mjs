@@ -1,5 +1,5 @@
 import { createClient } from "@libsql/client";
-import { migrateTurso } from "../../scripts/migrate-turso.mjs";
+import { migrateTurso } from "../../scripts/migrate-turso.ts";
 import { createTursoD1Database } from "../../server/turso-d1.ts";
 
 export async function migratedDatabase() {

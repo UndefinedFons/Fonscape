@@ -3,8 +3,11 @@ import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { relative, resolve } from "node:path";
 import { gzipSync } from "node:zlib";
 import { fileURLToPath } from "node:url";
-import { isMermaidEngineChunkName } from "./chunk-size-warning.mjs";
+import { isMermaidEngineChunkName } from "./chunk-size-warning.ts";
 import { MAX_RESPONSIVE_VARIANT_BYTES } from "./generate-responsive-images.ts";
+
+type JavaScriptAsset = { path: string; gzip: number };
+type ViteManifestChunk = { file: string; imports?: string[]; isEntry?: boolean };
 
 const DIST_ROOT = resolve(process.cwd(), "dist");
 const ENTRY_HTML = resolve(DIST_ROOT, "index.html");
@@ -23,17 +26,17 @@ const CONTENT_PAGE_GZIP_LIMIT = 96 * 1024;
 const CONTENT_INDEX_GZIP_LIMIT = 48 * 1024;
 const CONTENT_ENTRY_GZIP_LIMIT = 48 * 1024;
 
-function localAssetPath(url) {
+function localAssetPath(url: string): string | null {
   const pathname = decodeURIComponent(String(url).split(/[?#]/u)[0]);
   if (!pathname.startsWith("/") || pathname.startsWith("//")) return null;
   return resolve(DIST_ROOT, pathname.slice(1));
 }
 
-function gzipSize(path) {
+function gzipSize(path: string): number {
   return gzipSync(readFileSync(path), { level: 9 }).byteLength;
 }
 
-function collectJavaScriptFiles(directory) {
+function collectJavaScriptFiles(directory: string): string[] {
   if (!existsSync(directory)) return [];
   return readdirSync(directory, { withFileTypes: true })
     .sort((left, right) => left.name.localeCompare(right.name))
@@ -44,7 +47,7 @@ function collectJavaScriptFiles(directory) {
     });
 }
 
-function collectFiles(directory) {
+function collectFiles(directory: string): string[] {
   if (!existsSync(directory)) return [];
   return readdirSync(directory, { withFileTypes: true })
     .sort((left, right) => left.name.localeCompare(right.name))
@@ -55,31 +58,31 @@ function collectFiles(directory) {
     });
 }
 
-export function summarizeJavaScriptAssets(assets, entryPath) {
+export function summarizeJavaScriptAssets(assets: JavaScriptAsset[], entryPath: string) {
   const dynamicAssets = assets.filter(({ path }) => path !== entryPath);
-  const largestDynamic = dynamicAssets.reduce((largest, asset) => !largest || asset.gzip > largest.gzip ? asset : largest, null);
+  const largestDynamic = dynamicAssets.reduce<JavaScriptAsset | null>((largest, asset) => !largest || asset.gzip > largest.gzip ? asset : largest, null);
   return {
     dynamicAssets,
     largestDynamic,
   };
 }
 
-function formatKiB(bytes) {
+function formatKiB(bytes: number): string {
   return `${(bytes / 1024).toFixed(1)} KiB`;
 }
 
-function formatAssetPath(path) {
+function formatAssetPath(path: string): string {
   return relative(DIST_ROOT, path).split("\\").join("/");
 }
 
-export function dynamicJavaScriptLimit(path) {
+export function dynamicJavaScriptLimit(path: string): number {
   const name = path.split(/[\\/]/u).at(-1) || "";
   return isMermaidEngineChunkName(name)
     ? MERMAID_ENGINE_GZIP_LIMIT
     : MAX_DYNAMIC_JAVASCRIPT_GZIP_LIMIT;
 }
 
-export function checkPerformanceBudget() {
+export function checkPerformanceBudget(): void {
   if (!existsSync(ENTRY_HTML)) throw new Error("缺少 dist/index.html，请先运行生产构建。");
   const html = readFileSync(ENTRY_HTML, "utf8");
   const scriptUrls = [...html.matchAll(/<script\b[^>]*\btype="module"[^>]*\bsrc="([^"]+)"[^>]*>/giu)].map((match) => match[1]);
@@ -87,7 +90,7 @@ export function checkPerformanceBudget() {
   const criticalFontStyles = [...html.matchAll(/<style\b[^>]*\bdata-fonscape-critical-fonts[^>]*>([\s\S]*?)<\/style>/giu)];
   const preloadImageUrls = [...html.matchAll(/<link\b[^>]*\brel="preload"[^>]*\bas="image"[^>]*>/giu)]
     .map((match) => match[0].match(/\bhref="([^"]+)"/iu)?.[1])
-    .filter(Boolean);
+    .filter((url): url is string => Boolean(url));
   const responsiveImageUrls = [...html.matchAll(/\bimagesrcset="([^"]+)"/giu)]
     .flatMap((match) => match[1].split(",").map((candidate) => candidate.trim().split(/\s+/u)[0]))
     .filter(Boolean);
@@ -112,7 +115,7 @@ export function checkPerformanceBudget() {
   const styleGzip = gzipSize(stylePath);
   const fontStyleGzip = gzipSize(fontStylePath);
   const fullFontStyleGzip = gzipSize(fullFontStylePath);
-  const failures = [];
+  const failures: string[] = [];
   if (htmlGzip > ENTRY_HTML_GZIP_LIMIT) failures.push(`首页 HTML gzip ${formatKiB(htmlGzip)} 超过 ${formatKiB(ENTRY_HTML_GZIP_LIMIT)}`);
   if (scriptGzip > ENTRY_JAVASCRIPT_GZIP_LIMIT) failures.push(`首页 JS gzip ${formatKiB(scriptGzip)} 超过 ${formatKiB(ENTRY_JAVASCRIPT_GZIP_LIMIT)}`);
   for (const asset of javascriptAssets.filter(({ path }) => path !== scriptPath)) {
@@ -122,9 +125,9 @@ export function checkPerformanceBudget() {
   const manifestPath = resolve(DIST_ROOT, ".vite/manifest.json");
   if (!existsSync(manifestPath)) failures.push("缺少构建 manifest，无法核对首页静态依赖。");
   else {
-    const manifest = JSON.parse(readFileSync(manifestPath, "utf8"));
-    const visited = new Set();
-    const visit = (key) => {
+    const manifest: Record<string, ViteManifestChunk | undefined> = JSON.parse(readFileSync(manifestPath, "utf8"));
+    const visited = new Set<string>();
+    const visit = (key: string) => {
       if (visited.has(key)) return;
       visited.add(key);
       const chunk = manifest[key];
@@ -132,7 +135,7 @@ export function checkPerformanceBudget() {
       if (/(?:^|\/)mermaid-/u.test(chunk.file)) failures.push(`Mermaid 资源进入首页静态依赖：${chunk.file}`);
       for (const dependency of chunk.imports || []) visit(dependency);
     };
-    for (const [key, chunk] of Object.entries(manifest)) if (chunk.isEntry) visit(key);
+    for (const [key, chunk] of Object.entries(manifest)) if (chunk?.isEntry) visit(key);
   }
   if (styleGzip > ENTRY_CSS_GZIP_LIMIT) failures.push(`首页 CSS gzip ${formatKiB(styleGzip)} 超过 ${formatKiB(ENTRY_CSS_GZIP_LIMIT)}`);
   if (fontStyleGzip > LOCAL_FONT_CSS_GZIP_LIMIT) failures.push(`本地字体 CSS gzip ${formatKiB(fontStyleGzip)} 超过 ${formatKiB(LOCAL_FONT_CSS_GZIP_LIMIT)}`);
@@ -161,7 +164,7 @@ export function checkPerformanceBudget() {
   const generatedImageRoot = resolve(DIST_ROOT, "fonscape/generated-images");
   const generatedImageFiles = existsSync(generatedImageRoot) ? readdirSync(generatedImageRoot, { withFileTypes: true }).filter((entry) => entry.isFile()) : [];
   const generatedImageBytes = generatedImageFiles.reduce((total, entry) => total + statSync(resolve(generatedImageRoot, entry.name)).size, 0);
-  const generatedCounts = new Map();
+  const generatedCounts = new Map<string, number>();
   for (const entry of generatedImageFiles) {
     const bytes = statSync(resolve(generatedImageRoot, entry.name)).size;
     if (bytes > GENERATED_RESPONSIVE_IMAGE_LIMIT) failures.push(`响应式图片候选 /fonscape/generated-images/${entry.name} 为 ${formatKiB(bytes)}，超过 ${formatKiB(GENERATED_RESPONSIVE_IMAGE_LIMIT)}`);
@@ -195,7 +198,7 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
   try {
     checkPerformanceBudget();
   } catch (error) {
-    console.error(error.message);
+    console.error(error instanceof Error ? error.message : String(error));
     process.exitCode = 1;
   }
 }

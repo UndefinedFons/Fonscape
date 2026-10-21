@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 import { createClient } from "@libsql/client";
-import { migrateTurso, splitSqlStatements } from "../scripts/migrate-turso.mjs";
+import { migrateTurso, splitSqlStatements } from "../scripts/migrate-turso.ts";
 
 test("Turso migration splitter preserves quoted and commented semicolons", () => {
   assert.deepEqual(splitSqlStatements(`-- ignored ; comment

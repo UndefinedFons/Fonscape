@@ -6,12 +6,12 @@ import { parsePost } from "./src/content/frontmatter.ts";
 import { contentDateTimestamp } from "./src/content/date.ts";
 import siteConfig from "./fonscape.config.js";
 import { generateContentArtifacts } from "./scripts/generate-content-targets.ts";
-import { generateFontStylesheets } from "./scripts/generate-font-css.mjs";
+import { generateFontStylesheets } from "./scripts/generate-font-css.ts";
 import { generateResponsiveImages } from "./scripts/generate-responsive-images.ts";
 import { responsiveImageCandidates, responsiveImageUrl } from "./src/responsiveImages.ts";
-import { generateRssFeed } from "./scripts/generate-rss.mjs";
-import { generateSitemap } from "./scripts/generate-sitemap.mjs";
-import { isKnownMermaidCircularChunkWarning, MERMAID_CHUNK_WARNING_LIMIT_KB, mermaidChunkWarningPlugin } from "./scripts/chunk-size-warning.mjs";
+import { generateRssFeed } from "./scripts/generate-rss.ts";
+import { generateSitemap } from "./scripts/generate-sitemap.ts";
+import { isKnownMermaidCircularChunkWarning, MERMAID_CHUNK_WARNING_LIMIT_KB, mermaidChunkWarningPlugin } from "./scripts/chunk-size-warning.ts";
 import { normalizeSiteUrl, siteUrlForPath } from "./src/siteUrl.ts";
 
 function escapeAttribute(value) {
