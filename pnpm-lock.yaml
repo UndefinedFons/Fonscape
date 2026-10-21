@@ -31,7 +31,7 @@ importers:
         version: 1.6.1(patch_hash=5a03bfb71ec59a9f71b7bd04260409ac9a24311077d653fa3f3dc9caf85ed1b9)
       '@phosphor-icons/react':
         specifier: ^2.1.10
-        version: 2.1.10(react-dom@19.2.9(react@19.2.9))(react@19.2.9)
+        version: 2.1.10(react-dom@19.2.9(react@19.3.1))(react@19.3.1)
       '@vercel/functions':
         specifier: 3.10.1
         version: 3.10.1(ws@8.21.3)
@@ -49,16 +49,16 @@ importers:
         version: 11.17.2
       prism-react-renderer:
         specifier: ^2.4.1
-        version: 2.4.1(react@19.2.9)
+        version: 2.4.1(react@19.3.1)
       react:
-        specifier: 19.2.9
-        version: 19.2.9
+        specifier: 19.3.1
+        version: 19.3.1
       react-dom:
         specifier: 19.2.9
-        version: 19.2.9(react@19.2.9)
+        version: 19.2.9(react@19.3.1)
       react-markdown:
         specifier: ^10.1.0
-        version: 10.1.0(@types/react@19.2.18)(react@19.2.9)(supports-color@10.2.2)
+        version: 10.1.0(@types/react@19.3.0)(react@19.3.1)(supports-color@10.2.2)
       rehype-katex:
         specifier: ^7.0.1
         version: 7.0.1
@@ -85,11 +85,11 @@ importers:
         specifier: 22.20.5
         version: 22.20.5
       '@types/react':
-        specifier: 19.2.18
-        version: 19.2.18
+        specifier: 19.3.0
+        version: 19.3.0
       '@types/react-dom':
         specifier: 19.2.7
-        version: 19.2.7(@types/react@19.2.18)
+        version: 19.2.7(@types/react@19.3.0)
       eslint:
         specifier: 10.13.0
         version: 10.13.0(supports-color@10.2.2)
@@ -1124,8 +1124,8 @@ packages:
     peerDependencies:
       '@types/react': ^19.2.0
 
-  '@types/react@19.2.18':
-    resolution: {integrity: sha512-AnzbBERsrLKtk2XSfTbYRLjQPdy116Sty4q+T+Bp3IC4l6jNBvreVPAHmpq9qhXQM7CXZPjLVmGMw9sy+hxQ3w==}
+  '@types/react@19.3.0':
+    resolution: {integrity: sha512-N0rFCuH9YoxG9/m61l9MfpJKfmLOVU0em7ipIz6TRgSSkvReLB9vL85GB+yr8Bs5leqpvg96JSwF4ZS1s4viQg==}
 
   '@types/trusted-types@2.0.7':
     resolution: {integrity: sha512-ScaPdn1dQczgbl0QFTeTOmVHFULt394XJgOQNoyVhZ6r2vLnMLJfBPd53SB52T/3G36VI1/g2MZaX0cwDuXsfw==}
@@ -2182,8 +2182,8 @@ packages:
     resolution: {integrity: sha512-QgT5//D3jfjJb6Gsjxv0Slpj23ip+HtOpnNgnb2S5zU3CB26G/IDPGoy4RJB42wzFE46DRsstbW6tKHoKbhAxw==}
     engines: {node: '>=0.10.0'}
 
-  react@19.2.9:
-    resolution: {integrity: sha512-RuLdAokXv3sRmZa2/N8QH0KmTBIgDKC+buRUikGqow31+mGSGidLCX2o4XFq8OV+xBFWfhM9DVgTq1PPHADH4w==}
+  react@19.3.1:
+    resolution: {integrity: sha512-QNhWdt7nrgVWWQG58QuGsAR3jv3Hbe4mb4vz7w2csnHavciZJgda1CPNaldF6eVxv90ud3jUXpKlHL69gO38yw==}
     engines: {node: '>=0.10.0'}
 
   rehype-katex@7.0.1:
@@ -3114,10 +3114,10 @@ snapshots:
 
   '@neon-rs/load@0.0.4': {}
 
-  '@phosphor-icons/react@2.1.10(react-dom@19.2.9(react@19.2.9))(react@19.2.9)':
+  '@phosphor-icons/react@2.1.10(react-dom@19.2.9(react@19.3.1))(react@19.3.1)':
     dependencies:
-      react: 19.2.9
-      react-dom: 19.2.9(react@19.2.9)
+      react: 19.3.1
+      react-dom: 19.2.9(react@19.3.1)
 
   '@playwright/test@1.64.1':
     dependencies:
@@ -3388,11 +3388,11 @@ snapshots:
 
   '@types/prismjs@1.26.6': {}
 
-  '@types/react-dom@19.2.7(@types/react@19.2.18)':
+  '@types/react-dom@19.2.7(@types/react@19.3.0)':
     dependencies:
-      '@types/react': 19.2.18
+      '@types/react': 19.3.0
 
-  '@types/react@19.2.18':
+  '@types/react@19.3.0':
     dependencies:
       csstype: 3.2.3
 
@@ -4780,11 +4780,11 @@ snapshots:
 
   prelude-ls@1.2.1: {}
 
-  prism-react-renderer@2.4.1(react@19.2.9):
+  prism-react-renderer@2.4.1(react@19.3.1):
     dependencies:
       '@types/prismjs': 1.26.6
       clsx: 2.1.1
-      react: 19.2.9
+      react: 19.3.1
 
   promise-limit@2.7.0: {}
 
@@ -4796,21 +4796,21 @@ snapshots:
     dependencies:
       hookified: 2.2.0
 
-  react-dom@19.2.9(react@19.2.9):
+  react-dom@19.2.9(react@19.3.1):
     dependencies:
-      react: 19.2.9
+      react: 19.3.1
       scheduler: 0.27.0
 
-  react-markdown@10.1.0(@types/react@19.2.18)(react@19.2.9)(supports-color@10.2.2):
+  react-markdown@10.1.0(@types/react@19.3.0)(react@19.3.1)(supports-color@10.2.2):
     dependencies:
       '@types/hast': 3.0.5
       '@types/mdast': 4.0.4
-      '@types/react': 19.2.18
+      '@types/react': 19.3.0
       devlop: 1.1.0
       hast-util-to-jsx-runtime: 2.3.6(supports-color@10.2.2)
       html-url-attributes: 3.0.1
       mdast-util-to-hast: 13.2.1
-      react: 19.2.9
+      react: 19.3.1
       remark-parse: 11.0.0(supports-color@10.2.2)
       remark-rehype: 11.1.2
       unified: 11.0.5
@@ -4821,7 +4821,7 @@ snapshots:
 
   react-refresh@0.18.0: {}
 
-  react@19.2.9: {}
+  react@19.3.1: {}
 
   rehype-katex@7.0.1:
     dependencies:
