@@ -14,6 +14,13 @@ updates:
       prefix: chore
       include: scope
     groups:
+      # React changes the entry bundle, so it is reviewed apart from routine updates.
+      react:
+        patterns:
+          - react
+          - react-dom
+          - "@types/react"
+          - "@types/react-dom"
       npm-minor-and-patch:
         update-types:
           - minor
@@ -21,6 +28,14 @@ updates:
     ignore:
       # Node.js types follow the runtime declared in package.json engines and the workflows.
       - dependency-name: "@types/node"
+        update-types:
+          - version-update:semver-major
+      # typescript-eslint supports TypeScript below 6.1.
+      - dependency-name: typescript
+        update-types:
+          - version-update:semver-major
+      # jsdom 30 requires a newer Node.js 22 release than package.json engines declares.
+      - dependency-name: jsdom
         update-types:
           - version-update:semver-major
 
