@@ -528,6 +528,8 @@ pnpm check
 
 Updater 会保护站点配置、Markdown 内容、友链、图片、音频与真实环境变量，并在应用前把将要改写的文件备份到 `.fonscape-update/backups/`。升级到指定版本时使用 `--to <目标版本>`。
 
+站点依赖随目标版本的 `package.json` 与 `pnpm-lock.yaml` 一同更新。`.github/dependabot.yml` 只用于 Fonscape 上游仓库的依赖维护，Updater 不会同步或修改它；通过一键部署复制的仓库如不需要每周的依赖升级 Pull Request，可以删除该文件。
+
 需要让目标版本重新接管全部主题文件时，先预演主题校准：
 
 ```bash
