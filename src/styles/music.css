@@ -170,7 +170,7 @@
 
 
 .music-record-progress { position:absolute; z-index:2; left:14px; right:14px; bottom:7px; height:2px; background:rgba(255,255,255,.25); pointer-events:none; }
-.music-record-progress>span { display:block; height:100%; background:#fff; transition:width .3s linear; }
+.music-record-progress>span { display:block; height:100%; background:#fff; transform-origin:left; transition:transform .3s linear; }
 .music-record-lyric { position:absolute; z-index:1; inset:20% 16px 27%; overflow:hidden; padding-block:20cqw; text-align:center; color:#fff; font:600 clamp(22px,5cqw,34px)/1.65 "Zen Maru Gothic",sans-serif; text-shadow:0 1px 2px #000,0 2px 5px #000,0 0 14px rgba(0,0,0,.8); mask-image:linear-gradient(transparent,#000 18%,#000 82%,transparent); pointer-events:none; }
 .music-record-lyric p { margin:14px 0; padding:10px 0; opacity:.72; transition:opacity .35s ease,transform .35s ease; }
 .music-record-lyric p.is-current { font-weight:700; opacity:1; transform:scale(1.03); }

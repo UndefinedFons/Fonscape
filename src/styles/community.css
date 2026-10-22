@@ -218,7 +218,8 @@
 .comments-refresh-error button { min-height:34px; padding:0 13px; border:1px solid var(--line); border-radius:999px; background:var(--surface); color:var(--muted); cursor:pointer; }
 .comments-pagination { margin-top:25px; padding-top:22px; border-top:1px solid var(--line); }
 .community-skeleton { display:grid; gap:10px; padding:22px 0; }
-.community-skeleton i { height:56px; border-radius:13px; background:linear-gradient(90deg,var(--surface-soft),var(--surface),var(--surface-soft)); background-size:220% 100%; animation:content-loading 1.4s linear infinite; }
+.community-skeleton i { position:relative; height:56px; overflow:hidden; border-radius:13px; }
+.community-skeleton i::after { content:""; position:absolute; top:0; bottom:0; left:0; width:660%; background:linear-gradient(90deg,var(--surface-soft),var(--surface),var(--surface-soft)) 0 0/calc(100% / 3) 100%; animation:content-loading 1.4s linear infinite; pointer-events:none; }
 
 @media (max-width:760px) {
   .account-dialog { max-height:calc(100vh - 40px); padding:22px 18px 14px; border-radius:20px; }

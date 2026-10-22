@@ -43,6 +43,6 @@ export function MusicRecord({ entry, eager = false, order = 0 }: { entry: MusicR
       <span className="music-record-kind">{getMusicSectionLabel(entry.section)}</span>{entry.featured && <span className="music-record-pinned"><PushPin size={12} weight="fill" />置顶</span>}<div className="music-record-copy" key={track?.id || "collection"}><h3>{track?.title || entry.sourceTitle}</h3><p>{track?.artist || entry.sourceMeta || ""}</p></div>
     </a>
     <button aria-label={`${playing ? "暂停" : "播放"} ${entry.sourceTitle}`} aria-pressed={playing} aria-busy={loading} onClick={toggle}><span className={`music-control-icon${loading ? " is-loading" : ""}`} key={loading ? "loading" : String(playing)}>{loading ? <SpinnerGap size={20} /> : playing ? <Pause size={20} weight="fill" /> : <Play size={20} weight="fill" />}</span></button>
-    {playing && <div className="music-record-progress" aria-hidden="true"><span style={{ width: `${progress}%` }} /></div>}
+    {playing && <div className="music-record-progress" aria-hidden="true"><span style={{ transform: `scaleX(${progress / 100})` }} /></div>}
   </article>;
 }
