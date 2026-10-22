@@ -13,26 +13,29 @@ import { UserCircle } from "@phosphor-icons/react/UserCircle";
 import { UserCircleCheck } from "@phosphor-icons/react/UserCircleCheck";
 import { X } from "@phosphor-icons/react/X";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import type { CSSProperties, ReactNode } from "react";
+import type { CSSProperties, ReactNode, RefObject } from "react";
 import { navItems } from "../content/index.ts";
 import { getDetailReadingTarget } from "../detailReading.ts";
 import { routeHref } from "../routes.ts";
 import type { ArticleOutlineItem, PublicUser } from "../types.ts";
 
-function useDetailReadingProgress(route: string): number {
-  const [progress, setProgress] = useState(0);
-
+// Scroll-driven progress is written straight to the capsule's custom
+// properties so reading never re-renders the header on every frame.
+function useDetailReadingProgress(route: string, capsuleRef: RefObject<HTMLElement | null>) {
   useEffect(() => {
+    const capsule = capsuleRef.current;
     const readingTarget = getDetailReadingTarget(route);
-    if (!readingTarget) {
-      setProgress(0);
-      return undefined;
-    }
+    if (!capsule || !readingTarget) return undefined;
 
     let articleBody: Element | null = null;
     let frame = 0;
     let resizeObserver: ResizeObserver | null = null;
     let lastProgress = -1;
+    const setProgress = (value: number) => {
+      capsule.style.setProperty("--article-reading-progress", `${value}%`);
+      capsule.style.setProperty("--article-reading-progress-opacity", value > 0 ? "1" : "0");
+    };
+    setProgress(0);
 
     const update = () => {
       frame = 0;
@@ -83,10 +86,10 @@ function useDetailReadingProgress(route: string): number {
       mutationObserver.disconnect();
       window.removeEventListener("scroll", scheduleUpdate);
       window.removeEventListener("resize", scheduleUpdate);
+      capsule.style.removeProperty("--article-reading-progress");
+      capsule.style.removeProperty("--article-reading-progress-opacity");
     };
-  }, [route]);
-
-  return progress;
+  }, [capsuleRef, route]);
 }
 
 export function ArticleOutlinePopover({ items, open, activeId, onSelect }: {
@@ -139,7 +142,7 @@ export function Header({ route, theme, menuOpen, onMenu, onTheme, onSearch, onSe
   const navRef = useRef<HTMLElement | null>(null);
   const headerCenterRef = useRef<HTMLDivElement | null>(null);
   const detailReadingTarget = getDetailReadingTarget(route);
-  const detailReadingProgress = useDetailReadingProgress(route);
+  useDetailReadingProgress(route, headerCenterRef);
   const [indicator, setIndicator] = useState({ x: 0, ready: false });
   const [collapsed, setCollapsed] = useState(false);
   const [morphing, setMorphing] = useState("");
@@ -270,7 +273,7 @@ export function Header({ route, theme, menuOpen, onMenu, onTheme, onSearch, onSe
   const collapseHeader = () => morphHeader(true);
   const restoreHeader = () => morphHeader(false);
   return <header className={`site-header${hasArticleOutline ? " has-article-outline" : ""}${collapsed ? " is-collapsed" : ""}`}>
-    <div ref={headerCenterRef} className={`header-center material-panel${detailReadingTarget ? " has-article-reading-progress" : ""}${morphing ? ` is-morphing is-${morphing}` : ""}`} style={{ "--article-reading-progress": `${detailReadingProgress}%`, "--article-reading-progress-opacity": detailReadingProgress > 0 ? 1 : 0 } as CSSProperties}>
+    <div ref={headerCenterRef} className={`header-center material-panel${detailReadingTarget ? " has-article-reading-progress" : ""}${morphing ? ` is-morphing is-${morphing}` : ""}`}>
       <nav ref={navRef} className={menuOpen ? "main-nav is-open" : "main-nav"} aria-label="主导航">
         <span className={indicator.ready ? "nav-active-indicator is-ready" : "nav-active-indicator"} style={{ "--indicator-x": `${indicator.x}px` } as CSSProperties} aria-hidden="true" />
         {navItems.map(([path, label]) => {

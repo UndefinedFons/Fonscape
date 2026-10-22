@@ -111,8 +111,6 @@
 :root[data-glass="on"] .friend-card {
   background:var(--glass-surface);
   border-color:color-mix(in srgb,var(--friend-color) 28%,var(--line));
-  -webkit-backdrop-filter:blur(14px);
-  backdrop-filter:blur(14px);
   box-shadow:
     0 14px 36px color-mix(in srgb,var(--shadow-color) 34%,transparent),
     0 0 38px color-mix(in srgb,var(--friend-color) 14%,transparent);
