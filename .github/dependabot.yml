@@ -49,6 +49,10 @@ updates:
         versions: ["19.3.x"]
       - dependency-name: "@types/react-dom"
         versions: ["19.3.x"]
+      # Vite 8 bundles with Rolldown; manualChunks and the Mermaid chunk budget need a separate migration.
+      - dependency-name: vite
+        update-types:
+          - version-update:semver-major
 
   - package-ecosystem: github-actions
     directory: /
